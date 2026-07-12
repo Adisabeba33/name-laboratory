@@ -269,6 +269,10 @@ export default function App() {
         dictionary.
         <br />
         Meaning → Concept → Language Discovery → Word Evolution → Word.
+        <br />
+        <span className="build" title="Changes on every deploy — refresh to see if a new build is live">
+          v{__APP_VERSION__} · build {__BUILD_SHA__} · {__BUILD_TIME__} UTC
+        </span>
       </footer>
     </div>
   )
