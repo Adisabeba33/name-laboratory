@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { generateWords, MODES, type CreativeMode, type WordPassport } from './engine'
 import { PassportCard } from './components/PassportCard'
+import { Logo } from './components/Logo'
 
 /** Suggested keyword chips — a quick way to seed the concept map. */
 const SUGGESTED_KEYWORDS = [
@@ -53,7 +54,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="masthead">
-        <img className="logo" src="/favicon.svg" alt="" aria-hidden />
+        <Logo className="logo" />
         <div>
           <h1>Word Laboratory</h1>
           <p className="tag">
