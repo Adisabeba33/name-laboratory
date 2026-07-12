@@ -836,11 +836,18 @@ textarea:focus {
   margin: 6px 0 2px;
 }
 
-.say {
+.word-meta {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px 12px;
   margin: 2px 0 4px;
+}
+
+.say {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .say-key {
@@ -856,6 +863,75 @@ textarea:focus {
   font-size: 13px;
   letter-spacing: 0.02em;
   color: var(--accent-2);
+}
+
+.translit {
+  font-size: 14px;
+  color: var(--text);
+  font-style: italic;
+}
+
+.translit::before {
+  content: '· ';
+  color: var(--text-faint);
+  font-style: normal;
+}
+
+.pos {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  text-transform: lowercase;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.short-meaning {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--text-faint);
+  letter-spacing: 0.01em;
+}
+
+.sec.use .use-lang {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 8px;
+}
+
+.use-tag {
+  flex: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  height: fit-content;
+  margin-top: 2px;
+}
+
+.sec.use ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sec.use li {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.sec.use .coined {
+  color: var(--accent);
+  font-weight: 600;
+  font-style: normal;
 }
 
 .meaning-block {

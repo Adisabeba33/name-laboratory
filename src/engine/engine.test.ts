@@ -20,6 +20,7 @@ import {
 import { KNOWN_WORDS } from './data/known-words'
 import { countSyllables, awkwardClusters, vowelRatio } from './phonetics'
 import { pronounce } from './pronounce'
+import { translitRu } from './translit'
 import { Rng } from './rng'
 
 const MEDICINE_REQUEST = {
@@ -219,6 +220,25 @@ describe('pronunciation & brand', () => {
       for (const w of fam.words) {
         expect(w.pronunciationGuide.length).toBeGreaterThan(0)
         expect(w.pronunciationGuide).toMatch(/[a-z]/i)
+      }
+    }
+  })
+
+  it('transliterates a word into readable Cyrillic', () => {
+    expect(translitRu('Varethis')).toBe('варетис')
+    // Only Cyrillic letters come out, and it is non-empty.
+    for (const w of ['Korvain', 'Morakai', 'Threnora', 'Ophelith']) {
+      expect(translitRu(w)).toMatch(/^[а-яё]+$/)
+    }
+  })
+
+  it('gives every generated word a Cyrillic form and a usage slot', () => {
+    for (const fam of generateFamilies(MEDICINE_REQUEST)) {
+      for (const w of fam.words) {
+        expect(w.transliteration).toMatch(/^[а-яё]+$/)
+        expect(w.partOfSpeech.length).toBeGreaterThan(0)
+        expect(Array.isArray(w.usage.en)).toBe(true)
+        expect(Array.isArray(w.usage.ru)).toBe(true)
       }
     }
   })

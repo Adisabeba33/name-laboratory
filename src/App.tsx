@@ -86,6 +86,7 @@ export default function App() {
             word: w.word,
             language: f.character,
             hint: w.meaning.split(' (')[0],
+            translit: w.transliteration,
           })),
         )
         const map = await fetchBespokeMeanings(trimmed, items)
@@ -96,7 +97,15 @@ export default function App() {
               ...f,
               words: f.words.map((w) => {
                 const m = map.get(w.word.toLowerCase())
-                return m ? { ...w, meaning: `${m.en} (${m.ru})` } : w
+                return m
+                  ? {
+                      ...w,
+                      meaning: `${m.en} (${m.ru})`,
+                      shortMeaning: m.short || w.shortMeaning,
+                      partOfSpeech: m.pos || w.partOfSpeech,
+                      usage: { en: m.usageEn, ru: m.usageRu },
+                    }
+                  : w
               }),
             })),
           })

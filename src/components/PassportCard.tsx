@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { EmotionalAxis, WordPassport } from '../engine'
 
 /** The order emotional axes are shown in — most brand-relevant first. */
@@ -34,16 +35,52 @@ export function PassportCard({ p }: { p: WordPassport }) {
           gen {e.generation}
         </span>
       </div>
-      {p.pronunciationGuide && (
-        <div className="say" title="How to say it — the stressed syllable is capitalised">
-          <span className="say-key">say</span>
-          <span className="say-val">{p.pronunciationGuide}</span>
-        </div>
-      )}
+      <div className="word-meta">
+        {p.pronunciationGuide && (
+          <span className="say" title="How to say it — the stressed syllable is capitalised">
+            <span className="say-key">say</span>
+            <span className="say-val">{p.pronunciationGuide}</span>
+          </span>
+        )}
+        {p.transliteration && (
+          <span className="translit" title="Cyrillic form — how it looks inside Russian">
+            {p.transliteration}
+          </span>
+        )}
+        {p.partOfSpeech && <span className="pos">{p.partOfSpeech}</span>}
+      </div>
       <div className="meaning-block">
         <span className="meaning-label">Meaning</span>
         <p className="meaning">“{p.meaning}”</p>
+        {p.shortMeaning && <p className="short-meaning">{p.shortMeaning}</p>}
       </div>
+
+      {(p.usage.en.length > 0 || p.usage.ru.length > 0) && (
+        <div className="sec use">
+          <h4>Use in language</h4>
+          {p.usage.en.length > 0 && (
+            <div className="use-lang">
+              <span className="use-tag">EN</span>
+              <ul>
+                {p.usage.en.map((s, i) => (
+                  <li key={`en-${i}`}>{highlight(s, p.word)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {p.usage.ru.length > 0 && (
+            <div className="use-lang">
+              <span className="use-tag">RU</span>
+              <ul>
+                {p.usage.ru.map((s, i) => (
+                  <li key={`ru-${i}`}>{highlight(s, p.transliteration)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="origin">{p.ancestry.note}</div>
 
       <div className="sec">
@@ -147,4 +184,28 @@ export function PassportCard({ p }: { p: WordPassport }) {
 
 function pct(n: number): string {
   return `${Math.round(n * 100)}%`
+}
+
+/**
+ * Emphasise the invented word wherever it appears in an example sentence,
+ * matching its inflected forms too (a shared stem of the word), so the reader's
+ * eye lands on how the new word sits inside an ordinary sentence.
+ */
+function highlight(sentence: string, word: string): ReactNode {
+  const stem = word.trim().slice(0, Math.max(3, word.trim().length - 2))
+  if (!stem) return sentence
+  const parts = sentence.split(new RegExp(`(${escapeRe(stem)}\\p{L}*)`, 'giu'))
+  return parts.map((part, i) =>
+    part.toLowerCase().startsWith(stem.toLowerCase()) && part.length >= stem.length ? (
+      <b className="coined" key={i}>
+        {part}
+      </b>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  )
+}
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

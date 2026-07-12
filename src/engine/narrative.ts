@@ -78,7 +78,7 @@ export function buildAncestry(lead: Concept, language: Language): Ancestry {
   return {
     character: language.character,
     families: language.families,
-    note: `${language.character} — phonetic ancestry ${joinList(families)}, evolved around ${IDEAS[lead].essence}.`,
+    note: `${language.character} — constructed using phonetic patterns associated with ${joinList(families)}, shaped around ${IDEAS[lead].essence}.`,
   }
 }
 

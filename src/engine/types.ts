@@ -221,6 +221,17 @@ export interface WordPassport {
   family: { id: string; name: string }
   /** Concept-first meaning — the idea the word was imagined to hold. */
   meaning: string
+  /** A one-line distillation of the meaning, e.g. "Identity reborn through survival." */
+  shortMeaning: string
+  /** The word's grammatical role, e.g. "noun". Defaults to "noun"; refined by the LLM. */
+  partOfSpeech: string
+  /** The word written in Cyrillic so it can live in Russian, e.g. "варетис". */
+  transliteration: string
+  /**
+   * How the word actually lives inside existing languages: natural example
+   * sentences that teach how it functions. Empty until the LLM writes them.
+   */
+  usage: { en: string[]; ru: string[] }
   /** A stress-marked spoken guide for saying the word, e.g. "eh-LEE-ah-yeh". */
   pronunciationGuide: string
   /** Where the word's sound descends from — species + phonetic ancestry. */
