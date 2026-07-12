@@ -15,7 +15,7 @@ export interface WordItem {
 export async function fetchBespokeMeanings(
   brief: string,
   words: WordItem[],
-  timeoutMs = 25_000,
+  timeoutMs = 55_000,
 ): Promise<Map<string, { en: string; ru: string }> | null> {
   if (words.length === 0) return null
   const controller = new AbortController()

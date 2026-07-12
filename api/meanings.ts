@@ -17,6 +17,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 const MODEL = process.env.WORDLAB_MODEL || 'claude-opus-4-8'
 const MAX_WORDS = 30
 
+// Writing ~18 bespoke bilingual definitions with Opus takes well over Vercel's
+// default 10s function limit. Allow up to 60s (the Hobby ceiling) so the call
+// actually completes instead of timing out into the deterministic fallback.
+export const config = { maxDuration: 60 }
+
 const SCHEMA = {
   type: 'object',
   additionalProperties: false,

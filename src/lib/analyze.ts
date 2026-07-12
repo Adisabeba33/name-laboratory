@@ -10,7 +10,7 @@ import type { MeaningAnalysis } from '../engine'
  */
 export async function analyzeRemote(
   brief: string,
-  timeoutMs = 25_000,
+  timeoutMs = 55_000,
 ): Promise<MeaningAnalysis | null> {
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), timeoutMs)

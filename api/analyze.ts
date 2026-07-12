@@ -31,6 +31,10 @@ const THEMES = ['metamorphosis', 'grief', 'resilience']
 
 const MODEL = process.env.WORDLAB_MODEL || 'claude-opus-4-8'
 
+// Deep meaning analysis with Opus can approach Vercel's default 10s limit.
+// Allow up to 60s (the Hobby ceiling) so a thoughtful reading never times out.
+export const config = { maxDuration: 60 }
+
 const NODE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
