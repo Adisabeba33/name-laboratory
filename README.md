@@ -14,17 +14,24 @@ Meaning → Concept → Emotional Identity → Linguistic Structure → Phonetic
 
 > **Example.** Ask for _“a premium AI company focused on medicine”_ with the keywords
 > `trust, intelligence, calm, precision, future`, and the lab first builds an internal
-> semantic map (healing, knowledge, precision, calm…), then constructs an original word
-> such as **Sanicura** and hands back a full _Word Passport_ explaining why it exists.
+> semantic map (healing, knowledge, precision, calm…), then discovers several distinct
+> **linguistic families** — Crystalline (`Kaint · Kaix · Kaon`), Noble (`Selova · Selelle
+> · Selon`), Verdant (`Vaith · Vaia · Vaiwen`)… — each with a full _Word Passport_.
+
+Not a name generator, and not twelve mutations of one pattern. A single run discovers
+several **new linguistic species** — different sound worlds — and grows a small family
+of kin words inside each. The words are *synthesised* inside a linguistic archetype, so
+the source roots inspire the texture but never show through: a word feels **discovered,
+not assembled**.
 
 ---
 
 ## What it does
 
-Every generated word arrives as a **Word Passport**:
+Every discovered word arrives as a **Word Passport**:
 
-- **Meaning** — a one-line sense synthesised from the roots the word was built from.
-- **Origin** — the morphological roots and language families it grew from.
+- **Meaning** — a concept-first idea the word was imagined to hold (not its etymology).
+- **Lineage** — the linguistic character and the language families it echoes.
 - **Emotional DNA** — measurable attributes (Premium, Scientific, Elegant, Trustworthy,
   Creative, Warm, Futuristic, Mystical, Playful…), each scored 0–100.
 - **Personality** — a handful of adjectives read off the emotional DNA.
@@ -56,25 +63,35 @@ or an interactive slider UI.
 
 | File | Responsibility |
 | --- | --- |
-| `types.ts` | The type system — including the central **`WordGenome`**. |
-| `data/roots.ts` | Morphological roots across 10 language families (Latin, Greek, Sanskrit, Norse, Celtic, Japanese, Arabic, Hebrew, Finnish, PIE). |
+| `types.ts` | The type system — the central **`WordGenome`**, plus `WordFamily` / `Lineage`. |
+| `data/archetypes.ts` | The **linguistic archetypes** — the engine's "species", each a self-contained sound world with its own phoneme inventory and emotional signature. |
+| `data/ideas.ts` | Concept → idea vocabulary, so meanings state an idea rather than an etymology. |
 | `data/concepts.ts` | Keyword → concept map (the "internal semantic map"). |
-| `data/modes.ts` | Creative-mode profiles. |
+| `data/modes.ts` | Creative-mode profiles (bias which archetypes a run favours). |
 | `data/known-words.ts` | Blocklist for the novelty check. |
 | `concepts.ts` | **Meaning → Concept**: builds the weighted concept vector. |
 | `phonetics.ts` | Phonetic primitives — syllables, vowel ratio, clusters, pronounceability, symmetry. |
 | `genome.ts` | Computes a word's **Word Genome** and its quality score. |
-| `emotional.ts` | **Emotional Identity**: derives emotional DNA from genome + concepts + mode. |
-| `assembler.ts` | **Linguistic Structure → Phonetics → Word**: fuses roots into original words. |
+| `synth.ts` | **Linguistic Structure → Phonetics → Word**: synthesises masked, kin words inside an archetype (no visible root-gluing). |
+| `emotional.ts` | **Emotional Identity**: emotional DNA from archetype signature + concepts + genome. |
 | `pronunciation.ts` | Cross-language pronounceability ratings. |
 | `brand.ts` | Brand / industry matching. |
-| `narrative.ts` | Meaning, origin story, explanation, personality, difficulty. |
-| `generator.ts` | Orchestrates the full pipeline and ranks candidates. |
+| `narrative.ts` | Concept-first meaning, explanation, story, lineage, personality, difficulty. |
+| `generator.ts` | Orchestrates the family-first pipeline (`generateFamilies`). |
 | `rng.ts` | Seeded RNG so results are deterministic and shareable. |
 
 The React UI in [`src/App.tsx`](src/App.tsx) and
 [`src/components/PassportCard.tsx`](src/components/PassportCard.tsx) is a thin,
 presentational layer over that engine.
+
+### Family-first generation
+
+`generateFamilies()` scores every archetype against the concept map (boosted by the
+creative mode), takes the top *distinct* archetypes, and grows a kin family inside each.
+Because the archetypes sound genuinely different from one another, a single run reads as
+several new linguistic species rather than one repeated formula. Words are synthesised
+from an archetype's phoneme inventory — the source roots and languages only inspire the
+texture, they never surface as glued fragments.
 
 ### Why the genome is central
 
@@ -98,18 +115,22 @@ npm test           # run the engine test suite
 Use the engine directly, without the UI:
 
 ```ts
-import { generateWords } from './src/engine'
+import { generateFamilies } from './src/engine'
 
-const words = generateWords({
+const families = generateFamilies({
   brief: 'A premium AI company focused on medicine',
   keywords: ['trust', 'intelligence', 'calm', 'precision', 'future'],
   mode: 'medical',
-  count: 6,
+  count: 6, // number of families to discover
 })
 
-console.log(words[0].word)        // e.g. "Sanicura"
-console.log(words[0].meaning)     // e.g. "The healing that gives rise to care…"
-console.log(words[0].emotionalDNA) // { premium: 89, trustworthy: 99, ... }
+const family = families[0]
+console.log(family.character)          // e.g. "Crystalline"
+console.log(family.words.map((w) => w.word)) // e.g. ["Kaint", "Kaix", "Kaon"]
+console.log(family.words[0].meaning)   // e.g. "Living intelligence meeting precision — …"
+console.log(family.words[0].emotionalDNA) // { scientific: 96, futuristic: 60, ... }
+
+// generateWords() still returns a flat WordPassport[] if you don't need the grouping.
 ```
 
 Generation is deterministic for a given request (and optional `seed`), so results are

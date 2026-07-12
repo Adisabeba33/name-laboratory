@@ -6,13 +6,16 @@
  * driven later by an LLM or an interactive "Word Genome" slider UI.
  */
 export * from './types'
-export { generateWords, buildPassport } from './generator'
+export { generateFamilies, generateWords, buildPassport } from './generator'
 export { buildConceptMap, topConcepts, conceptMatch } from './concepts'
 export { computeGenome, genomeQuality, estimateUniqueness, editDistance } from './genome'
 export { computeEmotionalDNA, dominantEmotions } from './emotional'
 export { matchBrands } from './brand'
 export { ratePronunciation } from './pronunciation'
+export { growFamily } from './synth'
+export { ARCHETYPES, archetypeById } from './data/archetypes'
+export type { Archetype } from './data/archetypes'
 export { MODES, DEFAULT_MODE } from './data/modes'
 export type { ModeProfile } from './data/modes'
-export { ROOTS } from './data/roots'
+export { IDEAS } from './data/ideas'
 export { Rng, hashSeed } from './rng'

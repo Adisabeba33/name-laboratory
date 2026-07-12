@@ -152,19 +152,35 @@ export interface BrandFit {
 }
 
 /**
+ * A word's lineage — where it *feels* like it came from.
+ *
+ * Roots and language families inspire the sound, but they must never show through
+ * the surface (no "lum + iris" glue). So the passport exposes a lineage — the
+ * linguistic character and the families it echoes — rather than its ingredients.
+ */
+export interface Lineage {
+  /** The linguistic character, e.g. "Crystalline", "Liquid", "Ancient". */
+  character: string
+  /** Language families whose phonetics inspired it (for flavour, not copying). */
+  families: LanguageFamily[]
+  /** A single sentence placing the word in its lineage. */
+  note: string
+}
+
+/**
  * The "Word Passport" — everything a user receives about a generated word. The
  * user should always understand *why* the word exists, not merely receive a name.
+ * Meaning leads; etymology recedes.
  */
 export interface WordPassport {
   /** The invented word, capitalised for display. */
   word: string
-  /** One-line meaning, synthesised from the source roots and concepts. */
+  /** The linguistic family this word belongs to within its generation. */
+  family: { id: string; name: string }
+  /** Concept-first meaning — the idea the word was imagined to hold. */
   meaning: string
-  /** Where the word comes from — the roots it was built from. */
-  origin: {
-    summary: string
-    roots: Array<{ form: string; gloss: string; family: LanguageFamily }>
-  }
+  /** Where the word feels like it came from (character + families), not its parts. */
+  lineage: Lineage
   /** Measurable emotional attributes. */
   emotionalDNA: EmotionalDNA
   /** A handful of personality adjectives. */
@@ -175,12 +191,32 @@ export interface WordPassport {
   difficulty: string[]
   /** Industries the word naturally fits — and ones it doesn't. */
   brandFit: BrandFit
-  /** A believable origin story for the invented word. */
+  /** A believable account of how such a word might have evolved. */
   story: string
-  /** A plain-language explanation of the design choices behind the word. */
+  /** A concept-first explanation of why the word exists. */
   explanation: string
   /** The underlying genome, exposed for transparency and future tooling. */
   genome: WordGenome
+}
+
+/**
+ * A linguistic family produced by a single generation.
+ *
+ * The core shift in the product: a generation doesn't return a flat list of
+ * name variations — it discovers several distinct "linguistic species", each
+ * with its own sound world, then grows kin words inside each.
+ */
+export interface WordFamily {
+  /** Stable id for the family (its archetype id + index). */
+  id: string
+  /** Display name for the family (its shared stem, e.g. "Kael-"). */
+  name: string
+  /** The linguistic character of this family, e.g. "Crystalline". */
+  character: string
+  /** The idea this family was grown around. */
+  theme: string
+  /** The kin words in this family (2–3 variations that clearly belong together). */
+  words: WordPassport[]
 }
 
 /** The creative styles that bias which roots and endings the engine reaches for. */

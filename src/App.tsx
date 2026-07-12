@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { generateWords, MODES, type CreativeMode, type WordPassport } from './engine'
+import { generateFamilies, MODES, type CreativeMode, type WordFamily } from './engine'
 import { PassportCard } from './components/PassportCard'
 import { Logo } from './components/Logo'
 
@@ -19,7 +19,7 @@ export default function App() {
   const [freeInput, setFreeInput] = useState('')
   const [mode, setMode] = useState<CreativeMode>('medical')
   const [count, setCount] = useState(6)
-  const [results, setResults] = useState<WordPassport[] | null>(null)
+  const [results, setResults] = useState<WordFamily[] | null>(null)
   const [nonce, setNonce] = useState(0)
 
   const allKeywords = useMemo(() => {
@@ -38,14 +38,14 @@ export default function App() {
 
   function run(reseed = false) {
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
-    const words = generateWords({
+    const families = generateFamilies({
       brief: brief.trim() || undefined,
       keywords: allKeywords,
       mode,
       count,
       seed,
     })
-    setResults(words)
+    setResults(families)
     setNonce((n) => n + 1)
   }
 
@@ -58,7 +58,8 @@ export default function App() {
         <div>
           <h1>Word Laboratory</h1>
           <p className="tag">
-            An AI laboratory that invents new, meaningful words — meaning first, word last.
+            A laboratory for discovering words that have never existed — several new
+            linguistic species at a time, meaning first.
           </p>
         </div>
       </header>
@@ -135,23 +136,26 @@ export default function App() {
 
         <div className="field">
           <label className="lbl" htmlFor="count">
-            How many words — {count}
+            How many families — {count}
           </label>
           <div className="count-control">
             <input
               id="count"
               type="range"
-              min={1}
-              max={12}
+              min={3}
+              max={8}
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
             />
+            <span className="hint" style={{ marginTop: 0 }}>
+              each with 2–3 kin words
+            </span>
           </div>
         </div>
 
         <div className="actions">
           <button className="btn" onClick={() => run(false)} disabled={!canRun}>
-            Invent words
+            Discover words
           </button>
           {results && (
             <button className="btn ghost" onClick={() => run(true)}>
@@ -163,33 +167,43 @@ export default function App() {
 
       {results === null ? (
         <div className="empty">
-          Describe what you're naming and press <b>Invent words</b>. Each result
-          arrives with a full Word Passport — meaning, emotional DNA, brand fit and a story.
+          Describe what you're naming and press <b>Discover words</b>. Each run
+          surfaces several distinct linguistic families — different species of word —
+          and every word arrives with a full Word Passport.
         </div>
       ) : results.length === 0 ? (
         <div className="empty">
-          No words cleared the novelty check for that input. Try adding a keyword or switching modes.
+          Nothing cleared the novelty check for that input. Try adding a keyword or switching modes.
         </div>
       ) : (
         <section className="results" key={nonce}>
           <div className="results-head">
-            <h2>{results.length} invented words</h2>
+            <h2>{results.length} linguistic families discovered</h2>
             <span className="muted">
-              {MODES[mode].label} mode · built from {allKeywords.length} concept
-              {allKeywords.length === 1 ? '' : 's'}
+              {results.reduce((n, f) => n + f.words.length, 0)} words · {MODES[mode].label} mode
             </span>
           </div>
-          <div className="grid">
-            {results.map((p) => (
-              <PassportCard p={p} key={p.word} />
-            ))}
-          </div>
+          {results.map((fam) => (
+            <div className="family" key={fam.id}>
+              <div className="family-head">
+                <span className="family-char">{fam.character}</span>
+                <span className="family-name">{fam.name}</span>
+                <span className="family-theme">grown around {fam.theme}</span>
+              </div>
+              <div className="grid">
+                {fam.words.map((p) => (
+                  <PassportCard p={p} key={p.word} />
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
       <footer className="footer">
         Word Laboratory runs a self-contained linguistic engine — every word is
-        constructed from a measurable “Word Genome”, not copied from any dictionary.
+        synthesised inside a linguistic archetype from a measurable “Word Genome”,
+        never copied from any dictionary and never gluing roots together.
         <br />
         Meaning → Concept → Emotional Identity → Linguistic Structure → Phonetics → Word.
       </footer>

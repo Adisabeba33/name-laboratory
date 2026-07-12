@@ -29,7 +29,7 @@ export function PassportCard({ p }: { p: WordPassport }) {
     <article className="passport">
       <div className="word">{p.word}</div>
       <div className="meaning">“{p.meaning}”</div>
-      <div className="origin">{p.origin.summary}</div>
+      <div className="origin">{p.lineage.note}</div>
 
       <div className="sec">
         <h4>Emotional DNA</h4>
