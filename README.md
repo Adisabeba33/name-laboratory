@@ -117,6 +117,34 @@ reproducible and shareable.
 
 ---
 
+## Deploy
+
+The app is a static Vite build (no server, no environment variables), so any static
+host works. A [`vercel.json`](vercel.json) is included.
+
+**Vercel (recommended)** — the easiest path is the dashboard, no CLI needed:
+
+1. Push this repo to GitHub (already done for the working branch).
+2. In Vercel, choose **Add New → Project → Import Git Repository** and pick this repo.
+3. Vercel auto-detects the settings from `vercel.json`:
+   - Framework: **Vite**
+   - Build command: `npm run build`
+   - Output directory: `dist`
+4. Click **Deploy**. Every push to the branch redeploys automatically.
+
+Or via the CLI:
+
+```bash
+npm i -g vercel
+vercel        # preview deploy
+vercel --prod # production deploy
+```
+
+Because it's fully static, it also drops straight onto Netlify, Cloudflare Pages,
+GitHub Pages, or any bucket — build with `npm run build` and serve `dist/`.
+
+---
+
 ## Roadmap — the Word Genome
 
 The MVP already computes a genome per word. The long-term ambition is to let users
