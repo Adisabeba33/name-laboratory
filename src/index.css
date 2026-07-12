@@ -836,6 +836,28 @@ textarea:focus {
   margin: 6px 0 2px;
 }
 
+.say {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 2px 0 4px;
+}
+
+.say-key {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 700;
+}
+
+.say-val {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--accent-2);
+}
+
 .meaning-block {
   margin: 8px 0 14px;
   border-left: 2px solid var(--accent);

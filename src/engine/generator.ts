@@ -19,6 +19,7 @@ import { computeGenome } from './genome'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
 import { ratePronunciation } from './pronunciation'
+import { pronounce } from './pronounce'
 import { matchBrands } from './brand'
 import { IDEAS } from './data/ideas'
 import {
@@ -168,6 +169,7 @@ export function buildPassport(
     word,
     family: { id: `${language.id}-${languageIndex}`, name: language.character },
     meaning: buildMeaning(lead, support),
+    pronunciationGuide: pronounce(word, language.stressPattern),
     ancestry: buildAncestry(lead, language),
     evolution,
     emotionalDNA,

@@ -34,6 +34,12 @@ export function PassportCard({ p }: { p: WordPassport }) {
           gen {e.generation}
         </span>
       </div>
+      {p.pronunciationGuide && (
+        <div className="say" title="How to say it — the stressed syllable is capitalised">
+          <span className="say-key">say</span>
+          <span className="say-val">{p.pronunciationGuide}</span>
+        </div>
+      )}
       <div className="meaning-block">
         <span className="meaning-label">Meaning</span>
         <p className="meaning">“{p.meaning}”</p>

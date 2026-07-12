@@ -19,6 +19,7 @@ import {
 } from './index'
 import { KNOWN_WORDS } from './data/known-words'
 import { countSyllables, awkwardClusters, vowelRatio } from './phonetics'
+import { pronounce } from './pronounce'
 import { Rng } from './rng'
 
 const MEDICINE_REQUEST = {
@@ -196,6 +197,29 @@ describe('pronunciation & brand', () => {
     for (const r of ratings) {
       expect(r.stars).toBeGreaterThanOrEqual(1)
       expect(r.stars).toBeLessThanOrEqual(5)
+    }
+  })
+
+  it('writes a stress-marked spoken guide for a word', () => {
+    // Even stress → penultimate syllable is the stressed (upper-cased) one.
+    expect(pronounce('Eliaye', 'Even')).toBe('eh-LEE-AH-yeh')
+    // Digraphs stay whole; ph→f; the stress moves with the pattern.
+    expect(pronounce('Ophelith', 'Final')).toBe('oh-feh-LEETH')
+    expect(pronounce('Ashka', 'Initial')).toBe('AHSH-kah')
+    // Always hyphen-broken with exactly one upper-cased (stressed) syllable.
+    for (const w of ['Sora', 'Quorven', 'Sanicura', 'Threnora']) {
+      const g = pronounce(w, 'Even')
+      expect(g).toMatch(/-/)
+      expect(g.split('-').filter((s) => s === s.toUpperCase()).length).toBeGreaterThanOrEqual(1)
+    }
+  })
+
+  it('gives every generated word a pronunciation guide', () => {
+    for (const fam of generateFamilies(MEDICINE_REQUEST)) {
+      for (const w of fam.words) {
+        expect(w.pronunciationGuide.length).toBeGreaterThan(0)
+        expect(w.pronunciationGuide).toMatch(/[a-z]/i)
+      }
     }
   })
 

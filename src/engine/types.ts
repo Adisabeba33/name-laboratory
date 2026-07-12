@@ -221,6 +221,8 @@ export interface WordPassport {
   family: { id: string; name: string }
   /** Concept-first meaning — the idea the word was imagined to hold. */
   meaning: string
+  /** A stress-marked spoken guide for saying the word, e.g. "eh-LEE-ah-yeh". */
+  pronunciationGuide: string
   /** Where the word's sound descends from — species + phonetic ancestry. */
   ancestry: Ancestry
   /** The word's own inherited genome / evolution profile. */
