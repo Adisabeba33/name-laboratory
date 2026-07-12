@@ -14,7 +14,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
  * keeps the deterministic meanings, so the app always works.
  */
 
-const MODEL = process.env.WORDLAB_MODEL || 'claude-opus-4-8'
+const MODEL = process.env.WORDLAB_MODEL || 'claude-haiku-4-5-20251001'
 const MAX_WORDS = 30
 
 // Writing ~18 bespoke bilingual definitions with Opus takes well over Vercel's

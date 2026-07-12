@@ -29,7 +29,7 @@ const CONCEPTS = [
 // Recognised themes. Keep in sync with src/engine/data/themes.ts ids.
 const THEMES = ['metamorphosis', 'grief', 'resilience']
 
-const MODEL = process.env.WORDLAB_MODEL || 'claude-opus-4-8'
+const MODEL = process.env.WORDLAB_MODEL || 'claude-haiku-4-5-20251001'
 
 // Deep meaning analysis with Opus can approach Vercel's default 10s limit.
 // Allow up to 60s (the Hobby ceiling) so a thoughtful reading never times out.
