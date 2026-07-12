@@ -15,33 +15,40 @@ Meaning → Concept → Emotional Identity → Linguistic Structure → Phonetic
 > **Example.** Ask for _“a premium AI company focused on medicine”_ with the keywords
 > `trust, intelligence, calm, precision, future`, and the lab first builds an internal
 > semantic map (healing, knowledge, precision, calm…), then discovers several distinct
-> **linguistic families** — Crystalline (`Kaint · Kaix · Kaon`), Noble (`Selova · Selelle
-> · Selon`), Verdant (`Vaith · Vaia · Vaiwen`)… — each with a full _Word Passport_.
+> **languages** — Crystalline (`Zaittyrar · Kekynar · Qerkysix`), Noble (`Lodounova ·
+> Doradount · Sosnovoava`), Verdant (`Lerolis · Narilelvis · Mirermia`)… — each with its
+> own **Language Genome**, and populated with native-speaker words.
 
-Not a name generator, and not twelve mutations of one pattern. A single run discovers
-several **new linguistic species** — different sound worlds — and grows a small family
-of kin words inside each. The words are *synthesised* inside a linguistic archetype, so
-the source roots inspire the texture but never show through: a word feels **discovered,
-not assembled**.
+Not a name generator, and not twelve mutations of one pattern. **The laboratory discovers
+languages.** A single run surfaces several new linguistic species — each with a
+description, native characteristics and a measurable Language Genome — then generates
+native-speaker words that obey it. A word is *evidence the language exists*: synthesised
+from the language's own phonotactics, it feels **discovered, not assembled**.
 
 ---
 
 ## What it does
 
-Every discovered word arrives as a **Word Passport**:
+Each run discovers several **languages**, shown as a **Language Tree**. Every language has:
+
+- **A description & Native Characteristics** — what kind of linguistic species it is
+  (e.g. Crystalline: prefers K/T/X, avoids long vowels, low phonetic entropy…).
+- **A Language Genome** — the language's own DNA: consonant density, preferred vowels,
+  cadence, stress pattern, visual symmetry, entropy, mutation rate, emotional gravity,
+  evolution speed and signature endings.
+
+Every native-speaker word then arrives as a **Word Passport**:
 
 - **Meaning** — a concept-first idea the word was imagined to hold (not its etymology).
-- **Lineage** — the linguistic character and the language families it echoes.
+- **Phonetic Ancestry** — the species it belongs to and the families its sound descends
+  from (research-lab framing, never "inspired by").
+- **Word Genome** — the word's own evolution profile: parent language, generation,
+  mutation %, visual balance, originality, memorability, phonetic stability, evolution
+  distance.
 - **Emotional DNA** — measurable attributes (Premium, Scientific, Elegant, Trustworthy,
   Creative, Warm, Futuristic, Mystical, Playful…), each scored 0–100.
-- **Personality** — a handful of adjectives read off the emotional DNA.
-- **Pronunciation** — 1–5 stars per language (English, Spanish, Russian, Japanese, French).
-- **Difficulty** — easy to pronounce / remember / visually balanced.
-- **Brand Fit** — industries the word suits (AI, Medicine, Luxury, Finance, Wellness…)
-  and ones it doesn't (Toys, Fast food, Comedy…).
-- **Explain the word** — a plain-language rationale for the phonetic design choices.
-- **Origin story** — a believable account of how such a word might have evolved.
-- **Word Genome** — the measurable "genetic code" the whole passport is derived from.
+- **Personality**, **Pronunciation** (1–5 stars per language), **Difficulty**,
+  **Brand Fit**, an **explanation** and an **origin story**.
 
 ### Creative modes
 
@@ -63,35 +70,41 @@ or an interactive slider UI.
 
 | File | Responsibility |
 | --- | --- |
-| `types.ts` | The type system — the central **`WordGenome`**, plus `WordFamily` / `Lineage`. |
-| `data/archetypes.ts` | The **linguistic archetypes** — the engine's "species", each a self-contained sound world with its own phoneme inventory and emotional signature. |
+| `types.ts` | The type system — `WordGenome`, `LanguageGenome`, `WordEvolution`, `WordFamily`, `Ancestry`. |
+| `data/languages.ts` | The **languages** — the engine's "species", each a self-contained sound world with its own phoneme inventory, cadence, emotional signature, description and native characteristics. |
 | `data/ideas.ts` | Concept → idea vocabulary, so meanings state an idea rather than an etymology. |
 | `data/concepts.ts` | Keyword → concept map (the "internal semantic map"). |
-| `data/modes.ts` | Creative-mode profiles (bias which archetypes a run favours). |
+| `data/modes.ts` | Creative-mode profiles (bias which languages a run favours). |
 | `data/known-words.ts` | Blocklist for the novelty check. |
 | `concepts.ts` | **Meaning → Concept**: builds the weighted concept vector. |
 | `phonetics.ts` | Phonetic primitives — syllables, vowel ratio, clusters, pronounceability, symmetry. |
-| `genome.ts` | Computes a word's **Word Genome** and its quality score. |
-| `synth.ts` | **Linguistic Structure → Phonetics → Word**: synthesises masked, kin words inside an archetype (no visible root-gluing). |
-| `emotional.ts` | **Emotional Identity**: emotional DNA from archetype signature + concepts + genome. |
+| `genome.ts` | Computes a word's phonetic **Word Genome** and its quality score. |
+| `synth.ts` | **Word Evolution → Word**: synthesises diverse *native-speaker* words from a language's phonotactics (no root-gluing, real internal diversity). |
+| `language.ts` | Computes the **Language Genome** (from a sample) and each word's **evolution profile**. |
+| `emotional.ts` | **Emotional Identity**: emotional DNA from language signature + concepts + genome. |
 | `pronunciation.ts` | Cross-language pronounceability ratings. |
 | `brand.ts` | Brand / industry matching. |
-| `narrative.ts` | Concept-first meaning, explanation, story, lineage, personality, difficulty. |
-| `generator.ts` | Orchestrates the family-first pipeline (`generateFamilies`). |
+| `narrative.ts` | Concept-first meaning, explanation, story, phonetic ancestry, personality. |
+| `generator.ts` | Orchestrates the language-discovery pipeline (`generateFamilies`). |
 | `rng.ts` | Seeded RNG so results are deterministic and shareable. |
 
-The React UI in [`src/App.tsx`](src/App.tsx) and
-[`src/components/PassportCard.tsx`](src/components/PassportCard.tsx) is a thin,
-presentational layer over that engine.
+The React UI (`src/App.tsx`, `src/components/LanguageTree.tsx`,
+`LanguageSection.tsx`, `PassportCard.tsx`) is a thin, presentational layer over that
+engine.
 
-### Family-first generation
+### Discovering languages
 
-`generateFamilies()` scores every archetype against the concept map (boosted by the
-creative mode), takes the top *distinct* archetypes, and grows a kin family inside each.
-Because the archetypes sound genuinely different from one another, a single run reads as
-several new linguistic species rather than one repeated formula. Words are synthesised
-from an archetype's phoneme inventory — the source roots and languages only inspire the
-texture, they never surface as glued fragments.
+```
+Meaning → Concept → Emotional Identity → Language Discovery → Language Genome
+        → Language Rules → Word Evolution → Word
+```
+
+`generateFamilies()` scores every language against the concept map (boosted by the
+creative mode), takes the top *distinct* species, derives each one's Language Genome, and
+generates native-speaker words that obey it. Because the languages are genuinely different
+sound worlds, a run reads as several new linguistic species; and because words are drawn
+from a language's full phonotactics (varying length, rhythm and structure), they show
+real internal diversity while still sounding native to the same language.
 
 ### Why the genome is central
 

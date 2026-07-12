@@ -152,19 +152,45 @@ export interface BrandFit {
 }
 
 /**
- * A word's lineage — where it *feels* like it came from.
+ * Linguistic Ancestry — where a word's *sound* descends from.
  *
- * Roots and language families inspire the sound, but they must never show through
- * the surface (no "lum + iris" glue). So the passport exposes a lineage — the
- * linguistic character and the families it echoes — rather than its ingredients.
+ * The product framing is a research lab, not branding software: a word doesn't
+ * say "inspired by Greek and Latin", it declares its phonetic ancestry — the
+ * language families its sound evolved from. They inspire the texture only; no
+ * source ever shows through the surface.
  */
-export interface Lineage {
-  /** The linguistic character, e.g. "Crystalline", "Liquid", "Ancient". */
+export interface Ancestry {
+  /** The linguistic species, e.g. "Crystalline", "Liquid", "Ancient". */
   character: string
-  /** Language families whose phonetics inspired it (for flavour, not copying). */
+  /** The phonetic ancestry — families the sound evolved from. */
   families: LanguageFamily[]
-  /** A single sentence placing the word in its lineage. */
+  /** A single sentence placing the word in its ancestry. */
   note: string
+}
+
+/**
+ * A word's own genome — traits it inherits from and diverges within its parent
+ * language. This makes each word feel alive: a measured specimen of its species,
+ * with a generation, a mutation from the canonical form, and a distance travelled
+ * along the language's evolutionary path.
+ */
+export interface WordEvolution {
+  /** The language this word is a native speaker of. */
+  parentLanguage: string
+  /** Which generation of the language it belongs to (1 = closest to the root). */
+  generation: number
+  /** How far it has mutated from its language's canonical specimen (0–100%). */
+  mutation: number
+  /** Left/right visual balance of the written form (0–100). */
+  visualBalance: number
+  /** How novel the word is versus known vocabulary (0–100). */
+  originality: number
+  /** Estimated ease of recall (0–100). */
+  memorability: number
+  /** How stable/pronounceable the phonetics are (0–100). */
+  phoneticStability: number
+  /** Distance travelled from the language prototype along its path (0–1). */
+  evolutionDistance: number
 }
 
 /**
@@ -175,12 +201,14 @@ export interface Lineage {
 export interface WordPassport {
   /** The invented word, capitalised for display. */
   word: string
-  /** The linguistic family this word belongs to within its generation. */
+  /** The language this word is a native speaker of. */
   family: { id: string; name: string }
   /** Concept-first meaning — the idea the word was imagined to hold. */
   meaning: string
-  /** Where the word feels like it came from (character + families), not its parts. */
-  lineage: Lineage
+  /** Where the word's sound descends from — species + phonetic ancestry. */
+  ancestry: Ancestry
+  /** The word's own inherited genome / evolution profile. */
+  evolution: WordEvolution
   /** Measurable emotional attributes. */
   emotionalDNA: EmotionalDNA
   /** A handful of personality adjectives. */
@@ -195,27 +223,58 @@ export interface WordPassport {
   story: string
   /** A concept-first explanation of why the word exists. */
   explanation: string
-  /** The underlying genome, exposed for transparency and future tooling. */
+  /** The underlying phonetic genome, exposed for transparency and future tooling. */
   genome: WordGenome
 }
 
 /**
- * A linguistic family produced by a single generation.
+ * The Language Genome — a language's own measurable DNA.
  *
- * The core shift in the product: a generation doesn't return a flat list of
- * name variations — it discovers several distinct "linguistic species", each
- * with its own sound world, then grows kin words inside each.
+ * This describes the *language itself*, not any individual word: its phonotactic
+ * tendencies, cadence and rate of evolution. Words are then generated as native
+ * speakers that obey this genome.
+ */
+export interface LanguageGenome {
+  consonantDensity: 'Low' | 'Medium' | 'High'
+  /** The vowels the language reaches for most, e.g. "A / O". */
+  preferredVowels: string
+  cadence: 'Short' | 'Measured' | 'Flowing' | 'Irregular'
+  stressPattern: 'Initial' | 'Final' | 'Even'
+  /** Typical left/right symmetry of its written words (0–100). */
+  visualSymmetry: number
+  entropy: 'Low' | 'Medium' | 'High'
+  mutationRate: 'Low' | 'Medium' | 'High'
+  emotionalGravity: 'Low' | 'Medium' | 'High'
+  evolutionSpeed: 'Slow' | 'Medium' | 'Fast'
+  /** Signature word endings, e.g. ["-an", "-or", "-ix"]. */
+  preferredEndings: string[]
+}
+
+/**
+ * A linguistic species discovered by a single generation.
+ *
+ * The core shift in the product: a generation doesn't return name variations —
+ * it discovers whole *languages*. Each has a description, native characteristics
+ * and its own Language Genome; the words are native speakers of it.
  */
 export interface WordFamily {
-  /** Stable id for the family (its archetype id + index). */
+  /** Stable id for the language within this generation. */
   id: string
-  /** Display name for the family (its shared stem, e.g. "Kael-"). */
+  /** The language's name, e.g. "Crystalline". */
   name: string
-  /** The linguistic character of this family, e.g. "Crystalline". */
+  /** Same as `name`, kept for clarity at call sites. */
   character: string
-  /** The idea this family was grown around. */
+  /** A short account of the linguistic species. */
+  description: string
+  /** Bullet-point native traits of the language. */
+  nativeCharacteristics: string[]
+  /** The language's own measurable DNA. */
+  genome: LanguageGenome
+  /** The phonetic ancestry this language evolved from. */
+  ancestry: LanguageFamily[]
+  /** The idea this language was discovered around. */
   theme: string
-  /** The kin words in this family (2–3 variations that clearly belong together). */
+  /** The native-speaker words that prove the language exists. */
   words: WordPassport[]
 }
 

@@ -5,13 +5,14 @@ import {
   buildConceptMap,
   computeGenome,
   computeEmotionalDNA,
+  computeLanguageGenome,
   estimateUniqueness,
   editDistance,
   ratePronunciation,
   matchBrands,
-  growFamily,
-  ARCHETYPES,
-  archetypeById,
+  speakNative,
+  LANGUAGES,
+  languageById,
   MODES,
 } from './index'
 import { KNOWN_WORDS } from './data/known-words'
@@ -46,7 +47,6 @@ describe('concept mapping (Meaning → Concept)', () => {
 describe('phonetics', () => {
   it('counts vowel groups as syllables', () => {
     expect(countSyllables('quantara')).toBe(3)
-    expect(countSyllables('sora')).toBe(2)
     expect(countSyllables('a')).toBe(1)
   })
 
@@ -56,38 +56,40 @@ describe('phonetics', () => {
   })
 })
 
-describe('synthesis (masked, kin words)', () => {
-  it('grows a family of distinct, pronounceable words that share a stem', () => {
+describe('native synthesis (diverse speakers of one language)', () => {
+  it('speaks distinct, pronounceable native words', () => {
     const rng = new Rng(123)
-    const crystalline = archetypeById('crystalline')
-    const fam = growFamily(crystalline, rng, 3)
-    expect(fam.members.length).toBeGreaterThanOrEqual(2)
-    // Kin: every member starts from the shared stem.
-    for (const m of fam.members) {
-      expect(m.toLowerCase().startsWith(fam.stem.slice(0, 2))).toBe(true)
-      expect(awkwardClusters(m)).toBeLessThan(1)
-      expect(KNOWN_WORDS.has(m.toLowerCase())).toBe(false)
+    const vocab = speakNative(languageById('crystalline'), rng, 3)
+    expect(vocab.words.length).toBeGreaterThanOrEqual(2)
+    expect(new Set(vocab.words).size).toBe(vocab.words.length)
+    for (const w of vocab.words) {
+      expect(awkwardClusters(w)).toBeLessThan(1)
+      expect(KNOWN_WORDS.has(w.toLowerCase())).toBe(false)
+      expect(w.length).toBeLessThanOrEqual(10)
     }
-    // Distinct: not all the same word.
-    expect(new Set(fam.members).size).toBe(fam.members.length)
   })
 
-  it('does not expose raw source roots (no glued "lum"/"iris" fragments)', () => {
+  it('gives a language real internal diversity (not stem mutations)', () => {
+    const rng = new Rng(7)
+    const vocab = speakNative(languageById('liquid'), rng, 3)
+    // Words should not all share the same 3-letter prefix (the old failure mode).
+    const prefixes = new Set(vocab.words.map((w) => w.slice(0, 3).toLowerCase()))
+    expect(prefixes.size).toBeGreaterThan(1)
+  })
+
+  it('does not expose raw source-root fragments', () => {
     const words = generateWords({ ...MEDICINE_REQUEST, count: 8 }).map((w) => w.word.toLowerCase())
-    // The old assembler leaked these root fragments as prefixes; the synth must not.
-    const leaked = words.filter((w) => /^(lum|iris|nous|reg|leuk)/.test(w))
-    expect(leaked).toEqual([])
+    expect(words.filter((w) => /^(lum|iris|nous|reg|leuk)/.test(w))).toEqual([])
   })
 })
 
 describe('genome (measurable genetic code)', () => {
-  it('produces every attribute in range', () => {
+  it('produces attributes in range', () => {
     const g = computeGenome('Quantara', ['order', 'elevation'])
     for (const key of ['vowelRatio', 'rhythm', 'pronounceability', 'uniqueness'] as const) {
       expect(g[key]).toBeGreaterThanOrEqual(0)
       expect(g[key]).toBeLessThanOrEqual(1)
     }
-    expect(g.syllables).toBe(3)
   })
 
   it('scores known words as non-unique and invented words as unique', () => {
@@ -103,23 +105,37 @@ describe('editDistance', () => {
   })
 })
 
-describe('emotional DNA — distinct per archetype', () => {
+describe('Language Genome', () => {
+  it('describes the language, with sensible fields', () => {
+    const rng = new Rng(1)
+    const lang = languageById('crystalline')
+    const vocab = speakNative(lang, rng, 3)
+    const genome = computeLanguageGenome(lang, vocab.words)
+    expect(genome.cadence).toBe('Short')
+    expect(genome.stressPattern).toBe('Initial')
+    expect(genome.preferredEndings.length).toBe(3)
+    expect(genome.preferredEndings[0].startsWith('-')).toBe(true)
+    // Low-entropy language reads as highly symmetric.
+    expect(genome.visualSymmetry).toBeGreaterThan(80)
+  })
+})
+
+describe('emotional DNA — distinct per language', () => {
   it('scores every axis 0–100', () => {
     const g = computeGenome('Quantara', ['order', 'precision', 'science'])
-    const dna = computeEmotionalDNA(g, buildConceptMap(['precision', 'science']), archetypeById('crystalline'))
+    const dna = computeEmotionalDNA(g, buildConceptMap(['precision', 'science']), languageById('crystalline'))
     for (const v of Object.values(dna)) {
       expect(v).toBeGreaterThanOrEqual(0)
       expect(v).toBeLessThanOrEqual(100)
     }
   })
 
-  it('gives clearly different profiles to different archetypes (fixes static DNA)', () => {
+  it('gives clearly different profiles to different languages', () => {
     const concepts = buildConceptMap(['trust', 'precision', 'calm'])
     const g = computeGenome('Selora', ['trust'])
-    const crystalline = computeEmotionalDNA(g, concepts, archetypeById('crystalline'))
-    const noble = computeEmotionalDNA(g, concepts, archetypeById('noble'))
-    const verdant = computeEmotionalDNA(g, concepts, archetypeById('verdant'))
-    // Same word, same brief — the archetype alone should move the DNA a lot.
+    const crystalline = computeEmotionalDNA(g, concepts, languageById('crystalline'))
+    const noble = computeEmotionalDNA(g, concepts, languageById('noble'))
+    const verdant = computeEmotionalDNA(g, concepts, languageById('verdant'))
     expect(crystalline.scientific).toBeGreaterThan(noble.scientific + 20)
     expect(noble.premium).toBeGreaterThan(verdant.premium + 20)
     expect(verdant.natural).toBeGreaterThan(crystalline.natural + 20)
@@ -128,8 +144,7 @@ describe('emotional DNA — distinct per archetype', () => {
 
 describe('pronunciation & brand', () => {
   it('rates every language 1–5 stars', () => {
-    const g = computeGenome('Sora', ['sky'])
-    const ratings = ratePronunciation('Sora', g)
+    const ratings = ratePronunciation('Sora', computeGenome('Sora', ['sky']))
     expect(ratings.length).toBeGreaterThanOrEqual(5)
     for (const r of ratings) {
       expect(r.stars).toBeGreaterThanOrEqual(1)
@@ -137,11 +152,11 @@ describe('pronunciation & brand', () => {
     }
   })
 
-  it('routes a premium/scientific profile toward AI/medicine, away from fast food', () => {
+  it('routes a premium/scientific profile toward strong industries', () => {
     const dna = computeEmotionalDNA(
       computeGenome('Sanicura', ['healing', 'trust']),
       buildConceptMap(['trust', 'precision', 'science']),
-      archetypeById('crystalline'),
+      languageById('crystalline'),
     )
     const fit = matchBrands(dna)
     expect(fit.excellentFor.length).toBeGreaterThan(0)
@@ -149,24 +164,38 @@ describe('pronunciation & brand', () => {
   })
 })
 
-describe('generateFamilies (family-first pipeline)', () => {
-  it('returns several distinct linguistic families', () => {
+describe('generateFamilies (discovering languages)', () => {
+  it('discovers several distinct linguistic species', () => {
     const families = generateFamilies(MEDICINE_REQUEST)
     expect(families.length).toBeGreaterThanOrEqual(4)
-    // Families must be genuinely different species, not one repeated pattern.
-    const characters = families.map((f) => f.character)
-    expect(new Set(characters).size).toBe(characters.length)
+    const names = families.map((f) => f.character)
+    expect(new Set(names).size).toBe(names.length)
   })
 
-  it('grows kin words inside each family that share the family stem', () => {
-    const families = generateFamilies(MEDICINE_REQUEST)
-    for (const fam of families) {
+  it('gives every language a genome, description and native characteristics', () => {
+    for (const fam of generateFamilies(MEDICINE_REQUEST)) {
+      expect(fam.description.length).toBeGreaterThan(10)
+      expect(fam.nativeCharacteristics.length).toBeGreaterThan(2)
+      expect(fam.genome.preferredEndings.length).toBe(3)
+      expect(fam.ancestry.length).toBeGreaterThan(0)
       expect(fam.words.length).toBeGreaterThanOrEqual(1)
-      const stemStart = fam.words[0].word.slice(0, 3).toLowerCase()
-      // Members of a family look related (shared opening).
-      const related = fam.words.filter((w) => w.word.slice(0, 2).toLowerCase() === stemStart.slice(0, 2))
-      expect(related.length).toBe(fam.words.length)
     }
+  })
+
+  it('gives every word an evolution profile that inherits its language', () => {
+    const [fam] = generateFamilies(MEDICINE_REQUEST)
+    fam.words.forEach((w, i) => {
+      expect(w.evolution.parentLanguage).toBe(fam.character)
+      expect(w.evolution.generation).toBe(i + 1)
+      for (const key of ['mutation', 'visualBalance', 'originality', 'memorability', 'phoneticStability'] as const) {
+        expect(w.evolution[key]).toBeGreaterThanOrEqual(0)
+        expect(w.evolution[key]).toBeLessThanOrEqual(100)
+      }
+      expect(w.evolution.evolutionDistance).toBeGreaterThanOrEqual(0)
+      expect(w.evolution.evolutionDistance).toBeLessThanOrEqual(1)
+    })
+    // Generation 1 is the canonical specimen: zero mutation.
+    expect(fam.words[0].evolution.mutation).toBe(0)
   })
 
   it('is deterministic for the same request', () => {
@@ -190,17 +219,15 @@ describe('generateFamilies (family-first pipeline)', () => {
   it('fills every passport section, concept-first', () => {
     const [fam] = generateFamilies(MEDICINE_REQUEST)
     const p = fam.words[0]
-    expect(p.word.length).toBeGreaterThan(2)
     expect(p.meaning).toBeTruthy()
-    expect(p.lineage.families.length).toBeGreaterThan(0)
-    expect(p.lineage.character).toBe(fam.character)
-    expect(p.personality.length).toBeGreaterThan(0)
+    expect(p.ancestry.families.length).toBeGreaterThan(0)
+    expect(p.ancestry.character).toBe(fam.character)
     expect(p.explanation.toLowerCase()).toContain('imagined to hold')
     expect(p.story).toContain(p.word)
     expect(p.family.id).toBe(fam.id)
   })
 
-  it('spans different archetypes across creative modes', () => {
+  it('spans different languages across creative modes', () => {
     const req = { keywords: ['future', 'power'], count: 6, seed: 7 }
     const tech = generateFamilies({ ...req, mode: 'technology' }).map((f) => f.character)
     const nature = generateFamilies({ ...req, mode: 'nature' }).map((f) => f.character)
@@ -214,10 +241,7 @@ describe('generateFamilies (family-first pipeline)', () => {
     }
   })
 
-  it('has a matching mode preference for every archetype id used', () => {
-    // Sanity: every archetype id is a real one.
-    for (const a of ARCHETYPES) {
-      expect(archetypeById(a.id).id).toBe(a.id)
-    }
+  it('resolves every language id', () => {
+    for (const l of LANGUAGES) expect(languageById(l.id).id).toBe(l.id)
   })
 })

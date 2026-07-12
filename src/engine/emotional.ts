@@ -5,7 +5,7 @@ import type {
   EmotionalDNA,
   WordGenome,
 } from './types'
-import type { Archetype } from './data/archetypes'
+import type { Language } from './data/languages'
 import { clamp01 } from './phonetics'
 
 /**
@@ -62,12 +62,12 @@ const AXES: EmotionalAxis[] = [
 export function computeEmotionalDNA(
   genome: WordGenome,
   concepts: ConceptVector,
-  archetype: Archetype,
+  language: Language,
 ): EmotionalDNA {
   const dna = Object.fromEntries(AXES.map((a) => [a, 0])) as EmotionalDNA
 
-  // 1) Archetype signature — the dominant, family-defining term.
-  for (const [axis, amount] of Object.entries(archetype.emotion) as [EmotionalAxis, number][]) {
+  // 1) Language signature — the dominant, species-defining term.
+  for (const [axis, amount] of Object.entries(language.emotion) as [EmotionalAxis, number][]) {
     dna[axis] += amount * 0.9
   }
 

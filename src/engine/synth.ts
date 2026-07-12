@@ -1,125 +1,117 @@
-import type { Archetype } from './data/archetypes'
+import type { Language } from './data/languages'
 import { KNOWN_WORDS } from './data/known-words'
 import { Rng } from './rng'
 import { awkwardClusters, isVowel, normalise } from './phonetics'
 
 /**
- * Word synthesis.
+ * Native-speaker word synthesis.
  *
- * Replaces the old "glue two roots" assembler. A word is grown *inside* an
- * archetype from its phoneme inventory, so nothing of the source roots shows
- * through — the word reads as discovered, not assembled.
- *
- * A family shares a **stem** (its first syllable or two) and differs only in the
- * tail, so its members are unmistakably kin — Kael·on, Kael·ith, Kael·or — while
- * different archetypes yield stems that sound nothing alike.
+ * Words are generated as native speakers of a language: each is assembled from
+ * the language's own phoneme inventory and obeys its cadence, so the whole set
+ * shares a sound world without being stem-mutations of one another. Internal
+ * diversity comes from varying syllable counts, coda presence and endings —
+ * "words a native speaker would naturally coin", not "Kaix / Kaon / Kaint".
  */
-export interface SynthFamily {
-  /** The shared stem, lowercased (e.g. "kael"). */
-  stem: string
-  /** The kin words, capitalised (e.g. ["Kaelon", "Kaelith", "Kaelor"]). */
-  members: string[]
+export interface NativeVocabulary {
+  /** Distinct native words, capitalised. */
+  words: string[]
+  /** The language's canonical minimal specimen (for evolution distance). */
+  prototype: string
 }
 
-/** Grow one family: a shared stem plus `size` distinct, pronounceable kin words. */
-export function growFamily(a: Archetype, rng: Rng, size = 3): SynthFamily {
-  // Try a few stems; keep the first that yields enough good members.
-  for (let attempt = 0; attempt < 6; attempt++) {
-    const stem = buildStem(a, rng)
-    const members = growMembers(a, stem, rng, size)
-    if (members.length >= Math.min(2, size)) {
-      return { stem, members }
-    }
-  }
-  // Fallback: a minimal stem with whatever members we can grow.
-  const stem = buildStem(a, rng)
-  return { stem, members: growMembers(a, stem, rng, size) }
-}
-
-/** A stem is one syllable, sometimes closed with a consonant: on·set + nucleus (+ coda). */
-function buildStem(a: Archetype, rng: Rng): string {
-  const onset = rng.pick(a.onsets)
-  const nucleus = rng.pick(a.nuclei)
-  let stem = onset + nucleus
-  // Some onsets already carry a vowel (e.g. "sol", "ae"); avoid vowel pile-ups.
-  if (isVowel(onset[onset.length - 1]) && isVowel(nucleus[0])) {
-    stem = onset + nucleus.slice(1)
-  }
-  if (rng.next() < a.codaBias) {
-    stem += rng.pick(a.codas)
-  }
-  return tidy(stem)
-}
-
-/** Grow `size` distinct kin words from a stem by attaching different tails. */
-function growMembers(a: Archetype, stem: string, rng: Rng, size: number): string[] {
-  const endings = rng.shuffle(a.endings)
-  const out: string[] = []
+/** Speak `count` distinct native words of a language. */
+export function speakNative(lang: Language, rng: Rng, count: number): NativeVocabulary {
+  const words: string[] = []
   const seen = new Set<string>()
-  // Members must open with the family's shared stem so they read as kin.
-  const cohesion = stem.slice(0, Math.min(2, stem.length))
+  const prototype = buildPrototype(lang)
 
-  const tryAdd = (raw: string) => {
+  let guard = 0
+  while (words.length < count && guard++ < count * 12) {
+    const raw = generateWord(lang, rng)
     const word = tidy(raw)
     const key = word.toLowerCase()
     if (
       key.length >= 4 &&
       key.length <= 10 &&
-      key.startsWith(cohesion) &&
       !seen.has(key) &&
       !KNOWN_WORDS.has(key) &&
-      awkwardClusters(word) < 1
+      awkwardClusters(word) < 1 &&
+      hasVowel(word)
     ) {
       seen.add(key)
-      out.push(capitalise(word))
-      return true
+      words.push(capitalise(word))
     }
-    return false
   }
-
-  // Most members: stem + a distinct ending.
-  for (const ending of endings) {
-    if (out.length >= size) break
-    tryAdd(attach(stem, ending, a, rng))
-  }
-
-  // If we still need variety, grow a longer, two-syllable variant.
-  let guard = 0
-  while (out.length < size && guard++ < 8) {
-    const bridge = rng.pick(a.nuclei)
-    const extended = attach(stem, bridge + rng.pick(a.codas), a, rng)
-    tryAdd(attach(extended, rng.pick(endings), a, rng))
-  }
-
-  return out
+  return { words, prototype }
 }
 
-/** Attach a tail to a stem with euphony rules, so the seam never sounds bolted on. */
-function attach(stem: string, tail: string, a: Archetype, rng: Rng): string {
-  const stemVowel = isVowel(stem[stem.length - 1])
-  const tailVowel = isVowel(tail[0])
-
-  if (stemVowel && tailVowel) {
-    // vowel + vowel: drop the tail's leading vowel(s) so the *stem* survives
-    // intact and the family stays cohesive (ya + ith → yath, ya + iel → yael).
-    const trimmed = tail.replace(/^[aeiouyë-ü]+/, '')
-    if (trimmed.length >= 2) return stem + trimmed
-    // Tail was mostly vowels: drop the stem's final vowel as a fallback.
-    return stem.slice(0, -1) + tail
-  }
-  if (!stemVowel && !tailVowel) {
-    // consonant + consonant: bridge with a light vowel from the archetype.
-    return stem + rng.pick(a.nuclei)[0] + tail
-  }
-  return stem + tail
+/** The language's canonical, minimal word — its evolutionary "root form". */
+function buildPrototype(lang: Language): string {
+  const stem = lang.onsets[0] + lang.nuclei[0]
+  return tidy(stem + lang.endings[0])
 }
 
-/** Collapse triple letters and strip stray characters. */
+/** Assemble one native word from the language's phonotactics. */
+function generateWord(lang: Language, rng: Rng): string {
+  const [min, max] = lang.syllables
+  const sylCount = min + rng.int(max - min + 1)
+
+  let word = ''
+  for (let i = 0; i < sylCount; i++) {
+    const first = i === 0
+    const onset = rng.pick(first ? lang.onsets : lang.medials)
+    const nucleus = rng.pick(lang.nuclei)
+    const wantCoda = i < sylCount - 1 || rng.next() < lang.codaBias
+    const coda = wantCoda && rng.next() < lang.codaBias ? rng.pick(lang.codas) : ''
+    word = joinSyllable(word, onset, nucleus, coda)
+  }
+
+  // Sometimes finish on a signature ending instead of the last raw coda.
+  if (rng.next() < lang.endingBias) {
+    word = attachEnding(word, rng.pick(lang.endings), lang, rng)
+  }
+  return word
+}
+
+/** Append a syllable (onset+nucleus+coda) to the word so far, smoothing seams. */
+function joinSyllable(word: string, onset: string, nucleus: string, coda: string): string {
+  let piece = onset + nucleus + coda
+  if (word === '') return piece
+
+  const prev = word[word.length - 1]
+  const next = piece[0]
+  // vowel meeting vowel: drop the incoming leading vowel.
+  if (isVowel(prev) && isVowel(next)) {
+    piece = piece.replace(/^[aeiouyë-ü]+/, '') || piece
+  }
+  // onset was itself vowel-led (e.g. "ae"): avoid a wall of vowels.
+  return word + piece
+}
+
+/** Attach a signature ending with euphony (keeps the word pronounceable). */
+function attachEnding(word: string, ending: string, lang: Language, rng: Rng): string {
+  const wordVowel = isVowel(word[word.length - 1])
+  const endVowel = isVowel(ending[0])
+  if (wordVowel && endVowel) {
+    const trimmed = ending.replace(/^[aeiouyë-ü]+/, '')
+    return trimmed.length >= 2 ? word + trimmed : word.slice(0, -1) + ending
+  }
+  if (!wordVowel && !endVowel) {
+    return word + rng.pick(lang.nuclei)[0] + ending
+  }
+  return word + ending
+}
+
+function hasVowel(word: string): boolean {
+  return [...word].some(isVowel)
+}
+
+/** Collapse triple letters, doubled vowels and stray characters. */
 function tidy(word: string): string {
   return normalise(word)
     .replace(/[^a-zë-ü]/gi, '')
     .replace(/(.)\1\1+/g, '$1$1')
-    .replace(/(.)\1/g, (m, c: string) => (isVowel(c) ? c : m)) // no doubled vowels
+    .replace(/(.)\1/g, (m, c: string) => (isVowel(c) ? c : m))
 }
 
 function capitalise(word: string): string {

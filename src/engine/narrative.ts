@@ -1,21 +1,21 @@
 import type {
+  Ancestry,
   Concept,
   EmotionalDNA,
   LanguageFamily,
-  Lineage,
   WordGenome,
 } from './types'
-import type { Archetype } from './data/archetypes'
+import type { Language } from './data/languages'
 import { IDEAS } from './data/ideas'
 import { dominantEmotions } from './emotional'
 
 /**
- * The "explain the word" layer — rebuilt so meaning leads and etymology recedes.
+ * The "explain the word" layer — meaning leads, ancestry reads like research.
  *
- * The old version narrated ingredients ("the light that gives rise to rainbow").
- * These functions instead state the *idea* a word was imagined to hold, drawn
- * from the concept map, and only then place it in a lineage. The concept always
- * comes before the origin.
+ * The framing is a linguistic laboratory, not branding software: a word doesn't
+ * say "inspired by Greek and Latin", it states its *phonetic ancestry* — the
+ * families its sound descends from — and the idea it was discovered to carry.
+ * The concept always comes before the ancestry.
  */
 
 const FAMILY_LABEL: Record<LanguageFamily, string> = {
@@ -29,6 +29,10 @@ const FAMILY_LABEL: Record<LanguageFamily, string> = {
   arabic: 'Arabic',
   hebrew: 'Hebrew',
   finnish: 'Finnish',
+}
+
+export function familyLabel(family: LanguageFamily): string {
+  return FAMILY_LABEL[family]
 }
 
 /** A concept-first, one-line meaning — the idea the word holds. */
@@ -45,40 +49,35 @@ export function buildMeaning(lead: Concept, support?: Concept): string {
 export function buildExplanation(
   lead: Concept,
   support: Concept | undefined,
-  archetype: Archetype,
+  language: Language,
 ): string {
   const idea =
     support && support !== lead
       ? `${IDEAS[lead].active}, in service of ${IDEAS[support].noun}`
       : IDEAS[lead].active
-  const structure = archetype.sharpness > 0.55
-    ? `Its ${archetype.character.toLowerCase()} structure gives the idea a precise, engineered edge`
-    : `Its ${archetype.character.toLowerCase()} structure lets the idea read as calm and human rather than clinical`
+  const structure = language.sharpness > 0.55
+    ? `Its ${language.character} phonology gives the idea a precise, engineered edge`
+    : `Its ${language.character} phonology lets the idea read as calm and human rather than clinical`
   return `A word imagined to hold ${IDEAS[lead].noun}: ${idea}. ${structure}.`
 }
 
 /** A believable account of how such a word might have evolved. */
-export function buildStory(
-  word: string,
-  lead: Concept,
-  archetype: Archetype,
-): string {
+export function buildStory(word: string, lead: Concept, language: Language): string {
   return (
-    `Though ${word} has never been spoken before, it carries itself like a word ` +
-    `with a past. It belongs to a ${archetype.character} lineage — ${lowerFirst(archetype.feel)} — ` +
-    `and settles around ${IDEAS[lead].essence}. Said aloud a few times, it feels ` +
-    `less invented than remembered.`
+    `Though ${word} has never been spoken before, it carries itself like a native ` +
+    `word of a real language. It descends from the ${language.character} species — ` +
+    `${lowerFirst(language.feel)} — and settles around ${IDEAS[lead].essence}. Said ` +
+    `aloud a few times, it feels less invented than remembered.`
   )
 }
 
-/** Where the word feels like it came from — character + families, never ingredients. */
-export function buildLineage(lead: Concept, archetype: Archetype): Lineage {
-  const families = archetype.families.map((f) => FAMILY_LABEL[f])
-  const familyPhrase = joinList(families)
+/** Phonetic ancestry — species + families the sound descends from, never ingredients. */
+export function buildAncestry(lead: Concept, language: Language): Ancestry {
+  const families = language.families.map((f) => FAMILY_LABEL[f])
   return {
-    character: archetype.character,
-    families: archetype.families,
-    note: `A ${archetype.character}-lineage word, echoing ${familyPhrase} phonetics — shaped around ${IDEAS[lead].essence}.`,
+    character: language.character,
+    families: language.families,
+    note: `${language.character} — phonetic ancestry ${joinList(families)}, evolved around ${IDEAS[lead].essence}.`,
   }
 }
 

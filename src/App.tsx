@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { generateFamilies, MODES, type CreativeMode, type WordFamily } from './engine'
-import { PassportCard } from './components/PassportCard'
+import { LanguageSection } from './components/LanguageSection'
+import { LanguageTree } from './components/LanguageTree'
 import { Logo } from './components/Logo'
 
 /** Suggested keyword chips — a quick way to seed the concept map. */
@@ -47,6 +48,14 @@ export default function App() {
     })
     setResults(families)
     setNonce((n) => n + 1)
+  }
+
+  function scrollToWord(word: string) {
+    const el = document.getElementById(`word-${word}`)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('flash')
+    window.setTimeout(() => el.classList.remove('flash'), 1200)
   }
 
   const canRun = allKeywords.length > 0 || brief.trim().length > 0
@@ -178,24 +187,16 @@ export default function App() {
       ) : (
         <section className="results" key={nonce}>
           <div className="results-head">
-            <h2>{results.length} linguistic families discovered</h2>
+            <h2>{results.length} linguistic species discovered</h2>
             <span className="muted">
-              {results.reduce((n, f) => n + f.words.length, 0)} words · {MODES[mode].label} mode
+              {results.reduce((n, f) => n + f.words.length, 0)} native words · {MODES[mode].label} mode
             </span>
           </div>
+
+          <LanguageTree families={results} onPick={scrollToWord} />
+
           {results.map((fam) => (
-            <div className="family" key={fam.id}>
-              <div className="family-head">
-                <span className="family-char">{fam.character}</span>
-                <span className="family-name">{fam.name}</span>
-                <span className="family-theme">grown around {fam.theme}</span>
-              </div>
-              <div className="grid">
-                {fam.words.map((p) => (
-                  <PassportCard p={p} key={p.word} />
-                ))}
-              </div>
-            </div>
+            <LanguageSection fam={fam} key={fam.id} />
           ))}
         </section>
       )}

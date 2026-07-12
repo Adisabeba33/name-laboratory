@@ -6,27 +6,28 @@ import type {
   WordFamily,
   WordPassport,
 } from './types'
-import { ARCHETYPES, type Archetype } from './data/archetypes'
+import { LANGUAGES, type Language } from './data/languages'
 import { DEFAULT_MODE } from './data/modes'
 import { buildConceptMap, topConcepts } from './concepts'
 import { Rng, hashSeed } from './rng'
-import { growFamily } from './synth'
+import { speakNative } from './synth'
 import { computeGenome } from './genome'
 import { computeEmotionalDNA } from './emotional'
+import { computeLanguageGenome, computeWordEvolution } from './language'
 import { ratePronunciation } from './pronunciation'
 import { matchBrands } from './brand'
 import { IDEAS } from './data/ideas'
 import {
+  buildAncestry,
   buildDifficulty,
   buildExplanation,
-  buildLineage,
   buildMeaning,
   buildPersonality,
   buildStory,
 } from './narrative'
 
-/** Which archetypes a creative mode leans toward (a soft boost, not a lock). */
-const MODE_ARCHETYPES: Record<CreativeMode, string[]> = {
+/** Which languages a creative mode leans toward (a soft boost, not a lock). */
+const MODE_LANGUAGES: Record<CreativeMode, string[]> = {
   minimal: ['liquid', 'crystalline'],
   luxury: ['noble', 'solar'],
   scientific: ['crystalline'],
@@ -43,19 +44,19 @@ const MODE_ARCHETYPES: Record<CreativeMode, string[]> = {
   timeless: ['noble', 'ancient', 'liquid'],
 }
 
-const WORDS_PER_FAMILY = 3
+const WORDS_PER_LANGUAGE = 3
 
 /**
- * The laboratory's front door — now family-first.
+ * The laboratory's front door — now it discovers *languages*.
  *
- * A generation doesn't return a flat list of near-identical names. It selects
- * several *distinct* linguistic archetypes that resonate with the brief, then
- * grows a small family of kin words inside each. The result reads as several
- * new linguistic species discovered at once.
+ * A generation selects several distinct linguistic species that resonate with
+ * the brief, gives each a Language Genome, then generates native-speaker words
+ * that obey it. Each word is a living specimen — a generation, a mutation, a
+ * distance travelled along its language's evolutionary path.
  */
 export function generateFamilies(request: GenerationRequest): WordFamily[] {
   const mode: CreativeMode = request.mode ?? DEFAULT_MODE
-  const familyCount = Math.max(3, Math.min(8, request.count ?? 6))
+  const languageCount = Math.max(3, Math.min(8, request.count ?? 6))
 
   // Step 1 — Meaning → Concept.
   const concepts = buildConceptMap(request.keywords, request.brief)
@@ -66,31 +67,38 @@ export function generateFamilies(request: GenerationRequest): WordFamily[] {
     hashSeed(`${request.keywords.join(',')}|${request.brief ?? ''}|${mode}`)
   const rng = new Rng(seed)
 
-  // Step 2 — choose a diverse set of archetypes (the "species").
-  const chosen = selectArchetypes(concepts, mode, familyCount, rng)
+  // Step 2 — Language Discovery: choose distinct species.
+  const chosen = selectLanguages(concepts, mode, languageCount, rng)
 
-  // Step 3 — grow a kin family inside each archetype.
+  // Step 3 — for each language, derive its genome and generate native words.
   const families: WordFamily[] = []
   const seenWords = new Set<string>()
 
-  chosen.forEach((archetype, i) => {
-    const { lead, support } = pickConcepts(archetype, concepts, leadConcepts)
-    const grown = growFamily(archetype, rng, WORDS_PER_FAMILY)
+  chosen.forEach((language, i) => {
+    const { lead, support } = pickConcepts(language, concepts, leadConcepts)
+    const vocab = speakNative(language, rng, WORDS_PER_LANGUAGE)
+    const fresh = vocab.words.filter((w) => {
+      const key = w.toLowerCase()
+      if (seenWords.has(key)) return false
+      seenWords.add(key)
+      return true
+    })
+    if (fresh.length === 0) return
 
-    const words = grown.members
-      .filter((w) => {
-        const key = w.toLowerCase()
-        if (seenWords.has(key)) return false
-        seenWords.add(key)
-        return true
-      })
-      .map((w) => buildPassport(w, archetype, i, grown.stem, lead, support, concepts))
+    const languageGenome = computeLanguageGenome(language, fresh)
+    const reference = fresh[0]
+    const words = fresh.map((w, gen) =>
+      buildPassport(w, language, i, lead, support, concepts, gen + 1, reference, vocab.prototype),
+    )
 
-    if (words.length === 0) return
     families.push({
-      id: `${archetype.id}-${i}`,
-      name: cap(grown.stem) + '‑',
-      character: archetype.character,
+      id: `${language.id}-${i}`,
+      name: language.character,
+      character: language.character,
+      description: language.description,
+      nativeCharacteristics: language.nativeCharacteristics,
+      genome: languageGenome,
+      ancestry: language.families,
       theme: IDEAS[lead].noun,
       words,
     })
@@ -99,94 +107,83 @@ export function generateFamilies(request: GenerationRequest): WordFamily[] {
   return families
 }
 
-/**
- * Backwards-compatible flat list of passports, if a caller just wants words.
- * The UI uses {@link generateFamilies}; this keeps the engine easy to embed.
- */
+/** Backwards-compatible flat list of passports. */
 export function generateWords(request: GenerationRequest): WordPassport[] {
   return generateFamilies(request).flatMap((f) => f.words)
 }
 
-/** Assemble a full Word Passport for one synthesised word. */
+/** Assemble a full Word Passport for one native-speaker word. */
 export function buildPassport(
   word: string,
-  archetype: Archetype,
-  familyIndex: number,
-  stem: string,
+  language: Language,
+  languageIndex: number,
   lead: Concept,
   support: Concept | undefined,
   concepts: ConceptVector,
+  generation: number,
+  reference: string,
+  prototype: string,
 ): WordPassport {
   const usedConcepts = support && support !== lead ? [lead, support] : [lead]
   const genome = computeGenome(word, usedConcepts)
-  const emotionalDNA = computeEmotionalDNA(genome, concepts, archetype)
+  const emotionalDNA = computeEmotionalDNA(genome, concepts, language)
+  const evolution = computeWordEvolution(word, genome, language, generation, reference, prototype)
 
   return {
     word,
-    family: { id: `${archetype.id}-${familyIndex}`, name: cap(stem) + '‑' },
+    family: { id: `${language.id}-${languageIndex}`, name: language.character },
     meaning: buildMeaning(lead, support),
-    lineage: buildLineage(lead, archetype),
+    ancestry: buildAncestry(lead, language),
+    evolution,
     emotionalDNA,
     personality: buildPersonality(emotionalDNA),
     pronunciation: ratePronunciation(word, genome),
     difficulty: buildDifficulty(genome),
     brandFit: matchBrands(emotionalDNA),
-    story: buildStory(word, lead, archetype),
-    explanation: buildExplanation(lead, support, archetype),
+    story: buildStory(word, lead, language),
+    explanation: buildExplanation(lead, support, language),
     genome,
   }
 }
 
 /**
- * Pick a diverse set of archetypes for this brief. Each archetype is scored by
- * how well its concepts resonate with the concept map, boosted by the creative
- * mode. We then take the top distinct archetypes — because the archetypes are
- * inherently different, the resulting families sound nothing alike.
+ * Choose a diverse set of languages for this brief. Each is scored by how well
+ * its concepts resonate with the concept map, boosted by the creative mode. The
+ * top distinct species are taken — because the languages are inherently
+ * different sound worlds, the discovered set sounds nothing alike.
  */
-function selectArchetypes(
+function selectLanguages(
   concepts: ConceptVector,
   mode: CreativeMode,
   count: number,
   rng: Rng,
-): Archetype[] {
-  const modeFavourites = new Set(MODE_ARCHETYPES[mode] ?? [])
-  const ranked = ARCHETYPES.map((a) => {
-    const resonance = a.concepts.reduce((sum, c) => sum + (concepts[c] ?? 0), 0)
-    const modeBoost = modeFavourites.has(a.id) ? 0.6 : 0
+): Language[] {
+  const favourites = new Set(MODE_LANGUAGES[mode] ?? [])
+  const ranked = LANGUAGES.map((l) => {
+    const resonance = l.concepts.reduce((sum, c) => sum + (concepts[c] ?? 0), 0)
+    const modeBoost = favourites.has(l.id) ? 0.6 : 0
     const jitter = rng.next() * 0.25
-    return { archetype: a, score: resonance + modeBoost + jitter }
+    return { language: l, score: resonance + modeBoost + jitter }
   }).sort((x, y) => y.score - x.score)
 
-  return ranked.slice(0, Math.min(count, ARCHETYPES.length)).map((r) => r.archetype)
+  return ranked.slice(0, Math.min(count, LANGUAGES.length)).map((r) => r.language)
 }
 
-/**
- * Choose the idea a family is grown around: a lead concept the archetype
- * resonates with, plus a distinct supporting concept from the brief.
- */
+/** Choose the idea a language is discovered around: a lead + distinct support. */
 function pickConcepts(
-  archetype: Archetype,
+  language: Language,
   concepts: ConceptVector,
   leadConcepts: Concept[],
 ): { lead: Concept; support?: Concept } {
-  // Lead: the brief's strongest concept this archetype can naturally carry.
   const lead =
-    leadConcepts.find((c) => archetype.concepts.includes(c)) ??
-    archetype.concepts.find((c) => (concepts[c] ?? 0) > 0) ??
-    archetype.concepts[0]
+    leadConcepts.find((c) => language.concepts.includes(c)) ??
+    language.concepts.find((c) => (concepts[c] ?? 0) > 0) ??
+    language.concepts[0]
 
-  // Support: prefer another concept this archetype resonates with (keeps the
-  // pairing on-theme and, because it differs per archetype, stops every family
-  // from reading "meeting <the same concept>"). Fall back to the brief's next
-  // strongest concept, then to a second archetype concept.
   const support =
-    leadConcepts.find((c) => c !== lead && archetype.concepts.includes(c)) ??
+    leadConcepts.find((c) => c !== lead && language.concepts.includes(c)) ??
     leadConcepts.find((c) => c !== lead) ??
-    archetype.concepts.find((c) => c !== lead)
+    language.concepts.find((c) => c !== lead)
 
   return { lead, support }
-}
-
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1)
 }

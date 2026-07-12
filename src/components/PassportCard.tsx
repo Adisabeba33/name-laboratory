@@ -25,11 +25,31 @@ function Stars({ n }: { n: number }) {
 export function PassportCard({ p }: { p: WordPassport }) {
   const topDNA = DNA_ORDER.filter((axis) => p.emotionalDNA[axis] >= 8).slice(0, 8)
 
+  const e = p.evolution
   return (
-    <article className="passport">
-      <div className="word">{p.word}</div>
+    <article className="passport" id={`word-${p.word}`}>
+      <div className="word-row">
+        <div className="word">{p.word}</div>
+        <span className="gen-badge" title="Generation within its language">
+          gen {e.generation}
+        </span>
+      </div>
       <div className="meaning">“{p.meaning}”</div>
-      <div className="origin">{p.lineage.note}</div>
+      <div className="origin">{p.ancestry.note}</div>
+
+      <div className="sec">
+        <h4>Word Genome</h4>
+        <div className="wg">
+          <div className="wg-cell"><span>Parent language</span><b>{e.parentLanguage}</b></div>
+          <div className="wg-cell"><span>Mutation</span><b>{e.mutation}%</b></div>
+          <div className="wg-cell"><span>Visual balance</span><b>{e.visualBalance}</b></div>
+          <div className="wg-cell"><span>Originality</span><b>{e.originality}</b></div>
+          <div className="wg-cell"><span>Memorability</span><b>{e.memorability}</b></div>
+          <div className="wg-cell"><span>Phonetic stability</span><b>{e.phoneticStability}</b></div>
+          <div className="wg-cell"><span>Evolution distance</span><b>{e.evolutionDistance.toFixed(2)}</b></div>
+          <div className="wg-cell"><span>Syllables</span><b>{p.genome.syllables}</b></div>
+        </div>
+      </div>
 
       <div className="sec">
         <h4>Emotional DNA</h4>
@@ -101,14 +121,14 @@ export function PassportCard({ p }: { p: WordPassport }) {
           <p className="story">{p.story}</p>
         </div>
         <div className="sec">
-          <h4>Word Genome</h4>
+          <h4>Phonetic profile</h4>
           <div className="pron">
             <div className="p"><span>Pronounceability</span><span>{pct(p.genome.pronounceability)}</span></div>
-            <div className="p"><span>Memorability</span><span>{pct(p.genome.memorability)}</span></div>
-            <div className="p"><span>Uniqueness</span><span>{pct(p.genome.uniqueness)}</span></div>
             <div className="p"><span>Rhythm</span><span>{pct(p.genome.rhythm)}</span></div>
-            <div className="p"><span>Visual symmetry</span><span>{pct(p.genome.visualSymmetry)}</span></div>
-            <div className="p"><span>Syllables</span><span>{p.genome.syllables}</span></div>
+            <div className="p"><span>Syllable harmony</span><span>{pct(p.genome.syllableHarmony)}</span></div>
+            <div className="p"><span>Sharpness</span><span>{pct(p.genome.sharpness)}</span></div>
+            <div className="p"><span>Vowel ratio</span><span>{pct(p.genome.vowelRatio)}</span></div>
+            <div className="p"><span>Weight</span><span>{pct(p.genome.weight)}</span></div>
           </div>
         </div>
       </details>
