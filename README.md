@@ -180,6 +180,10 @@ vocabulary, an optional theme), and the rest of the pipeline is unchanged.
 - The client calls `/api/analyze` first; if it's absent (the static Artifact), unconfigured,
   or failing, it **falls back to the self-contained engine** — the app always works.
 - A badge on the interpretation shows whether it was **Read by AI** or the built-in engine.
+- A second pass, [`api/meanings.ts`](api/meanings.ts), has the LLM write a **bespoke
+  meaning for every discovered word**, tailored to the exact prompt. Results render
+  immediately with the engine's meanings, then the AI meanings swap in progressively. This
+  step runs only when the LLM is available; otherwise the deterministic meanings stay.
 
 **Enable it on Vercel:** set `ANTHROPIC_API_KEY` in Project → Settings → Environment
 Variables. Optionally set `WORDLAB_MODEL` (defaults to `claude-opus-4-8`; `claude-sonnet-5`

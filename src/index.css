@@ -393,6 +393,16 @@ textarea:focus {
   font-size: 13px;
 }
 
+.refining {
+  color: var(--accent-2);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));

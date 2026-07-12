@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   runLaboratory,
   discoverFromAnalysis,
@@ -7,6 +7,7 @@ import {
   type LaboratoryResult,
 } from './engine'
 import { analyzeRemote } from './lib/analyze'
+import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { LanguageSection } from './components/LanguageSection'
 import { LanguageTree } from './components/LanguageTree'
@@ -34,7 +35,9 @@ export default function App() {
   const [results, setResults] = useState<LaboratoryResult | null>(null)
   const [nonce, setNonce] = useState(0)
   const [analyzing, setAnalyzing] = useState(false)
+  const [refining, setRefining] = useState(false)
   const [usedLLM, setUsedLLM] = useState(false)
+  const runId = useRef(0)
 
   const keywords = useMemo(
     () =>
@@ -47,11 +50,14 @@ export default function App() {
 
   async function run(reseed = false) {
     if (analyzing) return
+    const myRun = ++runId.current
     const trimmed = brief.trim()
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
     const request = { brief: trimmed || undefined, keywords, mode, count, seed }
 
     setAnalyzing(true)
+    let result: LaboratoryResult
+    let remote = false
     try {
       // 1) Let the LLM understand the meaning (server-side). Reuse the prior
       //    LLM analysis on a reseed so "Try another set" doesn't re-bill a call.
@@ -60,17 +66,44 @@ export default function App() {
           ? results.analysis
           : await analyzeRemote(trimmed)
 
-      if (analysis) {
-        setResults(discoverFromAnalysis(analysis, request))
-        setUsedLLM(true)
-      } else {
-        // 2) Fallback: the self-contained deterministic engine.
-        setResults(runLaboratory(request))
-        setUsedLLM(false)
-      }
+      remote = Boolean(analysis)
+      // Build immediately with the engine's meanings, so results show fast.
+      result = analysis ? discoverFromAnalysis(analysis, request) : runLaboratory(request)
+      setResults(result)
+      setUsedLLM(remote)
       setNonce((n) => n + 1)
     } finally {
       setAnalyzing(false)
+    }
+
+    // 2) Progressive enhancement: have the LLM write a bespoke meaning for each
+    //    word, then swap them in place. Only when the LLM is actually available.
+    if (remote) {
+      setRefining(true)
+      try {
+        const items: WordItem[] = result.families.flatMap((f) =>
+          f.words.map((w) => ({
+            word: w.word,
+            language: f.character,
+            hint: w.meaning.split(' (')[0],
+          })),
+        )
+        const map = await fetchBespokeMeanings(trimmed, items)
+        if (map && runId.current === myRun) {
+          setResults({
+            ...result,
+            families: result.families.map((f) => ({
+              ...f,
+              words: f.words.map((w) => {
+                const m = map.get(w.word.toLowerCase())
+                return m ? { ...w, meaning: `${m.en} (${m.ru})` } : w
+              }),
+            })),
+          })
+        }
+      } finally {
+        if (runId.current === myRun) setRefining(false)
+      }
     }
   }
 
@@ -218,6 +251,7 @@ export default function App() {
             <h2>{results.families.length} linguistic species discovered</h2>
             <span className="muted">
               {results.families.reduce((n, f) => n + f.words.length, 0)} native words
+              {refining && <span className="refining"> · writing meanings…</span>}
             </span>
           </div>
 
