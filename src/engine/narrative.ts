@@ -36,23 +36,14 @@ export function familyLabel(family: LanguageFamily): string {
 }
 
 /**
- * A concept-first, one-line meaning — the idea the word holds — followed by a
- * fluent (not word-for-word) Russian rendering in parentheses.
+ * A clear, dictionary-style definition of what the word means — plain language,
+ * not abstract poetry — followed by a fluent (not word-for-word) Russian
+ * rendering in parentheses. Each word in a language leads on a different concept,
+ * so each gets its own definition.
  */
-export function buildMeaning(lead: Concept, support?: Concept): string {
+export function buildMeaning(lead: Concept, _support?: Concept): string {
   const l = IDEAS[lead]
-  const hasSupport = Boolean(support && support !== lead)
-  const s = hasSupport ? IDEAS[support as Concept] : undefined
-
-  const en = s
-    ? `${cap(l.noun)} meeting ${s.noun} — ${l.active}.`
-    : `${cap(l.noun)} — ${l.active}.`
-
-  const ru = s
-    ? `${cap(l.ruNoun)} и ${s.ruNoun} — ${l.ruEssence}.`
-    : `${cap(l.ruNoun)} — ${l.ruEssence}.`
-
-  return `${en} (${ru})`
+  return `${cap(l.def)}. (${cap(l.defRu)}.)`
 }
 
 /** Why the word exists, concept first, structure second. */
