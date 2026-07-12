@@ -5,49 +5,42 @@ import { LanguageSection } from './components/LanguageSection'
 import { LanguageTree } from './components/LanguageTree'
 import { Logo } from './components/Logo'
 
-/** Suggested keyword chips — a quick way to seed the concept map. */
-const SUGGESTED_KEYWORDS = [
-  'trust', 'intelligence', 'calm', 'precision', 'future', 'healing', 'luxury',
-  'nature', 'power', 'light', 'vision', 'harmony', 'energy', 'clarity', 'wisdom',
-]
-
 const MODE_KEYS = Object.keys(MODES) as CreativeMode[]
+
+/** A few starting prompts, to show the one thing the lab wants: a described meaning. */
+const EXAMPLES = [
+  'the feeling of becoming someone completely different after surviving something that should have destroyed you',
+  'a calm, premium AI company for medicine',
+  'the quiet joy of returning home after a long time away',
+  'a luxury fragrance that smells like rain on warm stone',
+]
 
 export default function App() {
   const [brief, setBrief] = useState(
     'A word for the feeling of becoming someone completely different after surviving something that should have destroyed you.',
   )
-  const [keywords, setKeywords] = useState<string[]>([])
-  const [freeInput, setFreeInput] = useState('')
+  // Advanced-only controls — most people never open them.
   const [mode, setMode] = useState<CreativeMode>('timeless')
   const [count, setCount] = useState(6)
+  const [extra, setExtra] = useState('')
+
   const [results, setResults] = useState<LaboratoryResult | null>(null)
   const [nonce, setNonce] = useState(0)
 
-  const allKeywords = useMemo(() => {
-    const extra = freeInput
-      .split(/[,\n]/)
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean)
-    return [...new Set([...keywords, ...extra])]
-  }, [keywords, freeInput])
-
-  function toggleKeyword(k: string) {
-    setKeywords((prev) =>
-      prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k],
-    )
-  }
+  const keywords = useMemo(
+    () =>
+      extra
+        .split(/[,\n]/)
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean),
+    [extra],
+  )
 
   function run(reseed = false) {
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
-    const result = runLaboratory({
-      brief: brief.trim() || undefined,
-      keywords: allKeywords,
-      mode,
-      count,
-      seed,
-    })
-    setResults(result)
+    setResults(
+      runLaboratory({ brief: brief.trim() || undefined, keywords, mode, count, seed }),
+    )
     setNonce((n) => n + 1)
   }
 
@@ -59,7 +52,7 @@ export default function App() {
     window.setTimeout(() => el.classList.remove('flash'), 1200)
   }
 
-  const canRun = allKeywords.length > 0 || brief.trim().length > 0
+  const canRun = brief.trim().length > 0
 
   return (
     <div className="app">
@@ -68,98 +61,44 @@ export default function App() {
         <div>
           <h1>Word Laboratory</h1>
           <p className="tag">
-            A meaning-discovery engine: it first understands what you're really describing,
-            then invents the languages and words to name it.
+            Describe a meaning. The laboratory works out the rest — the concepts, the
+            languages, and the words to name it.
           </p>
         </div>
       </header>
 
-      <nav className="pipeline" aria-label="Generation pipeline">
-        <span className="step">Meaning Analysis</span>
-        <span className="arrow">→</span>
-        <span className="step">Hidden Concepts</span>
-        <span className="arrow">→</span>
-        <span className="step">Concept Network</span>
-        <span className="arrow">→</span>
-        <span className="step">Language Discovery</span>
-        <span className="arrow">→</span>
-        <span className="step">Word Evolution</span>
-        <span className="arrow">→</span>
-        <span className="step last">Word</span>
-      </nav>
-
       <section className="lab">
         <div className="field">
           <label className="lbl" htmlFor="brief">
-            What are you naming?
+            Describe the word you want
           </label>
           <textarea
             id="brief"
+            className="hero-input"
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
-            placeholder="e.g. A premium AI company focused on medicine"
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && canRun) run(false)
+            }}
+            placeholder="e.g. the feeling of becoming someone completely different after surviving something that should have destroyed you"
+            rows={3}
           />
           <p className="hint">
-            Describe the thing and its spirit. The lab reads meaning from this before choosing a single sound.
+            Just the meaning or feeling — no keywords, no settings needed. Press ⌘/Ctrl + Enter to run.
           </p>
-        </div>
 
-        <div className="field">
-          <label className="lbl">Concept keywords</label>
-          <div className="chips">
-            {SUGGESTED_KEYWORDS.map((k) => (
+          <div className="examples">
+            <span className="examples-label">Try:</span>
+            {EXAMPLES.map((ex) => (
               <button
                 type="button"
-                key={k}
-                className={`chip ${keywords.includes(k) ? 'on' : ''}`}
-                onClick={() => toggleKeyword(k)}
+                key={ex}
+                className="example"
+                onClick={() => setBrief(ex)}
               >
-                {k}
+                {ex.length > 46 ? ex.slice(0, 46) + '…' : ex}
               </button>
             ))}
-          </div>
-          <input
-            type="text"
-            value={freeInput}
-            onChange={(e) => setFreeInput(e.target.value)}
-            placeholder="Add your own, comma-separated…"
-            style={{ marginTop: 10 }}
-          />
-        </div>
-
-        <div className="field">
-          <label className="lbl">Creative mode</label>
-          <div className="modes">
-            {MODE_KEYS.map((key) => (
-              <button
-                type="button"
-                key={key}
-                className={`mode ${mode === key ? 'on' : ''}`}
-                onClick={() => setMode(key)}
-              >
-                <b>{MODES[key].label}</b>
-                <span>{MODES[key].description}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="field">
-          <label className="lbl" htmlFor="count">
-            How many families — {count}
-          </label>
-          <div className="count-control">
-            <input
-              id="count"
-              type="range"
-              min={3}
-              max={8}
-              value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
-            />
-            <span className="hint" style={{ marginTop: 0 }}>
-              each with 2–3 kin words
-            </span>
           </div>
         </div>
 
@@ -169,21 +108,77 @@ export default function App() {
           </button>
           {results && (
             <button className="btn ghost" onClick={() => run(true)}>
-              Try another batch
+              Try another set
             </button>
           )}
         </div>
+
+        <details className="advanced">
+          <summary>Advanced options</summary>
+          <div className="advanced-body">
+            <div className="field">
+              <label className="lbl">Creative register (optional)</label>
+              <div className="modes">
+                {MODE_KEYS.map((key) => (
+                  <button
+                    type="button"
+                    key={key}
+                    className={`mode ${mode === key ? 'on' : ''}`}
+                    onClick={() => setMode(key)}
+                  >
+                    <b>{MODES[key].label}</b>
+                    <span>{MODES[key].description}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="hint">
+                Leave as-is to let the meaning choose. A register only nudges which languages surface.
+              </p>
+            </div>
+
+            <div className="field">
+              <label className="lbl" htmlFor="count">
+                How many languages — {count}
+              </label>
+              <div className="count-control">
+                <input
+                  id="count"
+                  type="range"
+                  min={3}
+                  max={8}
+                  value={count}
+                  onChange={(e) => setCount(Number(e.target.value))}
+                />
+                <span className="hint" style={{ marginTop: 0 }}>
+                  each with 2–3 native words
+                </span>
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="lbl" htmlFor="extra">
+                Force specific concepts (optional)
+              </label>
+              <input
+                id="extra"
+                type="text"
+                value={extra}
+                onChange={(e) => setExtra(e.target.value)}
+                placeholder="e.g. rebirth, memory, fire — comma-separated"
+              />
+            </div>
+          </div>
+        </details>
       </section>
 
       {results === null ? (
         <div className="empty">
-          Describe what you're naming and press <b>Discover words</b>. Each run
-          surfaces several distinct linguistic families — different species of word —
-          and every word arrives with a full Word Passport.
+          Describe a meaning and press <b>Discover words</b>. The laboratory reads what you
+          really mean, then surfaces several new languages — each with native-speaker words.
         </div>
       ) : results.families.length === 0 ? (
         <div className="empty">
-          Nothing cleared the novelty check for that input. Try adding a keyword or switching modes.
+          Nothing cleared the novelty check for that input. Try describing it a little differently.
         </div>
       ) : (
         <section className="results" key={nonce}>
@@ -192,7 +187,7 @@ export default function App() {
           <div className="results-head">
             <h2>{results.families.length} linguistic species discovered</h2>
             <span className="muted">
-              {results.families.reduce((n, f) => n + f.words.length, 0)} native words · {MODES[mode].label} mode
+              {results.families.reduce((n, f) => n + f.words.length, 0)} native words
             </span>
           </div>
 
@@ -205,11 +200,11 @@ export default function App() {
       )}
 
       <footer className="footer">
-        Word Laboratory runs a self-contained linguistic engine — every word is
-        synthesised inside a linguistic archetype from a measurable “Word Genome”,
-        never copied from any dictionary and never gluing roots together.
+        Word Laboratory understands your meaning first, then invents the languages and words
+        to carry it — every word synthesised from a measurable genome, never copied from a
+        dictionary.
         <br />
-        Meaning → Concept → Emotional Identity → Linguistic Structure → Phonetics → Word.
+        Meaning → Concept → Language Discovery → Word Evolution → Word.
       </footer>
     </div>
   )
