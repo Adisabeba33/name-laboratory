@@ -322,6 +322,126 @@ textarea:focus {
   gap: 16px;
 }
 
+/* ── Laboratory Interpretation ──────────────────────────────────────── */
+.interp {
+  background:
+    radial-gradient(600px 200px at 100% 0%, rgba(139, 124, 255, 0.12), transparent 70%),
+    linear-gradient(180deg, var(--panel), var(--bg-soft));
+  border: 1px solid #33305a;
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  margin-bottom: 26px;
+  box-shadow: var(--shadow);
+}
+
+.interp-title {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.interp-text {
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0 0 10px;
+  max-width: 74ch;
+  text-wrap: balance;
+}
+
+.interp-text.ru {
+  font-size: 15px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.interp-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 28px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.interp-cols h4 {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 12px;
+}
+
+.hidden-concepts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hc {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #241f45, #1b1830);
+  border: 1px solid #3a3568;
+}
+
+.hc-en {
+  font-size: 13px;
+  font-weight: 600;
+  color: #d9d3ff;
+}
+
+.hc-ru {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.network {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+
+.net-node-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.net-node {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.net-en {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.net-ru {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.net-arrow {
+  color: var(--accent-2);
+  font-size: 13px;
+}
+
 /* ── Language Tree ──────────────────────────────────────────────────── */
 .tree {
   background: linear-gradient(180deg, var(--panel), var(--bg-soft));
@@ -796,5 +916,11 @@ details.more[open] > summary::before {
   }
   .pron {
     grid-template-columns: 1fr;
+  }
+  .interp-cols {
+    grid-template-columns: 1fr;
+  }
+  .interp-text {
+    font-size: 16px;
   }
 }

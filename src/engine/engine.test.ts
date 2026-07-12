@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
+  runLaboratory,
+  analyzeMeaning,
   generateFamilies,
   generateWords,
   buildConceptMap,
@@ -25,6 +27,51 @@ const MEDICINE_REQUEST = {
   mode: 'medical' as const,
   count: 6,
 }
+
+describe('Meaning Engine — analysis', () => {
+  const METAMORPHOSIS =
+    'A word for the feeling of becoming someone completely different after surviving something that should have destroyed you.'
+
+  it('reads the deep meaning, not surface keywords', () => {
+    const a = analyzeMeaning([], METAMORPHOSIS)
+    // The old engine grabbed creation/light/energy; the meaning engine must not.
+    const top = Object.entries(a.concepts).sort((x, y) => y[1] - x[1]).slice(0, 5).map(([c]) => c)
+    expect(top).toContain('survival')
+    expect(top).toContain('transformation')
+    expect(top).toContain('destruction')
+    expect((a.concepts.creation ?? 0)).toBeLessThan(a.concepts.transformation ?? 0)
+  })
+
+  it('recognises the metamorphosis theme and interprets it', () => {
+    const a = analyzeMeaning([], METAMORPHOSIS)
+    expect(a.theme).toBe('metamorphosis')
+    expect(a.interpretation.toLowerCase()).toContain('transformation')
+    expect(a.interpretationRu.length).toBeGreaterThan(20)
+    expect(a.hiddenConcepts.length).toBeGreaterThan(3)
+    expect(a.hiddenConcepts.every((h) => h.en && h.ru)).toBe(true)
+    expect(a.network.length).toBeGreaterThan(3)
+  })
+
+  it('steers language discovery toward the theme languages', () => {
+    const { families } = runLaboratory({ keywords: [], brief: METAMORPHOSIS, count: 4 })
+    const names = families.map((f) => f.character.toLowerCase())
+    expect(names.some((n) => ['ashen', 'phoenix', 'obsidian', 'chrysalis'].includes(n))).toBe(true)
+  })
+
+  it('gives words meanings that reflect the interpreted concept', () => {
+    const { families } = runLaboratory({ keywords: [], brief: METAMORPHOSIS, count: 4 })
+    const meanings = families.flatMap((f) => f.words.map((w) => w.meaning.toLowerCase()))
+    // At least one word should land on the emotional core, not a flat gloss.
+    expect(meanings.some((m) => /burned away|entered the fire|should have ended|clears the ground/.test(m))).toBe(true)
+  })
+
+  it('falls back to a generic interpretation for a plain brief', () => {
+    const a = analyzeMeaning(['trust', 'precision'], 'a premium fintech app')
+    expect(a.theme).toBeUndefined()
+    expect(a.interpretation.length).toBeGreaterThan(10)
+    expect(a.network.length).toBeGreaterThan(0)
+  })
+})
 
 describe('concept mapping (Meaning → Concept)', () => {
   it('expands keywords into a weighted concept map', () => {

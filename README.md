@@ -5,12 +5,22 @@ words carrying a deep semantic structure, an emotional identity, a linguistic lo
 and brand potential. The goal is for every invented word to feel as if it could have
 lived in a language for centuries.
 
-Word Laboratory is **not** a name generator. It doesn't shuffle syllables and check
-domains. It generates **meaning first** — the word is only the final result.
+Word Laboratory is **not** a name generator. It is a **Meaning Discovery Engine**: it
+first works out what you are *really* describing, then invents the languages and words to
+name it. Meaning is the product; words are the vessels that carry it.
 
 ```
-Meaning → Concept → Emotional Identity → Linguistic Structure → Phonetics → Word
+Prompt → Meaning Analysis → Hidden Concepts → Concept Network
+       → Language Discovery → Language Genome → Word Evolution → Word
 ```
+
+> **Meaning first.** For the prompt _“a word for becoming someone completely different
+> after surviving something that should have destroyed you,”_ the laboratory doesn't grab
+> surface words like *creation* or *light*. It reads the deep idea — **irreversible
+> identity transformation after destruction** — names the hidden concepts (_Death without
+> dying, Identity reborn, Survivor's metamorphosis…_), draws the concept network
+> (Destruction → Survival → Transformation → Identity → Rebirth), and only then discovers
+> languages whose philosophy fits (**Ashen, Phoenix, Obsidian, Chrysalis**).
 
 > **Example.** Ask for _“a premium AI company focused on medicine”_ with the keywords
 > `trust, intelligence, calm, precision, future`, and the lab first builds an internal
@@ -70,9 +80,12 @@ or an interactive slider UI.
 
 | File | Responsibility |
 | --- | --- |
-| `types.ts` | The type system — `WordGenome`, `LanguageGenome`, `WordEvolution`, `WordFamily`, `Ancestry`. |
-| `data/languages.ts` | The **languages** — the engine's "species", each a self-contained sound world with its own phoneme inventory, cadence, emotional signature, description and native characteristics. |
-| `data/ideas.ts` | Concept → idea vocabulary, so meanings state an idea rather than an etymology. |
+| `types.ts` | The type system — `MeaningAnalysis`, `WordGenome`, `LanguageGenome`, `WordEvolution`, `WordFamily`, `Ancestry`. |
+| `meaning.ts` | **The Meaning Engine.** `analyzeMeaning()` reads the prompt (keywords + phrase patterns), recognises the human theme, and produces the interpretation, hidden concepts and concept network. The single seam an LLM analyzer would replace. |
+| `data/patterns.ts` | Phrase → concept patterns that recover the *implied* meaning behind a prompt. |
+| `data/themes.ts` | Recognised human themes (metamorphosis, grief, resilience…) with deep interpretations and preferred languages. |
+| `data/languages.ts` | The **languages** — the engine's "species" (incl. meaning-driven Ashen / Phoenix / Obsidian / Chrysalis), each a sound world with its own phoneme inventory, cadence, emotional signature, philosophy-first description and native characteristics. |
+| `data/ideas.ts` | Concept → idea vocabulary: clear definitions (EN + RU) plus poetic material for explanations. |
 | `data/concepts.ts` | Keyword → concept map (the "internal semantic map"). |
 | `data/modes.ts` | Creative-mode profiles (bias which languages a run favours). |
 | `data/known-words.ts` | Blocklist for the novelty check. |
@@ -85,7 +98,7 @@ or an interactive slider UI.
 | `pronunciation.ts` | Cross-language pronounceability ratings. |
 | `brand.ts` | Brand / industry matching. |
 | `narrative.ts` | Concept-first meaning, explanation, story, phonetic ancestry, personality. |
-| `generator.ts` | Orchestrates the language-discovery pipeline (`generateFamilies`). |
+| `generator.ts` | Orchestrates the full pipeline (`runLaboratory` → analysis + families). |
 | `rng.ts` | Seeded RNG so results are deterministic and shareable. |
 
 The React UI (`src/App.tsx`, `src/components/LanguageTree.tsx`,
@@ -128,22 +141,25 @@ npm test           # run the engine test suite
 Use the engine directly, without the UI:
 
 ```ts
-import { generateFamilies } from './src/engine'
+import { runLaboratory } from './src/engine'
 
-const families = generateFamilies({
-  brief: 'A premium AI company focused on medicine',
-  keywords: ['trust', 'intelligence', 'calm', 'precision', 'future'],
-  mode: 'medical',
-  count: 6, // number of families to discover
+const { analysis, families } = runLaboratory({
+  brief: 'a word for becoming someone completely different after surviving something that should have destroyed you',
+  keywords: [],
+  count: 6, // number of languages to discover
 })
 
-const family = families[0]
-console.log(family.character)          // e.g. "Crystalline"
-console.log(family.words.map((w) => w.word)) // e.g. ["Kaint", "Kaix", "Kaon"]
-console.log(family.words[0].meaning)   // e.g. "Living intelligence meeting precision — …"
-console.log(family.words[0].emotionalDNA) // { scientific: 96, futuristic: 60, ... }
+console.log(analysis.theme)          // "metamorphosis"
+console.log(analysis.interpretation) // "This request is not primarily about survival…"
+console.log(analysis.hiddenConcepts.map((c) => c.en)) // ["Death without dying", …]
+console.log(analysis.network.map((n) => n.en))        // ["Destruction", "Survival", …]
 
-// generateWords() still returns a flat WordPassport[] if you don't need the grouping.
+const language = families[0]
+console.log(language.character)              // e.g. "Ashen"
+console.log(language.words[0].meaning)       // "What remains standing after what should have ended it. (…)"
+console.log(language.words[0].emotionalDNA)  // { mystical: …, powerful: …, … }
+
+// generateFamilies() / generateWords() remain available if you only want words.
 ```
 
 Generation is deterministic for a given request (and optional `seed`), so results are

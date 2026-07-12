@@ -46,7 +46,7 @@ function tokenise(text: string): string[] {
 }
 
 /** Resolve a token to concepts, tolerating simple plural/suffix variation. */
-function resolveKeyword(token: string): ConceptVector | undefined {
+export function resolveKeyword(token: string): ConceptVector | undefined {
   if (KEYWORD_CONCEPTS[token]) return KEYWORD_CONCEPTS[token]
 
   // Try a few light stemming steps.

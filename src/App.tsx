@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { generateFamilies, MODES, type CreativeMode, type WordFamily } from './engine'
+import { runLaboratory, MODES, type CreativeMode, type LaboratoryResult } from './engine'
+import { InterpretationPanel } from './components/InterpretationPanel'
 import { LanguageSection } from './components/LanguageSection'
 import { LanguageTree } from './components/LanguageTree'
 import { Logo } from './components/Logo'
@@ -13,14 +14,14 @@ const SUGGESTED_KEYWORDS = [
 const MODE_KEYS = Object.keys(MODES) as CreativeMode[]
 
 export default function App() {
-  const [brief, setBrief] = useState('A premium AI company focused on medicine')
-  const [keywords, setKeywords] = useState<string[]>([
-    'trust', 'intelligence', 'calm', 'precision', 'future',
-  ])
+  const [brief, setBrief] = useState(
+    'A word for the feeling of becoming someone completely different after surviving something that should have destroyed you.',
+  )
+  const [keywords, setKeywords] = useState<string[]>([])
   const [freeInput, setFreeInput] = useState('')
-  const [mode, setMode] = useState<CreativeMode>('medical')
+  const [mode, setMode] = useState<CreativeMode>('timeless')
   const [count, setCount] = useState(6)
-  const [results, setResults] = useState<WordFamily[] | null>(null)
+  const [results, setResults] = useState<LaboratoryResult | null>(null)
   const [nonce, setNonce] = useState(0)
 
   const allKeywords = useMemo(() => {
@@ -39,14 +40,14 @@ export default function App() {
 
   function run(reseed = false) {
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
-    const families = generateFamilies({
+    const result = runLaboratory({
       brief: brief.trim() || undefined,
       keywords: allKeywords,
       mode,
       count,
       seed,
     })
-    setResults(families)
+    setResults(result)
     setNonce((n) => n + 1)
   }
 
@@ -67,22 +68,22 @@ export default function App() {
         <div>
           <h1>Word Laboratory</h1>
           <p className="tag">
-            A laboratory for discovering words that have never existed — several new
-            linguistic species at a time, meaning first.
+            A meaning-discovery engine: it first understands what you're really describing,
+            then invents the languages and words to name it.
           </p>
         </div>
       </header>
 
       <nav className="pipeline" aria-label="Generation pipeline">
-        <span className="step">Meaning</span>
+        <span className="step">Meaning Analysis</span>
         <span className="arrow">→</span>
-        <span className="step">Concept</span>
+        <span className="step">Hidden Concepts</span>
         <span className="arrow">→</span>
-        <span className="step">Emotional Identity</span>
+        <span className="step">Concept Network</span>
         <span className="arrow">→</span>
-        <span className="step">Linguistic Structure</span>
+        <span className="step">Language Discovery</span>
         <span className="arrow">→</span>
-        <span className="step">Phonetics</span>
+        <span className="step">Word Evolution</span>
         <span className="arrow">→</span>
         <span className="step last">Word</span>
       </nav>
@@ -180,22 +181,24 @@ export default function App() {
           surfaces several distinct linguistic families — different species of word —
           and every word arrives with a full Word Passport.
         </div>
-      ) : results.length === 0 ? (
+      ) : results.families.length === 0 ? (
         <div className="empty">
           Nothing cleared the novelty check for that input. Try adding a keyword or switching modes.
         </div>
       ) : (
         <section className="results" key={nonce}>
+          <InterpretationPanel analysis={results.analysis} />
+
           <div className="results-head">
-            <h2>{results.length} linguistic species discovered</h2>
+            <h2>{results.families.length} linguistic species discovered</h2>
             <span className="muted">
-              {results.reduce((n, f) => n + f.words.length, 0)} native words · {MODES[mode].label} mode
+              {results.families.reduce((n, f) => n + f.words.length, 0)} native words · {MODES[mode].label} mode
             </span>
           </div>
 
-          <LanguageTree families={results} onPick={scrollToWord} />
+          <LanguageTree families={results.families} onPick={scrollToWord} />
 
-          {results.map((fam) => (
+          {results.families.map((fam) => (
             <LanguageSection fam={fam} key={fam.id} />
           ))}
         </section>

@@ -6,7 +6,9 @@
  * driven later by an LLM or an interactive "Word Genome" slider UI.
  */
 export * from './types'
-export { generateFamilies, generateWords, buildPassport } from './generator'
+export { runLaboratory, generateFamilies, generateWords, buildPassport } from './generator'
+export { analyzeMeaning, matchTheme } from './meaning'
+export { THEMES } from './data/themes'
 export { buildConceptMap, topConcepts, conceptMatch } from './concepts'
 export { computeGenome, genomeQuality, estimateUniqueness, editDistance } from './genome'
 export { computeEmotionalDNA, dominantEmotions } from './emotional'

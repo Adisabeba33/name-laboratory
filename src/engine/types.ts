@@ -65,6 +65,22 @@ export type Concept =
   | 'strength'
   | 'freedom'
   | 'vision'
+  // Deep / emotional / philosophical concepts — the Meaning Engine's vocabulary
+  // for the human ideas behind a request, not just its surface nouns.
+  | 'transformation'
+  | 'rebirth'
+  | 'survival'
+  | 'destruction'
+  | 'identity'
+  | 'resilience'
+  | 'loss'
+  | 'memory'
+  | 'shadow'
+  | 'transcendence'
+  | 'longing'
+  | 'courage'
+  | 'grief'
+  | 'hope'
 
 /** A weighted point in concept space — the AI's "internal semantic map". */
 export type ConceptVector = Partial<Record<Concept, number>>
@@ -307,4 +323,39 @@ export interface GenerationRequest {
   count?: number
   /** Seed for deterministic generation (useful for tests and shareable results). */
   seed?: number
+}
+
+/** A node in the concept network — a discovered idea, in both languages. */
+export interface ConceptNode {
+  en: string
+  ru: string
+}
+
+/**
+ * The Meaning Analysis — the heart of the Meaning Engine.
+ *
+ * Before any language is discovered, the laboratory states what it believes the
+ * request is *really* about. If this reading is wrong, everything downstream is
+ * wrong — so it is surfaced to the user for transparency. This is the single seam
+ * an LLM meaning-analyzer would replace to reach open-ended understanding.
+ */
+export interface MeaningAnalysis {
+  /** The laboratory's plain-language reading of the request (English). */
+  interpretation: string
+  /** The same interpretation, in fluent Russian. */
+  interpretationRu: string
+  /** The hidden conceptual structures discovered — ideas, not keywords. */
+  hiddenConcepts: ConceptNode[]
+  /** An ordered relationship map explaining how the prompt was understood. */
+  network: ConceptNode[]
+  /** The dominant meaning-theme, if one was recognised (e.g. "metamorphosis"). */
+  theme?: string
+  /** The weighted concept map the interpretation produced. */
+  concepts: ConceptVector
+}
+
+/** The laboratory's full output: what it understood, and what it discovered. */
+export interface LaboratoryResult {
+  analysis: MeaningAnalysis
+  families: WordFamily[]
 }

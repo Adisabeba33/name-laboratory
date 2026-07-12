@@ -3,12 +3,16 @@ import type {
   ConceptVector,
   CreativeMode,
   GenerationRequest,
+  LaboratoryResult,
+  MeaningAnalysis,
   WordFamily,
   WordPassport,
 } from './types'
 import { LANGUAGES, type Language } from './data/languages'
+import { THEMES } from './data/themes'
 import { DEFAULT_MODE } from './data/modes'
-import { buildConceptMap, topConcepts } from './concepts'
+import { topConcepts } from './concepts'
+import { analyzeMeaning } from './meaning'
 import { Rng, hashSeed } from './rng'
 import { speakNative } from './synth'
 import { computeGenome } from './genome'
@@ -47,19 +51,30 @@ const MODE_LANGUAGES: Record<CreativeMode, string[]> = {
 const WORDS_PER_LANGUAGE = 3
 
 /**
- * The laboratory's front door — now it discovers *languages*.
+ * The laboratory's front door — the full Meaning Engine pipeline.
  *
- * A generation selects several distinct linguistic species that resonate with
- * the brief, gives each a Language Genome, then generates native-speaker words
- * that obey it. Each word is a living specimen — a generation, a mutation, a
- * distance travelled along its language's evolutionary path.
+ *   Meaning Analysis → Hidden Concepts → Concept Network → Language Discovery
+ *   → Language Genome → Word Evolution → Word
+ *
+ * It first decides what the request is really about (analyzeMeaning), then
+ * discovers the languages whose philosophy fits that meaning, and grows
+ * native-speaker words. The interpretation is returned alongside the words.
  */
+export function runLaboratory(request: GenerationRequest): LaboratoryResult {
+  const analysis = analyzeMeaning(request.keywords, request.brief)
+  return { analysis, families: discoverFamilies(request, analysis) }
+}
+
+/** Discover just the languages (the UI uses {@link runLaboratory}). */
 export function generateFamilies(request: GenerationRequest): WordFamily[] {
+  return runLaboratory(request).families
+}
+
+function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis): WordFamily[] {
   const mode: CreativeMode = request.mode ?? DEFAULT_MODE
   const languageCount = Math.max(3, Math.min(8, request.count ?? 6))
 
-  // Step 1 — Meaning → Concept.
-  const concepts = buildConceptMap(request.keywords, request.brief)
+  const concepts = analysis.concepts
   const leadConcepts = topConcepts(concepts, 8)
 
   const seed =
@@ -67,8 +82,8 @@ export function generateFamilies(request: GenerationRequest): WordFamily[] {
     hashSeed(`${request.keywords.join(',')}|${request.brief ?? ''}|${mode}`)
   const rng = new Rng(seed)
 
-  // Step 2 — Language Discovery: choose distinct species.
-  const chosen = selectLanguages(concepts, mode, languageCount, rng)
+  // Step 2 — Language Discovery: languages whose philosophy fits the meaning.
+  const chosen = selectLanguages(concepts, mode, languageCount, rng, analysis.theme)
 
   // Step 3 — for each language, derive its genome and generate native words.
   const families: WordFamily[] = []
@@ -165,13 +180,20 @@ function selectLanguages(
   mode: CreativeMode,
   count: number,
   rng: Rng,
+  themeId?: string,
 ): Language[] {
   const favourites = new Set(MODE_LANGUAGES[mode] ?? [])
+  // A recognised theme steers strongly toward the languages whose philosophy
+  // fits its meaning (so a rebirth prompt surfaces Ashen/Phoenix, not Solar).
+  const themePreferred = new Set(
+    themeId ? THEMES.find((t) => t.id === themeId)?.preferredLanguages ?? [] : [],
+  )
   const ranked = LANGUAGES.map((l) => {
     const resonance = l.concepts.reduce((sum, c) => sum + (concepts[c] ?? 0), 0)
-    const modeBoost = favourites.has(l.id) ? 0.6 : 0
-    const jitter = rng.next() * 0.25
-    return { language: l, score: resonance + modeBoost + jitter }
+    const modeBoost = favourites.has(l.id) ? 0.4 : 0
+    const themeBoost = themePreferred.has(l.id) ? 1.2 : 0
+    const jitter = rng.next() * 0.2
+    return { language: l, score: resonance + modeBoost + themeBoost + jitter }
   }).sort((x, y) => y.score - x.score)
 
   return ranked.slice(0, Math.min(count, LANGUAGES.length)).map((r) => r.language)

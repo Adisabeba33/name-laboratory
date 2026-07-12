@@ -51,6 +51,21 @@ const CONCEPT_EMOTION: Partial<Record<Concept, Partial<Record<EmotionalAxis, num
   depth: { mystical: 0.4, premium: 0.2 },
   movement: { energetic: 0.5, futuristic: 0.2 },
   unity: { trustworthy: 0.4, warm: 0.3 },
+  // Deep / emotional concepts.
+  transformation: { creative: 0.4, mystical: 0.4, powerful: 0.2 },
+  rebirth: { creative: 0.4, energetic: 0.3, mystical: 0.3, warm: 0.2 },
+  survival: { powerful: 0.5, trustworthy: 0.3 },
+  destruction: { powerful: 0.4, aggressive: 0.4, mystical: 0.2 },
+  identity: { trustworthy: 0.3, premium: 0.2, minimal: 0.2 },
+  resilience: { powerful: 0.5, trustworthy: 0.3, warm: 0.2 },
+  loss: { mystical: 0.4, elegant: 0.2 },
+  memory: { mystical: 0.3, warm: 0.2, premium: 0.2 },
+  shadow: { mystical: 0.6, aggressive: 0.2 },
+  transcendence: { mystical: 0.5, premium: 0.3, futuristic: 0.2 },
+  longing: { elegant: 0.3, warm: 0.3, mystical: 0.2 },
+  courage: { powerful: 0.4, energetic: 0.3 },
+  grief: { mystical: 0.4, elegant: 0.3 },
+  hope: { warm: 0.4, creative: 0.3 },
 }
 
 const AXES: EmotionalAxis[] = [
