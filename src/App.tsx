@@ -1,5 +1,12 @@
 import { useMemo, useState } from 'react'
-import { runLaboratory, MODES, type CreativeMode, type LaboratoryResult } from './engine'
+import {
+  runLaboratory,
+  discoverFromAnalysis,
+  MODES,
+  type CreativeMode,
+  type LaboratoryResult,
+} from './engine'
+import { analyzeRemote } from './lib/analyze'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { LanguageSection } from './components/LanguageSection'
 import { LanguageTree } from './components/LanguageTree'
@@ -26,6 +33,8 @@ export default function App() {
 
   const [results, setResults] = useState<LaboratoryResult | null>(null)
   const [nonce, setNonce] = useState(0)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [usedLLM, setUsedLLM] = useState(false)
 
   const keywords = useMemo(
     () =>
@@ -36,12 +45,33 @@ export default function App() {
     [extra],
   )
 
-  function run(reseed = false) {
+  async function run(reseed = false) {
+    if (analyzing) return
+    const trimmed = brief.trim()
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
-    setResults(
-      runLaboratory({ brief: brief.trim() || undefined, keywords, mode, count, seed }),
-    )
-    setNonce((n) => n + 1)
+    const request = { brief: trimmed || undefined, keywords, mode, count, seed }
+
+    setAnalyzing(true)
+    try {
+      // 1) Let the LLM understand the meaning (server-side). Reuse the prior
+      //    LLM analysis on a reseed so "Try another set" doesn't re-bill a call.
+      const analysis =
+        reseed && usedLLM && results
+          ? results.analysis
+          : await analyzeRemote(trimmed)
+
+      if (analysis) {
+        setResults(discoverFromAnalysis(analysis, request))
+        setUsedLLM(true)
+      } else {
+        // 2) Fallback: the self-contained deterministic engine.
+        setResults(runLaboratory(request))
+        setUsedLLM(false)
+      }
+      setNonce((n) => n + 1)
+    } finally {
+      setAnalyzing(false)
+    }
   }
 
   function scrollToWord(word: string) {
@@ -103,10 +133,10 @@ export default function App() {
         </div>
 
         <div className="actions">
-          <button className="btn" onClick={() => run(false)} disabled={!canRun}>
-            Discover words
+          <button className="btn" onClick={() => run(false)} disabled={!canRun || analyzing}>
+            {analyzing ? 'Reading the meaning…' : 'Discover words'}
           </button>
-          {results && (
+          {results && !analyzing && (
             <button className="btn ghost" onClick={() => run(true)}>
               Try another set
             </button>
@@ -182,7 +212,7 @@ export default function App() {
         </div>
       ) : (
         <section className="results" key={nonce}>
-          <InterpretationPanel analysis={results.analysis} />
+          <InterpretationPanel analysis={results.analysis} source={usedLLM ? 'llm' : 'engine'} />
 
           <div className="results-head">
             <h2>{results.families.length} linguistic species discovered</h2>

@@ -411,13 +411,40 @@ textarea:focus {
   box-shadow: var(--shadow);
 }
 
+.interp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+
 .interp-title {
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--accent);
   font-weight: 700;
-  margin: 0 0 12px;
+  margin: 0;
+}
+
+.interp-source {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.interp-source.llm {
+  color: #d9d3ff;
+  background: linear-gradient(180deg, #241f45, #1b1830);
+  border-color: #4b3fa0;
+}
+
+.interp-source.engine {
+  color: var(--text-faint);
 }
 
 .interp-text {

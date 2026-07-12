@@ -167,10 +167,32 @@ reproducible and shareable.
 
 ---
 
+## LLM meaning analysis (optional, server-side)
+
+The deterministic engine understands the emotional/philosophical prompts it was tuned
+for. To understand **any** prompt as deeply, an LLM can do the Meaning Analysis step
+via a serverless function — [`api/analyze.ts`](api/analyze.ts). It's the single seam the
+engine was designed around: the LLM returns the same `MeaningAnalysis` shape (interpretation
+EN/RU, hidden concepts, concept network, a weighted concept vector in the engine's own
+vocabulary, an optional theme), and the rest of the pipeline is unchanged.
+
+- The **API key lives only on the server** (`ANTHROPIC_API_KEY`), never in the browser.
+- The client calls `/api/analyze` first; if it's absent (the static Artifact), unconfigured,
+  or failing, it **falls back to the self-contained engine** — the app always works.
+- A badge on the interpretation shows whether it was **Read by AI** or the built-in engine.
+
+**Enable it on Vercel:** set `ANTHROPIC_API_KEY` in Project → Settings → Environment
+Variables. Optionally set `WORDLAB_MODEL` (defaults to `claude-opus-4-8`; `claude-sonnet-5`
+or `claude-haiku-4-5` are faster and cheaper for this task — roughly 1–2¢ and <1¢ per
+analysis respectively). See [`.env.example`](.env.example).
+
+---
+
 ## Deploy
 
-The app is a static Vite build (no server, no environment variables), so any static
-host works. A [`vercel.json`](vercel.json) is included.
+The frontend is a static Vite build; the only server-side piece is the optional
+`/api/analyze` function above. A [`vercel.json`](vercel.json) is included, and Vercel
+serves `/api` automatically alongside the Vite build.
 
 **Vercel (recommended)** — the easiest path is the dashboard, no CLI needed:
 

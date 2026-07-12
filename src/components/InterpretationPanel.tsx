@@ -8,10 +8,23 @@ import type { MeaningAnalysis } from '../engine'
  * concept network. This is what makes the product feel like it is reasoning, not
  * guessing — and lets the user catch a wrong reading before trusting the output.
  */
-export function InterpretationPanel({ analysis }: { analysis: MeaningAnalysis }) {
+export function InterpretationPanel({
+  analysis,
+  source,
+}: {
+  analysis: MeaningAnalysis
+  source?: 'llm' | 'engine'
+}) {
   return (
     <section className="interp">
-      <h3 className="interp-title">Laboratory Interpretation</h3>
+      <div className="interp-head">
+        <h3 className="interp-title">Laboratory Interpretation</h3>
+        {source && (
+          <span className={`interp-source ${source}`}>
+            {source === 'llm' ? 'Read by AI' : 'Read by the built-in engine'}
+          </span>
+        )}
+      </div>
       <p className="interp-text">{analysis.interpretation}</p>
       <p className="interp-text ru">{analysis.interpretationRu}</p>
 

@@ -70,6 +70,18 @@ export function generateFamilies(request: GenerationRequest): WordFamily[] {
   return runLaboratory(request).families
 }
 
+/**
+ * Build a full result from an externally-supplied analysis — e.g. one produced
+ * by the LLM meaning analyzer instead of the local `analyzeMeaning()`. The rest
+ * of the pipeline (language discovery, word synthesis, passports) is identical.
+ */
+export function discoverFromAnalysis(
+  analysis: MeaningAnalysis,
+  request: GenerationRequest,
+): LaboratoryResult {
+  return { analysis, families: discoverFamilies(request, analysis) }
+}
+
 function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis): WordFamily[] {
   const mode: CreativeMode = request.mode ?? DEFAULT_MODE
   const languageCount = Math.max(3, Math.min(8, request.count ?? 6))
