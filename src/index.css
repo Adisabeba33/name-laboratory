@@ -602,11 +602,28 @@ textarea:focus {
   margin: 6px 0 2px;
 }
 
+.meaning-block {
+  margin: 8px 0 14px;
+  border-left: 2px solid var(--accent);
+  padding-left: 11px;
+}
+
+.meaning-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
 .passport .meaning {
-  color: var(--text-dim);
-  font-size: 14px;
+  color: var(--text);
+  font-size: 14.5px;
   font-style: italic;
-  margin-bottom: 14px;
+  margin: 0;
+  line-height: 1.5;
 }
 
 .passport .origin {

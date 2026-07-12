@@ -75,7 +75,10 @@ export function generateFamilies(request: GenerationRequest): WordFamily[] {
   const seenWords = new Set<string>()
 
   chosen.forEach((language, i) => {
-    const { lead, support } = pickConcepts(language, concepts, leadConcepts)
+    // The concepts this language can carry, in brief-priority order. Each word
+    // takes a different lead/support pair from this list, so every word gets its
+    // own shade of meaning while staying on the language's theme.
+    const langConcepts = pickLanguageConcepts(language, concepts, leadConcepts)
     const vocab = speakNative(language, rng, WORDS_PER_LANGUAGE)
     const fresh = vocab.words.filter((w) => {
       const key = w.toLowerCase()
@@ -87,9 +90,14 @@ export function generateFamilies(request: GenerationRequest): WordFamily[] {
 
     const languageGenome = computeLanguageGenome(language, fresh)
     const reference = fresh[0]
-    const words = fresh.map((w, gen) =>
-      buildPassport(w, language, i, lead, support, concepts, gen + 1, reference, vocab.prototype),
-    )
+    const words = fresh.map((w, idx) => {
+      const lead = langConcepts[idx % langConcepts.length]
+      const support =
+        langConcepts.length > 1
+          ? langConcepts[(idx + 1) % langConcepts.length]
+          : undefined
+      return buildPassport(w, language, i, lead, support, concepts, idx + 1, reference, vocab.prototype)
+    })
 
     families.push({
       id: `${language.id}-${i}`,
@@ -99,7 +107,7 @@ export function generateFamilies(request: GenerationRequest): WordFamily[] {
       nativeCharacteristics: language.nativeCharacteristics,
       genome: languageGenome,
       ancestry: language.families,
-      theme: IDEAS[lead].noun,
+      theme: IDEAS[langConcepts[0]].noun,
       words,
     })
   })
@@ -169,21 +177,29 @@ function selectLanguages(
   return ranked.slice(0, Math.min(count, LANGUAGES.length)).map((r) => r.language)
 }
 
-/** Choose the idea a language is discovered around: a lead + distinct support. */
-function pickConcepts(
+/**
+ * The ordered set of concepts a language can carry for this brief. The brief's
+ * strongest concepts the language resonates with come first, then its next
+ * strongest, then the language's own concepts as a fallback — so there is always
+ * enough distinct material to give each word its own meaning.
+ */
+function pickLanguageConcepts(
   language: Language,
   concepts: ConceptVector,
   leadConcepts: Concept[],
-): { lead: Concept; support?: Concept } {
-  const lead =
-    leadConcepts.find((c) => language.concepts.includes(c)) ??
-    language.concepts.find((c) => (concepts[c] ?? 0) > 0) ??
-    language.concepts[0]
+): Concept[] {
+  const ordered: Concept[] = []
+  const add = (c: Concept | undefined) => {
+    if (c && !ordered.includes(c)) ordered.push(c)
+  }
 
-  const support =
-    leadConcepts.find((c) => c !== lead && language.concepts.includes(c)) ??
-    leadConcepts.find((c) => c !== lead) ??
-    language.concepts.find((c) => c !== lead)
+  // 1) brief concepts the language natively resonates with.
+  for (const c of leadConcepts) if (language.concepts.includes(c)) add(c)
+  // 2) the language's own concepts that the brief also touched.
+  for (const c of language.concepts) if ((concepts[c] ?? 0) > 0) add(c)
+  // 3) remaining brief concepts, then the language's defaults.
+  for (const c of leadConcepts) add(c)
+  for (const c of language.concepts) add(c)
 
-  return { lead, support }
+  return ordered.slice(0, 4)
 }

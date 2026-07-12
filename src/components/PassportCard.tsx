@@ -34,7 +34,10 @@ export function PassportCard({ p }: { p: WordPassport }) {
           gen {e.generation}
         </span>
       </div>
-      <div className="meaning">“{p.meaning}”</div>
+      <div className="meaning-block">
+        <span className="meaning-label">Meaning</span>
+        <p className="meaning">“{p.meaning}”</p>
+      </div>
       <div className="origin">{p.ancestry.note}</div>
 
       <div className="sec">
