@@ -299,6 +299,12 @@ are layered on top progressively.
   `MeaningAnalysis` / passport shapes so the deterministic fallback keeps working.
 - **The app must always work without the LLM.** Every LLM call has a graceful
   fallback; the key never reaches the browser.
+- **Never call the LLM silently.** Every AI request is gated by a confirmation
+  dialog (`ConfirmDialog`) because each call costs money — including the
+  secondary ones (steer chips, concept-direction focus). Declining runs the free
+  engine instead. A "don't ask again this session" opt-out exists, but the
+  default is to ask. Free engine steps (re-discovery, transliteration,
+  pronunciation) run without asking.
 - **Follow the honesty rules** (section 5). No fake etymology or fake precision.
 - **Determinism:** engine output must stay deterministic for a seed. Do not use
   `Date.now()` / `Math.random()` in the engine — use the seeded `Rng`.

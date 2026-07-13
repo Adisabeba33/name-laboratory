@@ -11,6 +11,7 @@ import { analyzeRemote } from './lib/analyze'
 import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { ConceptDirections } from './components/ConceptDirections'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { LanguageSection } from './components/LanguageSection'
 import { LanguageTree } from './components/LanguageTree'
 import { Logo } from './components/Logo'
@@ -41,7 +42,19 @@ export default function App() {
   const [steering, setSteering] = useState(false)
   const [usedLLM, setUsedLLM] = useState(false)
   const [selectedDirections, setSelectedDirections] = useState<string[]>([])
+  // Cost control: every LLM call must be confirmed. `llmAllowed` is the
+  // "don't ask again this session" escape; `confirm` drives the dialog.
+  const [llmAllowed, setLlmAllowed] = useState(false)
+  const [confirm, setConfirm] = useState<{ message: string; resolve: (ok: boolean) => void } | null>(
+    null,
+  )
   const runId = useRef(0)
+
+  /** Ask permission before any AI request. Resolves true if allowed. */
+  function confirmLLM(message: string): Promise<boolean> {
+    if (llmAllowed) return Promise.resolve(true)
+    return new Promise((resolve) => setConfirm({ message, resolve }))
+  }
 
   const keywords = useMemo(
     () =>
@@ -95,8 +108,21 @@ export default function App() {
 
   async function run(reseed = false, steer?: string) {
     if (analyzing) return
-    const myRun = ++runId.current
     const trimmed = brief.trim()
+    if (!trimmed) return
+
+    // Ask before any AI request. Declining still gives a free engine result;
+    // a steer only makes sense with AI, so a declined steer is a no-op.
+    const wantsAI = await confirmLLM(
+      steer
+        ? 'Re-read this meaning with the chosen emphasis and rewrite the word meanings.'
+        : reseed
+          ? 'Discover another set — rewrite the word meanings for the new words.'
+          : 'Read the meaning and write bespoke word meanings for this prompt.',
+    )
+    if (!wantsAI && steer) return
+
+    const myRun = ++runId.current
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
     const request = { brief: trimmed || undefined, keywords, mode, count, seed }
     // A steer re-interprets the SAME prompt with an added emphasis, without
@@ -109,10 +135,11 @@ export default function App() {
     let result: LaboratoryResult
     let remote = false
     try {
-      // 1) Let the LLM understand the meaning (server-side). Reuse the prior
-      //    LLM analysis on a reseed so "Try another set" doesn't re-bill a call.
-      const analysis =
-        reseed && usedLLM && results && !steer
+      // 1) Let the LLM understand the meaning (server-side) — only if allowed.
+      //    Reuse the prior LLM analysis on a reseed so it doesn't re-bill a call.
+      const analysis = !wantsAI
+        ? null
+        : reseed && usedLLM && results && !steer
           ? results.analysis
           : await analyzeRemote(analysisBrief)
 
@@ -143,10 +170,14 @@ export default function App() {
     const trimmed = brief.trim()
     const request = { brief: trimmed || undefined, keywords, mode, count }
     const focus = focusConcepts(results.analysis.concepts, results.analysis.directions, ids)
+    // Re-focusing the words is a free engine step — apply it immediately.
     const result = discoverFromAnalysis(results.analysis, request, focus)
     setResults(result)
     setNonce((n) => n + 1)
-    if (usedLLM) await enrich(result, myRun, trimmed)
+    // Rewriting the focused words' meanings is an AI request — ask first.
+    if (usedLLM && (await confirmLLM('Rewrite the focused words’ meanings with AI for this angle.'))) {
+      await enrich(result, myRun, trimmed)
+    }
   }
 
   function scrollToWord(word: string) {
@@ -161,6 +192,20 @@ export default function App() {
 
   return (
     <div className="app">
+      {confirm && (
+        <ConfirmDialog
+          message={confirm.message}
+          onCancel={() => {
+            confirm.resolve(false)
+            setConfirm(null)
+          }}
+          onAllow={(remember) => {
+            if (remember) setLlmAllowed(true)
+            confirm.resolve(true)
+            setConfirm(null)
+          }}
+        />
+      )}
       <header className="masthead">
         <Logo className="logo" />
         <div>
@@ -190,6 +235,7 @@ export default function App() {
           />
           <p className="hint">
             Just the meaning or feeling — no keywords, no settings needed. Press ⌘/Ctrl + Enter to run.
+            Anything that uses AI asks first — declining still gives a free engine result.
           </p>
 
           <div className="examples">
