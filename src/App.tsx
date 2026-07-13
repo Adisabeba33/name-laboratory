@@ -6,12 +6,22 @@ import {
   MODES,
   type CreativeMode,
   type LaboratoryResult,
+  type WordPassport,
 } from './engine'
+import {
+  loadLexicon,
+  addEntry,
+  removeEntry,
+  toEntry,
+  lexId,
+  type LexEntry,
+} from './lib/lexicon'
 import { analyzeRemote } from './lib/analyze'
 import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { ConceptDirections } from './components/ConceptDirections'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { Lexicon } from './components/Lexicon'
 import { LanguageSection } from './components/LanguageSection'
 import { LanguageTree } from './components/LanguageTree'
 import { Logo } from './components/Logo'
@@ -48,7 +58,26 @@ export default function App() {
   const [confirm, setConfirm] = useState<{ message: string; resolve: (ok: boolean) => void } | null>(
     null,
   )
+  // My Lexicon — the user's saved words, persisted on-device (localStorage).
+  const [lexicon, setLexicon] = useState<LexEntry[]>(() => loadLexicon())
+  const [showLexicon, setShowLexicon] = useState(false)
   const runId = useRef(0)
+
+  // Which of the current results' words are already saved (for this concept).
+  const savedKeys = useMemo(() => {
+    const b = brief.trim()
+    return new Set(lexicon.filter((e) => e.brief === b).map((e) => e.word.toLowerCase()))
+  }, [lexicon, brief])
+
+  function toggleSave(p: WordPassport) {
+    const b = brief.trim()
+    const id = lexId(p.word, b)
+    setLexicon((prev) =>
+      prev.some((e) => e.id === id)
+        ? removeEntry(prev, id)
+        : addEntry(prev, toEntry(p, p.family.name, b, new Date().toISOString())),
+    )
+  }
 
   /** Ask permission before any AI request. Resolves true if allowed. */
   function confirmLLM(message: string): Promise<boolean> {
@@ -215,7 +244,22 @@ export default function App() {
             languages, and the words to name it.
           </p>
         </div>
+        <button
+          type="button"
+          className="btn ghost lex-open"
+          onClick={() => setShowLexicon((v) => !v)}
+        >
+          My Lexicon · {lexicon.length}
+        </button>
       </header>
+
+      {showLexicon && (
+        <Lexicon
+          entries={lexicon}
+          onRemove={(id) => setLexicon((prev) => removeEntry(prev, id))}
+          onClose={() => setShowLexicon(false)}
+        />
+      )}
 
       <section className="lab">
         <div className="field">
@@ -359,7 +403,12 @@ export default function App() {
           <LanguageTree families={results.families} onPick={scrollToWord} />
 
           {results.families.map((fam) => (
-            <LanguageSection fam={fam} key={fam.id} />
+            <LanguageSection
+              fam={fam}
+              key={fam.id}
+              savedWords={savedKeys}
+              onToggleSave={toggleSave}
+            />
           ))}
         </section>
       )}

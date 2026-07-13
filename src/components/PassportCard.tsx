@@ -23,7 +23,15 @@ function Stars({ n }: { n: number }) {
  * brand fit, story and explanation are all on the card (the last two tucked into
  * a details disclosure to keep the grid scannable).
  */
-export function PassportCard({ p }: { p: WordPassport }) {
+export function PassportCard({
+  p,
+  saved,
+  onToggleSave,
+}: {
+  p: WordPassport
+  saved?: boolean
+  onToggleSave?: () => void
+}) {
   const topDNA = DNA_ORDER.filter((axis) => p.emotionalDNA[axis] >= 8).slice(0, 8)
 
   const e = p.evolution
@@ -31,9 +39,21 @@ export function PassportCard({ p }: { p: WordPassport }) {
     <article className="passport" id={`word-${p.word}`}>
       <div className="word-row">
         <div className="word">{p.word}</div>
-        <span className="gen-badge" title="Generation within its language">
-          gen {e.generation}
-        </span>
+        <div className="word-actions">
+          {onToggleSave && (
+            <button
+              type="button"
+              className={`save-btn ${saved ? 'on' : ''}`}
+              onClick={onToggleSave}
+              title={saved ? 'Saved to My Lexicon' : 'Save to My Lexicon'}
+            >
+              {saved ? '★ Saved' : '☆ Save'}
+            </button>
+          )}
+          <span className="gen-badge" title="Generation within its language">
+            gen {e.generation}
+          </span>
+        </div>
       </div>
       <div className="word-meta">
         {p.pronunciationGuide && (
