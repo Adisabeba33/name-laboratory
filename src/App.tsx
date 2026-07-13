@@ -18,6 +18,7 @@ import {
 } from './lib/lexicon'
 import { analyzeRemote } from './lib/analyze'
 import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
+import { fetchUsage, hasCachedUsage } from './lib/usage'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { ConceptDirections } from './components/ConceptDirections'
 import { ConfirmDialog } from './components/ConfirmDialog'
@@ -106,7 +107,6 @@ export default function App() {
           word: w.word,
           language: f.character,
           hint: w.meaning.split(' (')[0],
-          translit: w.transliteration,
         })),
       )
       const map = await fetchBespokeMeanings(trimmed, items)
@@ -123,7 +123,6 @@ export default function App() {
                     meaning: `${m.en} (${m.ru})`,
                     shortMeaning: m.short || w.shortMeaning,
                     partOfSpeech: m.pos || w.partOfSpeech,
-                    usage: { en: m.usageEn, ru: m.usageRu },
                   }
                 : w
             }),
@@ -207,6 +206,40 @@ export default function App() {
     if (usedLLM && (await confirmLLM('Rewrite the focused words’ meanings with AI for this angle.'))) {
       await enrich(result, myRun, trimmed)
     }
+  }
+
+  /**
+   * Lazily write "Use in Language" example sentences for ONE word, on demand —
+   * the most expensive step, so it runs only when a user asks to see this word
+   * used in a sentence. Free when already cached; otherwise an AI request.
+   */
+  async function requestUsage(p: WordPassport, language: string): Promise<void> {
+    if (!results) return
+    const b = brief.trim()
+    if (!hasCachedUsage(b, p.word)) {
+      const ok = await confirmLLM(`Write example sentences that use “${p.word}” in a real sentence.`)
+      if (!ok) return
+    }
+    const usage = await fetchUsage(b, {
+      word: p.word,
+      language,
+      hint: p.meaning.split(' (')[0],
+      translit: p.transliteration,
+    })
+    if (!usage) return
+    setResults((prev) =>
+      prev
+        ? {
+            ...prev,
+            families: prev.families.map((f) => ({
+              ...f,
+              words: f.words.map((w) =>
+                w.word === p.word ? { ...w, usage: { en: usage.en, ru: usage.ru } } : w,
+              ),
+            })),
+          }
+        : prev,
+    )
   }
 
   function scrollToWord(word: string) {
@@ -408,6 +441,7 @@ export default function App() {
               key={fam.id}
               savedWords={savedKeys}
               onToggleSave={toggleSave}
+              onRequestUsage={usedLLM ? requestUsage : undefined}
             />
           ))}
         </section>

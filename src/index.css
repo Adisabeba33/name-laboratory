@@ -1568,6 +1568,28 @@ textarea:focus {
   font-style: normal;
 }
 
+.use-load {
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent-2);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.use-load:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.use-load:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .meaning-block {
   margin: 8px 0 14px;
   border-left: 2px solid var(--accent);

@@ -177,7 +177,8 @@ passports are unchanged whether the analysis came from the LLM or the fallback.
 | File | Responsibility |
 | --- | --- |
 | `api/analyze.ts` | LLM Meaning Analysis. Returns the `MeaningAnalysis` shape. `501` if no key, `502` on failure → client falls back to the engine. |
-| `api/meanings.ts` | LLM "living dictionary" pass: per word writes meaning EN/RU, short definition, part of speech, and 2 EN + 2 RU natural usage sentences (uses the exact Cyrillic spelling passed in). |
+| `api/meanings.ts` | LLM meaning pass (cheap): per word writes meaning EN/RU, a short definition, and part of speech. Chunked + parallel so it never truncates. |
+| `api/usage.ts` | LLM "Use in Language" for ONE word, on demand: 2 EN + 2 RU natural example sentences. Split out and called lazily (per word the user opens) — the most expensive step, so it isn't run for words nobody looks at. |
 
 - The **API key lives only on the server** (`ANTHROPIC_API_KEY`), never in the browser.
 - `WORDLAB_MODEL` overrides the model (default `claude-haiku-4-5-20251001` for
@@ -304,7 +305,12 @@ are layered on top progressively.
   secondary ones (steer chips, concept-direction focus). Declining runs the free
   engine instead. A "don't ask again this session" opt-out exists, but the
   default is to ask. Free engine steps (re-discovery, transliteration,
-  pronunciation) run without asking.
+  pronunciation, adoption, evolve) run without asking.
+- **Spend as little as possible.** The expensive per-word example sentences
+  ("Use in Language") are written lazily — only for the word a user opens, via
+  `api/usage.ts`. The client libs (`lib/analyze`, `lib/meanings`, `lib/usage`)
+  cache results in memory, so an identical repeat costs nothing (and is served
+  without a confirmation prompt, since no request is made).
 - **Follow the honesty rules** (section 5). No fake etymology or fake precision.
 - **Determinism:** engine output must stay deterministic for a seed. Do not use
   `Date.now()` / `Math.random()` in the engine — use the seeded `Rng`.

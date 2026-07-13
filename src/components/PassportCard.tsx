@@ -35,13 +35,27 @@ export function PassportCard({
   p,
   savedWords,
   onToggleSave,
+  onRequestUsage,
 }: {
   p: WordPassport
   savedWords?: Set<string>
   onToggleSave?: (p: WordPassport) => void
+  onRequestUsage?: () => Promise<void>
 }) {
   const topDNA = DNA_ORDER.filter((axis) => p.emotionalDNA[axis] >= 8).slice(0, 8)
   const [lineage, setLineage] = useState<WordEvolutionStep[]>([])
+  const [usageLoading, setUsageLoading] = useState(false)
+
+  const hasUsage = p.usage.en.length > 0 || p.usage.ru.length > 0
+  async function loadUsage() {
+    if (!onRequestUsage) return
+    setUsageLoading(true)
+    try {
+      await onRequestUsage()
+    } finally {
+      setUsageLoading(false)
+    }
+  }
   const isSaved = (w: string) => savedWords?.has(w.toLowerCase()) ?? false
 
   // Evolving acts on the current tip of the lineage (chain multiple times).
@@ -92,7 +106,7 @@ export function PassportCard({
         {p.shortMeaning && <p className="short-meaning">{p.shortMeaning}</p>}
       </div>
 
-      {(p.usage.en.length > 0 || p.usage.ru.length > 0) && (
+      {hasUsage ? (
         <div className="sec use">
           <h4>Use in language</h4>
           {p.usage.en.length > 0 && (
@@ -116,6 +130,14 @@ export function PassportCard({
             </div>
           )}
         </div>
+      ) : (
+        onRequestUsage && (
+          <div className="sec use">
+            <button type="button" className="use-load" disabled={usageLoading} onClick={loadUsage}>
+              {usageLoading ? 'Writing sentences…' : 'Show it in a sentence (AI)'}
+            </button>
+          </div>
+        )
       )}
 
       <div className="origin">{p.ancestry.note}</div>

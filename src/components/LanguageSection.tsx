@@ -12,10 +12,12 @@ export function LanguageSection({
   fam,
   savedWords,
   onToggleSave,
+  onRequestUsage,
 }: {
   fam: WordFamily
   savedWords?: Set<string>
   onToggleSave?: (p: WordPassport) => void
+  onRequestUsage?: (p: WordPassport, language: string) => Promise<void>
 }) {
   const g = fam.genome
   return (
@@ -57,7 +59,15 @@ export function LanguageSection({
 
       <div className="grid">
         {fam.words.map((p) => (
-          <PassportCard p={p} key={p.word} savedWords={savedWords} onToggleSave={onToggleSave} />
+          <PassportCard
+            p={p}
+            key={p.word}
+            savedWords={savedWords}
+            onToggleSave={onToggleSave}
+            onRequestUsage={
+              onRequestUsage ? () => onRequestUsage(p, fam.character) : undefined
+            }
+          />
         ))}
       </div>
     </section>

@@ -8,10 +8,19 @@ import type { MeaningAnalysis } from '../engine'
  * case the caller falls back to the self-contained deterministic engine. The API
  * key lives only on the server; the browser never sees it.
  */
+const cache = new Map<string, MeaningAnalysis>()
+
+/** True if this exact prompt was already analysed (so it costs nothing to serve). */
+export function hasCachedAnalysis(brief: string): boolean {
+  return cache.has(brief)
+}
+
 export async function analyzeRemote(
   brief: string,
   timeoutMs = 55_000,
 ): Promise<MeaningAnalysis | null> {
+  const cached = cache.get(brief)
+  if (cached) return cached
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), timeoutMs)
   try {
@@ -35,7 +44,9 @@ export async function analyzeRemote(
     // Tolerate an older endpoint that doesn't return tensions/directions.
     if (!Array.isArray(data.tensions)) data.tensions = []
     if (!Array.isArray(data.directions)) data.directions = []
-    return data as MeaningAnalysis
+    const analysis = data as MeaningAnalysis
+    cache.set(brief, analysis)
+    return analysis
   } catch {
     return null
   } finally {
