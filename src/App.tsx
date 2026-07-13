@@ -4,6 +4,7 @@ import {
   discoverFromAnalysis,
   focusConcepts,
   MODES,
+  DEFAULT_SPEAKABILITY,
   type CreativeMode,
   type LaboratoryResult,
 } from './engine'
@@ -32,6 +33,7 @@ export default function App() {
   // Advanced-only controls — most people never open them.
   const [mode, setMode] = useState<CreativeMode>('timeless')
   const [count, setCount] = useState(6)
+  const [speakability, setSpeakability] = useState(DEFAULT_SPEAKABILITY)
   const [extra, setExtra] = useState('')
 
   const [results, setResults] = useState<LaboratoryResult | null>(null)
@@ -98,7 +100,7 @@ export default function App() {
     const myRun = ++runId.current
     const trimmed = brief.trim()
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
-    const request = { brief: trimmed || undefined, keywords, mode, count, seed }
+    const request = { brief: trimmed || undefined, keywords, mode, count, speakability, seed }
     // A steer re-interprets the SAME prompt with an added emphasis, without
     // changing what the user typed. Word synthesis still flows from the analysis.
     const analysisBrief = steer ? `${trimmed}\n\nSteer the reading: ${steer}.` : trimmed
@@ -141,7 +143,7 @@ export default function App() {
     const myRun = ++runId.current
     setSelectedDirections(ids)
     const trimmed = brief.trim()
-    const request = { brief: trimmed || undefined, keywords, mode, count }
+    const request = { brief: trimmed || undefined, keywords, mode, count, speakability }
     const focus = focusConcepts(results.analysis.concepts, results.analysis.directions, ids)
     const result = discoverFromAnalysis(results.analysis, request, focus)
     setResults(result)
@@ -239,6 +241,26 @@ export default function App() {
               <p className="hint">
                 Leave as-is to let the meaning choose. A register only nudges which languages surface.
               </p>
+            </div>
+
+            <div className="field">
+              <label className="lbl" htmlFor="speakability">
+                Word style — {speakability >= 0.66 ? 'Speakable' : speakability >= 0.4 ? 'Balanced' : 'Ornate'}
+              </label>
+              <div className="count-control">
+                <input
+                  id="speakability"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={speakability}
+                  onChange={(e) => setSpeakability(Number(e.target.value))}
+                />
+                <span className="hint" style={{ marginTop: 0 }}>
+                  Speakable ↔ Ornate — how far words may drift from everyday speech
+                </span>
+              </div>
             </div>
 
             <div className="field">

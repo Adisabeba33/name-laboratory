@@ -19,7 +19,14 @@ import {
   MODES,
 } from './index'
 import { KNOWN_WORDS } from './data/known-words'
-import { countSyllables, awkwardClusters, vowelRatio } from './phonetics'
+import {
+  countSyllables,
+  awkwardClusters,
+  vowelRatio,
+  longestVowelRun,
+  pronounceability,
+  speakabilityBand,
+} from './phonetics'
 import { pronounce } from './pronounce'
 import { translitRu } from './translit'
 import { Rng } from './rng'
@@ -177,6 +184,59 @@ describe('native synthesis (diverse speakers of one language)', () => {
   it('does not expose raw source-root fragments', () => {
     const words = generateWords({ ...MEDICINE_REQUEST, count: 8 }).map((w) => w.word.toLowerCase())
     expect(words.filter((w) => /^(lum|iris|nous|reg|leuk)/.test(w))).toEqual([])
+  })
+})
+
+describe('speakability — words that stay sayable', () => {
+  const LANGS = ['crystalline', 'liquid', 'ancient', 'noble', 'earthen', 'ashen']
+
+  it('keeps default words clear of vowel walls and spell-length', () => {
+    for (const id of LANGS) {
+      for (const seed of [7, 42, 99]) {
+        const vocab = speakNative(languageById(id), new Rng(seed), 3)
+        for (const w of vocab.words) {
+          expect(longestVowelRun(w)).toBeLessThanOrEqual(2)
+          expect(countSyllables(w)).toBeLessThanOrEqual(3)
+          expect(w.length).toBeLessThanOrEqual(9)
+          expect(pronounceability(w)).toBeGreaterThanOrEqual(0.5)
+        }
+      }
+    }
+  })
+
+  it('a strictly-speakable dial beats an ornate one on average', () => {
+    const avg = (n: number) => {
+      let sum = 0
+      let k = 0
+      for (const id of LANGS) {
+        for (const seed of [3, 11, 23]) {
+          for (const w of speakNative(languageById(id), new Rng(seed), 3, n).words) {
+            sum += pronounceability(w)
+            k++
+          }
+        }
+      }
+      return sum / k
+    }
+    expect(avg(1)).toBeGreaterThan(avg(0))
+  })
+
+  it('stays deterministic for a given seed and dial', () => {
+    const a = speakNative(languageById('liquid'), new Rng(55), 3, 0.7).words
+    const b = speakNative(languageById('liquid'), new Rng(55), 3, 0.7).words
+    expect(a).toEqual(b)
+  })
+
+  it('maps words to honest bands and ships one on every passport', () => {
+    expect(speakabilityBand('Moma')).toBe('Speakable')
+    expect(speakabilityBand('Senis')).toBe('Speakable')
+    // Long, many-syllable "incantation" shapes are flagged, not passed as sayable.
+    expect(speakabilityBand('Kororoalux')).not.toBe('Speakable')
+    expect(speakabilityBand('Kororoalongar')).toBe('Ornate') // length ≥ 11
+    const words = generateWords({ ...MEDICINE_REQUEST, count: 5 })
+    for (const w of words) {
+      expect(['Speakable', 'Balanced', 'Ornate']).toContain(w.speakability)
+    }
   })
 })
 

@@ -234,6 +234,8 @@ export interface WordPassport {
   usage: { en: string[]; ru: string[] }
   /** A stress-marked spoken guide for saying the word, e.g. "eh-LEE-ah-yeh". */
   pronunciationGuide: string
+  /** How readily the word enters everyday speech — a qualitative band. */
+  speakability: SpeakabilityBand
   /** Where the word's sound descends from — species + phonetic ancestry. */
   ancestry: Ancestry
   /** The word's own inherited genome / evolution profile. */
@@ -334,9 +336,21 @@ export interface GenerationRequest {
   mode?: CreativeMode
   /** How many words to invent. */
   count?: number
+  /**
+   * Bias toward everyday speech, 0–1 (default ~0.7). 1 keeps only strictly
+   * speakable words; lower values allow more ornate, elaborate shapes. Exposed
+   * in the UI as a "Speakable ↔ Ornate" slider.
+   */
+  speakability?: number
   /** Seed for deterministic generation (useful for tests and shareable results). */
   seed?: number
 }
+
+/**
+ * A qualitative read of how easily a word enters real speech. Kept as a band
+ * (not a fake percentage) per the project's honesty rules.
+ */
+export type SpeakabilityBand = 'Speakable' | 'Balanced' | 'Ornate'
 
 /** A node in the concept network — a discovered idea, in both languages. */
 export interface ConceptNode {

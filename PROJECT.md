@@ -86,6 +86,10 @@ configured, **bespoke per-word meanings and usage sentences swap in progressivel
   parentheses), tailored to the prompt when the LLM is on.
 - **Use in Language** — natural example sentences in English and Russian that show
   how the word actually functions in a sentence (LLM-written).
+- **Speakability band** — a qualitative read (Speakable / Balanced / Ornate) of how
+  readily the word enters everyday speech. Synthesis is biased toward speakable
+  shapes by default; a "Speakable ↔ Ornate" slider (`speakability` on the request)
+  lets the user allow more elaborate words.
 - **Word Genome / Emotional DNA / Personality / Brand Fit / origin explanation.**
 
 ---
@@ -219,7 +223,7 @@ Prompt → Interpretation → Hidden layers → Semantic tensions → Concept di
 | **1** | **Semantic Tensions** + optional "Refine the reading" steer chips (non-blocking, LLM-only) | ✅ done |
 | **2** | **Concept Directions** — 3–5 distinct angles; focus word discovery on one or combine two (non-blocking re-weight). `Concept` persistence deferred to Phase 6. | ✅ done |
 | **3** | **Diverse word discovery** — over-generate a candidate pool, then max-min-diversity select so a language's words never share a stem (no template mutation) | ✅ done |
-| 5 | Adoption Test — qualitative first, transparent numeric score later | ⏳ planned |
+| 5 | Adoption Test — qualitative first, transparent numeric score later. Speakability band + "Speakable ↔ Ornate" dial shipped as the first step. | 🟡 in progress |
 | 6 | Personal Lexicon — save/search/collections/history | ⏳ planned |
 | 7 | Evolve the word — change sound while preserving concept; parent/child lineage | ⏳ planned |
 | 8 | External checks — dictionary / brand / domain / trademark / cross-language negatives | ⏳ later |

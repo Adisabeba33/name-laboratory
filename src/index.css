@@ -1117,6 +1117,29 @@ textarea:focus {
   padding: 1px 8px;
 }
 
+.speak {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+}
+
+.speak-speakable {
+  color: #2f9e69;
+  border-color: color-mix(in srgb, #2f9e69 45%, var(--border));
+}
+
+.speak-balanced {
+  color: var(--text-muted, var(--text-faint));
+}
+
+.speak-ornate {
+  color: #b08328;
+  border-color: color-mix(in srgb, #b08328 45%, var(--border));
+}
+
 .short-meaning {
   margin: 6px 0 0;
   font-size: 12.5px;

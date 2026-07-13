@@ -16,6 +16,7 @@ import { analyzeMeaning } from './meaning'
 import { Rng, hashSeed } from './rng'
 import { speakNative } from './synth'
 import { computeGenome } from './genome'
+import { speakabilityBand } from './phonetics'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
 import { ratePronunciation } from './pronunciation'
@@ -113,7 +114,7 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
     // takes a different lead/support pair from this list, so every word gets its
     // own shade of meaning while staying on the language's theme.
     const langConcepts = pickLanguageConcepts(language, concepts, leadConcepts)
-    const vocab = speakNative(language, rng, WORDS_PER_LANGUAGE)
+    const vocab = speakNative(language, rng, WORDS_PER_LANGUAGE, request.speakability)
     const fresh = vocab.words.filter((w) => {
       const key = w.toLowerCase()
       if (seenWords.has(key)) return false
@@ -180,6 +181,7 @@ export function buildPassport(
     transliteration: translitRu(word),
     usage: { en: [], ru: [] },
     pronunciationGuide: pronounce(word, language.stressPattern),
+    speakability: speakabilityBand(word),
     ancestry: buildAncestry(lead, language),
     evolution,
     emotionalDNA,

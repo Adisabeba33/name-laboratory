@@ -47,6 +47,22 @@ export function countSyllables(word: string): number {
   return Math.max(1, count)
 }
 
+/** The longest run of adjacent vowels — a proxy for how much a word "piles up". */
+export function longestVowelRun(word: string): number {
+  const w = normalise(word)
+  let best = 0
+  let run = 0
+  for (const ch of w) {
+    if (isVowel(ch)) {
+      run++
+      if (run > best) best = run
+    } else {
+      run = 0
+    }
+  }
+  return best
+}
+
 export function vowelRatio(word: string): number {
   const w = normalise(word)
   const letters = [...w].filter((c) => /[a-zë-ü]/i.test(c))
@@ -127,6 +143,22 @@ export function pronounceability(word: string): number {
       syllableScore * 0.15 +
       endsOpen * 0.1,
   )
+}
+
+/**
+ * A qualitative read of how readily a word enters everyday speech. It blends the
+ * three things that actually make a coined word sayable — clean phonotactics,
+ * few syllables and modest length — so a long-but-smooth "incantation" is flagged
+ * rather than passed as speakable. A band (not a percentage), per the honesty
+ * rules: we are not claiming a measured probability of adoption.
+ */
+export function speakabilityBand(word: string): 'Speakable' | 'Balanced' | 'Ornate' {
+  const p = pronounceability(word)
+  const syllables = countSyllables(word)
+  const length = normalise(word).replace(/[^a-zë-ü]/gi, '').length
+  if (p >= 0.62 && syllables <= 3 && length <= 8) return 'Speakable'
+  if (p < 0.45 || syllables >= 5 || length >= 11) return 'Ornate'
+  return 'Balanced'
 }
 
 /** Left/right symmetry of the written form (palindromic tendency), 0–1. */

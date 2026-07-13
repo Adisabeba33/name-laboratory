@@ -48,6 +48,12 @@ export function PassportCard({ p }: { p: WordPassport }) {
           </span>
         )}
         {p.partOfSpeech && <span className="pos">{p.partOfSpeech}</span>}
+        <span
+          className={`speak speak-${p.speakability.toLowerCase()}`}
+          title="How readily this word enters everyday speech (a qualitative band, not a score)"
+        >
+          {p.speakability}
+        </span>
       </div>
       <div className="meaning-block">
         <span className="meaning-label">Meaning</span>
