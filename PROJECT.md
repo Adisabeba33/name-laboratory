@@ -103,13 +103,19 @@ Avoid this language:
 - “AI name generator”, “random word generator”, “build your own language”,
   “generating names…”, “here are your results”, “inspired by”.
 
-There are (eventually) **two modes** that must not be blended into one generic
-generator:
+There are **two modes** (a tab picker on the input), which must not be blended
+into one generic generator:
 
 - **Meaning Discovery** (primary) — for unnamed human experiences and concepts.
-  Optimises for semantic precision, emotional recognition, natural usage.
-- **Naming** (secondary) — for brands, products, characters. Optimises for brand
-  fit, memorability, domain/trademark potential.
+  Optimises for semantic precision, emotional recognition, natural usage. Shows
+  semantic tensions and concept directions.
+- **Naming** (secondary) — for a company, store, brand, product, or even a
+  newborn. Optimises for brand character, memorability, adoption. `api/analyze`
+  switches to a naming system prompt; the UI hides tensions/directions and
+  relabels results ("name families" / "candidate names").
+
+Both run the same discovery/synthesis pipeline underneath — only the analysis
+framing and result copy differ.
 
 ---
 
@@ -224,6 +230,8 @@ Prompt → Interpretation → Hidden layers → Semantic tensions → Concept di
 | **6** | **My Lexicon** — save words to a personal, on-device dictionary (localStorage); searchable, removable, keeps meaning/pronunciation/concept/adoption. Collections/tags & cross-device sync deferred. | ✅ done |
 | **7** | **Evolve the sound** — reshape a word's phonetics toward a direction (softer/darker/simpler/…) while keeping the meaning verbatim; deterministic (free, no LLM), with a parent→child lineage and a "what changed" summary. | ✅ done |
 | — | **Cost optimisation** — lazy per-word Use-in-Language (`api/usage.ts`) + in-memory caches for analyze/meanings/usage | ✅ done |
+| **21** | **Two modes** — Discover a meaning vs Name something (company/store/brand/newborn); naming uses its own analyst prompt and result framing | ✅ done |
+| — | **"How this word was made"** — honest per-word construction breakdown (syllables, ideas fused, species, sound influences); no fake morpheme etymology | ✅ done |
 | 8 | External checks — dictionary / brand / domain / trademark / cross-language negatives | ⏳ later |
 | A | **Accounts + database** — profiles, cross-device lexicon sync, request history | ⏳ later (see §7a) |
 | M | **Monetisation** — free daily limit + paid tier (premium model / higher limits) | ⏳ later (see §7a) |

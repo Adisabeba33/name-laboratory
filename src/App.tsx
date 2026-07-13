@@ -29,15 +29,47 @@ import { Logo } from './components/Logo'
 
 const MODE_KEYS = Object.keys(MODES) as CreativeMode[]
 
-/** A few starting prompts, to show the one thing the lab wants: a described meaning. */
-const EXAMPLES = [
-  'the feeling of becoming someone completely different after surviving something that should have destroyed you',
-  'a calm, premium AI company for medicine',
-  'the quiet joy of returning home after a long time away',
-  'a luxury fragrance that smells like rain on warm stone',
-]
+/** The two things the lab does: name a meaning, or name a thing. */
+type AppMode = 'discover' | 'name'
+
+/** Per-mode copy so the one input reads right for what the user is doing. */
+const MODE_COPY: Record<AppMode, {
+  tab: string
+  label: string
+  placeholder: string
+  button: string
+  examples: string[]
+}> = {
+  discover: {
+    tab: 'Discover a meaning',
+    label: 'Describe the word you want',
+    placeholder:
+      'e.g. the feeling of becoming someone completely different after surviving something that should have destroyed you',
+    button: 'Discover words',
+    examples: [
+      'the feeling of becoming someone completely different after surviving something that should have destroyed you',
+      'the quiet joy of returning home after a long time away',
+      'the smell of rain on warm dust after a long dry summer',
+      'the sadness of a perfect moment ending while you are still inside it',
+    ],
+  },
+  name: {
+    tab: 'Name something',
+    label: 'What are you naming?',
+    placeholder:
+      'e.g. a calm, premium AI company for medicine — or an unusual name for a newborn daughter',
+    button: 'Discover names',
+    examples: [
+      'a calm, premium AI company for medicine',
+      'a cozy independent bookstore and coffee house',
+      'a bold sportswear brand for climbers',
+      'a gentle, luminous name for a newborn daughter',
+    ],
+  },
+}
 
 export default function App() {
+  const [appMode, setAppMode] = useState<AppMode>('discover')
   const [brief, setBrief] = useState(
     'A word for the feeling of becoming someone completely different after surviving something that should have destroyed you.',
   )
@@ -169,7 +201,7 @@ export default function App() {
         ? null
         : reseed && usedLLM && results && !steer
           ? results.analysis
-          : await analyzeRemote(analysisBrief)
+          : await analyzeRemote(analysisBrief, appMode)
 
       remote = Boolean(analysis)
       // Build immediately with the engine's meanings, so results show fast.
@@ -295,9 +327,24 @@ export default function App() {
       )}
 
       <section className="lab">
+        <div className="app-modes" role="tablist">
+          {(Object.keys(MODE_COPY) as AppMode[]).map((m) => (
+            <button
+              type="button"
+              key={m}
+              role="tab"
+              aria-selected={appMode === m}
+              className={`app-mode ${appMode === m ? 'on' : ''}`}
+              onClick={() => setAppMode(m)}
+            >
+              {MODE_COPY[m].tab}
+            </button>
+          ))}
+        </div>
+
         <div className="field">
           <label className="lbl" htmlFor="brief">
-            Describe the word you want
+            {MODE_COPY[appMode].label}
           </label>
           <textarea
             id="brief"
@@ -307,17 +354,20 @@ export default function App() {
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && canRun) run(false)
             }}
-            placeholder="e.g. the feeling of becoming someone completely different after surviving something that should have destroyed you"
+            placeholder={MODE_COPY[appMode].placeholder}
             rows={3}
           />
           <p className="hint">
-            Just the meaning or feeling — no keywords, no settings needed. Press ⌘/Ctrl + Enter to run.
-            Anything that uses AI asks first — declining still gives a free engine result.
+            {appMode === 'name'
+              ? 'Describe what you’re naming — a company, store, brand, or even a baby.'
+              : 'Just the meaning or feeling — no keywords needed.'}{' '}
+            Press ⌘/Ctrl + Enter to run. Anything that uses AI asks first — declining still gives a
+            free engine result.
           </p>
 
           <div className="examples">
             <span className="examples-label">Try:</span>
-            {EXAMPLES.map((ex) => (
+            {MODE_COPY[appMode].examples.map((ex) => (
               <button
                 type="button"
                 key={ex}
@@ -332,7 +382,11 @@ export default function App() {
 
         <div className="actions">
           <button className="btn" onClick={() => run(false)} disabled={!canRun || analyzing}>
-            {analyzing ? 'Reading the meaning…' : 'Discover words'}
+            {analyzing
+              ? appMode === 'name'
+                ? 'Reading the brief…'
+                : 'Reading the meaning…'
+              : MODE_COPY[appMode].button}
           </button>
           {results && !analyzing && (
             <button className="btn ghost" onClick={() => run(true)}>
@@ -401,8 +455,18 @@ export default function App() {
 
       {results === null ? (
         <div className="empty">
-          Describe a meaning and press <b>Discover words</b>. The laboratory reads what you
-          really mean, then surfaces several new languages — each with native-speaker words.
+          {appMode === 'name' ? (
+            <>
+              Describe what you’re naming and press <b>Discover names</b>. The laboratory reads the
+              character it should have, then surfaces several sound-worlds — each with candidate
+              names.
+            </>
+          ) : (
+            <>
+              Describe a meaning and press <b>Discover words</b>. The laboratory reads what you
+              really mean, then surfaces several new languages — each with native-speaker words.
+            </>
+          )}
         </div>
       ) : results.families.length === 0 ? (
         <div className="empty">
@@ -415,9 +479,10 @@ export default function App() {
             source={usedLLM ? 'llm' : 'engine'}
             onSteer={usedLLM ? (label) => run(false, label) : undefined}
             steering={steering}
+            showTensions={appMode === 'discover'}
           />
 
-          {results.analysis.directions.length > 0 && (
+          {appMode === 'discover' && results.analysis.directions.length > 0 && (
             <ConceptDirections
               directions={results.analysis.directions}
               selected={selectedDirections}
@@ -426,9 +491,13 @@ export default function App() {
           )}
 
           <div className="results-head">
-            <h2>{results.families.length} linguistic species discovered</h2>
+            <h2>
+              {results.families.length}{' '}
+              {appMode === 'name' ? 'name families' : 'linguistic species'} discovered
+            </h2>
             <span className="muted">
-              {results.families.reduce((n, f) => n + f.words.length, 0)} native words
+              {results.families.reduce((n, f) => n + f.words.length, 0)}{' '}
+              {appMode === 'name' ? 'candidate names' : 'native words'}
               {refining && <span className="refining"> · writing meanings…</span>}
             </span>
           </div>

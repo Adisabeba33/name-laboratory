@@ -597,6 +597,38 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.app-modes {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-soft);
+  margin-bottom: 16px;
+}
+
+.app-mode {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.app-mode:hover {
+  color: var(--text);
+}
+
+.app-mode.on {
+  color: var(--bg);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
 .evolve-head {
   display: flex;
   align-items: baseline;

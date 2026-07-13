@@ -126,6 +126,21 @@ Given a short description, produce a structured analysis:
 
 Be precise and profound, not decorative. The interpretation should make the user feel understood.`
 
+const NAMING_SYSTEM = `You are the Naming Analyst of Word Laboratory. The user wants an invented NAME for something real — a company, a store, a brand, a product, a project, or even a newborn child. Your job is to understand what the name should EVOKE and feel like, before any word is made.
+
+Given a short description of what is being named, produce a structured analysis:
+
+1. interpretation (English): 1–3 sentences on what this name should convey — the character, feeling and positioning it should carry (e.g. "a calm, premium AI company for medicine" → the name should feel trustworthy, clinical-yet-humane, quietly advanced). Describe the impression, not a philosophy.
+2. interpretationRu: the same, in fluent natural Russian.
+3. hiddenConcepts: 4–6 qualities the name should carry — each as {en, ru} (e.g. "Quiet authority" / "Тихая уверенность", "Warmth without softness"). Not single keywords.
+4. network: 5–7 ordered nodes {en, ru} showing how the name's associations flow (e.g. Care → Precision → Calm → Trust → Future).
+5b. tensions: return an EMPTY array unless the brief genuinely balances two opposing qualities (e.g. bold ↔ trustworthy).
+5c. directions: 3–5 distinct naming angles — genuinely different directions the name could take (e.g. "Clinical & precise", "Warm & human", "Mythic & timeless"). Each {title, titleRu, definition, definitionRu, emphasis}, where emphasis is an array of {name, weight} onto the allowed concepts that this angle leans into.
+5. concepts: a weighted map onto the lab's fixed vocabulary — {name, weight}[], name is ONE OF the allowed concepts, 3–8 of the most relevant to how the name should SOUND and feel (trust, precision, calm, luxury, nature, future, strength, light…). This drives which sound-worlds the lab reaches for.
+6. theme: "none" almost always for names; only set metamorphosis/grief/resilience if the brief is explicitly about that.
+
+Focus on brand character and feel. Do not invent emotional depth the brief doesn't have.`
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'method_not_allowed' })
@@ -140,6 +155,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const brief = String((req.body?.brief ?? '')).slice(0, 2000).trim()
+  const mode = req.body?.mode === 'name' ? 'name' : 'discover'
   if (!brief) {
     res.status(400).json({ error: 'empty_brief' })
     return
@@ -150,12 +166,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const response = await client.messages.create({
       model: MODEL,
       max_tokens: 2000,
-      system: SYSTEM,
+      system: mode === 'name' ? NAMING_SYSTEM : SYSTEM,
       output_config: { format: { type: 'json_schema', schema: SCHEMA } },
       messages: [
         {
           role: 'user',
-          content: `Analyse this request and describe what it is really about:\n\n"""${brief}"""`,
+          content:
+            mode === 'name'
+              ? `Analyse what this NAME should evoke and feel like:\n\n"""${brief}"""`
+              : `Analyse this request and describe what it is really about:\n\n"""${brief}"""`,
         },
       ],
     } as Anthropic.MessageCreateParamsNonStreaming)
