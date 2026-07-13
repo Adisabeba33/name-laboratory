@@ -42,15 +42,30 @@ const NODE_SCHEMA = {
   properties: { en: { type: 'string' }, ru: { type: 'string' } },
 }
 
+const TENSION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['a', 'aRu', 'b', 'bRu', 'note', 'noteRu'],
+  properties: {
+    a: { type: 'string' },
+    aRu: { type: 'string' },
+    b: { type: 'string' },
+    bRu: { type: 'string' },
+    note: { type: 'string' },
+    noteRu: { type: 'string' },
+  },
+}
+
 const SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['interpretation', 'interpretationRu', 'hiddenConcepts', 'network', 'concepts', 'theme'],
+  required: ['interpretation', 'interpretationRu', 'hiddenConcepts', 'network', 'tensions', 'concepts', 'theme'],
   properties: {
     interpretation: { type: 'string' },
     interpretationRu: { type: 'string' },
     hiddenConcepts: { type: 'array', items: NODE_SCHEMA },
     network: { type: 'array', items: NODE_SCHEMA },
+    tensions: { type: 'array', items: TENSION_SCHEMA },
     concepts: {
       type: 'array',
       items: {
@@ -80,6 +95,7 @@ Given a short description, produce a structured analysis:
 2. interpretationRu: the same interpretation in fluent, natural Russian (idiomatic, not a word-for-word translation).
 3. hiddenConcepts: 4–6 ideas (not keywords) that live beneath the request — each as {en, ru}. These are phrases like "Death without dying" / "Смерть без смерти", not single words.
 4. network: 5–7 ordered concept nodes {en, ru} showing how the meaning flows (e.g. Destruction → Survival → Transformation → Identity → Rebirth).
+5b. tensions: 2–4 semantic tensions — the opposing forces the concept lives between. Each is {a, aRu, b, bRu, note, noteRu}: two short opposing pole labels (a vs b) and one human sentence (note) capturing the lived tension, e.g. a="Survival" b="Identity death", note="Alive, but no longer the same person." These are more useful than emotional percentages; only include tensions the request genuinely contains. If it carries no real opposition, return an empty array.
 5. concepts: a weighted map onto the lab's fixed vocabulary. Return an array of {name, weight} where name is ONE OF the allowed concepts and weight is 0–1 (1 = central). Include 3–8 of the most relevant. Pick whatever genuinely fits: for a sensory or physical request use the concrete concepts (water, nature, earth, fire, light, calm, movement…); for an emotional one, the deep concepts (transformation, rebirth, survival, identity, resilience, loss, memory, longing, grief, hope…). Do not force deep/emotional concepts onto a concrete request, and do not default to shallow ones on a profound one — follow the actual meaning.
 6. theme: one of "metamorphosis", "grief", "resilience", or "none" if none clearly dominates. metamorphosis = irreversible transformation/rebirth after destruction; grief = loss and love-after-loss; resilience = strength/courage under pressure.
 
@@ -142,6 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       interpretationRu: String(raw.interpretationRu ?? ''),
       hiddenConcepts: sanitiseNodes(raw.hiddenConcepts),
       network: sanitiseNodes(raw.network),
+      tensions: sanitiseTensions(raw.tensions),
       concepts,
       theme: raw.theme && raw.theme !== 'none' ? String(raw.theme) : undefined,
     }
@@ -160,4 +177,21 @@ function sanitiseNodes(input: unknown): Array<{ en: string; ru: string }> {
     .filter((n) => n && typeof n.en === 'string' && typeof n.ru === 'string')
     .slice(0, 8)
     .map((n) => ({ en: String(n.en), ru: String(n.ru) }))
+}
+
+function sanitiseTensions(input: unknown) {
+  if (!Array.isArray(input)) return []
+  return input
+    .filter(
+      (t) =>
+        t &&
+        typeof t.a === 'string' && typeof t.b === 'string' &&
+        typeof t.note === 'string',
+    )
+    .slice(0, 4)
+    .map((t) => ({
+      a: String(t.a), aRu: String(t.aRu ?? t.a),
+      b: String(t.b), bRu: String(t.bRu ?? t.b),
+      note: String(t.note), noteRu: String(t.noteRu ?? t.note),
+    }))
 }

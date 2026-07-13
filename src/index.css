@@ -473,6 +473,124 @@ textarea:focus {
   font-style: italic;
 }
 
+.tensions {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.tensions h4 {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 12px;
+}
+
+.tension-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tension {
+  display: grid;
+  grid-template-columns: minmax(0, auto) 1fr;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+
+.poles {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.pole {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+}
+
+.vs {
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+.tension-note {
+  font-size: 14.5px;
+  color: var(--text);
+  grid-column: 2;
+}
+
+.tension-note.ru {
+  grid-column: 2;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+@media (max-width: 560px) {
+  .tension {
+    grid-template-columns: 1fr;
+  }
+  .tension-note,
+  .tension-note.ru {
+    grid-column: 1;
+  }
+}
+
+.steer {
+  margin-top: 16px;
+}
+
+.steer-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 9px;
+}
+
+.steer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.steer-chip {
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.steer-chip:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.steer-chip.tone {
+  color: var(--text-faint);
+}
+
+.steer-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .interp-cols {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -32,6 +32,8 @@ export async function analyzeRemote(
     ) {
       return null
     }
+    // Tolerate an older endpoint that doesn't return tensions.
+    if (!Array.isArray(data.tensions)) data.tensions = []
     return data as MeaningAnalysis
   } catch {
     return null

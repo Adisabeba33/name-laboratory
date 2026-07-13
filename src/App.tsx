@@ -36,6 +36,7 @@ export default function App() {
   const [nonce, setNonce] = useState(0)
   const [analyzing, setAnalyzing] = useState(false)
   const [refining, setRefining] = useState(false)
+  const [steering, setSteering] = useState(false)
   const [usedLLM, setUsedLLM] = useState(false)
   const runId = useRef(0)
 
@@ -48,23 +49,27 @@ export default function App() {
     [extra],
   )
 
-  async function run(reseed = false) {
+  async function run(reseed = false, steer?: string) {
     if (analyzing) return
     const myRun = ++runId.current
     const trimmed = brief.trim()
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
     const request = { brief: trimmed || undefined, keywords, mode, count, seed }
+    // A steer re-interprets the SAME prompt with an added emphasis, without
+    // changing what the user typed. Word synthesis still flows from the analysis.
+    const analysisBrief = steer ? `${trimmed}\n\nSteer the reading: ${steer}.` : trimmed
 
     setAnalyzing(true)
+    if (steer) setSteering(true)
     let result: LaboratoryResult
     let remote = false
     try {
       // 1) Let the LLM understand the meaning (server-side). Reuse the prior
       //    LLM analysis on a reseed so "Try another set" doesn't re-bill a call.
       const analysis =
-        reseed && usedLLM && results
+        reseed && usedLLM && results && !steer
           ? results.analysis
-          : await analyzeRemote(trimmed)
+          : await analyzeRemote(analysisBrief)
 
       remote = Boolean(analysis)
       // Build immediately with the engine's meanings, so results show fast.
@@ -114,6 +119,7 @@ export default function App() {
         if (runId.current === myRun) setRefining(false)
       }
     }
+    if (runId.current === myRun) setSteering(false)
   }
 
   function scrollToWord(word: string) {
@@ -254,7 +260,12 @@ export default function App() {
         </div>
       ) : (
         <section className="results" key={nonce}>
-          <InterpretationPanel analysis={results.analysis} source={usedLLM ? 'llm' : 'engine'} />
+          <InterpretationPanel
+            analysis={results.analysis}
+            source={usedLLM ? 'llm' : 'engine'}
+            onSteer={usedLLM ? (label) => run(false, label) : undefined}
+            steering={steering}
+          />
 
           <div className="results-head">
             <h2>{results.families.length} linguistic species discovered</h2>

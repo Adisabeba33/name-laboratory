@@ -1,4 +1,10 @@
-import type { Concept, ConceptNode, ConceptVector, MeaningAnalysis } from './types'
+import type {
+  Concept,
+  ConceptNode,
+  ConceptVector,
+  MeaningAnalysis,
+  SemanticTension,
+} from './types'
 import { PATTERNS } from './data/patterns'
 import { THEMES, type Theme } from './data/themes'
 import { IDEAS } from './data/ideas'
@@ -48,9 +54,51 @@ export function analyzeMeaning(keywords: string[], brief?: string): MeaningAnaly
     interpretationRu: theme ? theme.interpretationRu : genericInterpretationRu(top),
     hiddenConcepts: theme ? theme.hiddenConcepts : genericHidden(top),
     network: theme ? theme.network : genericNetwork(top),
+    tensions: theme ? theme.tensions : genericTensions(concepts, top),
     theme: theme?.id,
     concepts,
   }
+}
+
+/**
+ * Concepts that pull against each other. When both poles are genuinely present
+ * in a prompt, the meaning lives in the tension between them — worth naming.
+ */
+const OPPOSITES: Array<[Concept, Concept]> = [
+  ['survival', 'loss'],
+  ['strength', 'grief'],
+  ['rebirth', 'destruction'],
+  ['creation', 'destruction'],
+  ['hope', 'shadow'],
+  ['light', 'shadow'],
+  ['freedom', 'order'],
+  ['calm', 'energy'],
+  ['identity', 'transformation'],
+  ['future', 'memory'],
+  ['courage', 'grief'],
+  ['unity', 'freedom'],
+]
+
+/**
+ * Generic semantic tensions: pairs of opposing concepts that are BOTH present in
+ * the prompt. Grounded (never invented from thin air), and empty when the prompt
+ * carries no real opposition — honest rather than decorative.
+ */
+function genericTensions(concepts: ConceptVector, top: Concept[]): SemanticTension[] {
+  const present = new Set(top)
+  const out: SemanticTension[] = []
+  for (const [a, b] of OPPOSITES) {
+    if (present.has(a) && present.has(b) && (concepts[a] ?? 0) > 0 && (concepts[b] ?? 0) > 0) {
+      out.push({
+        a: IDEAS[a].label, aRu: IDEAS[a].labelRu,
+        b: IDEAS[b].label, bRu: IDEAS[b].labelRu,
+        note: `Held between ${IDEAS[a].label.toLowerCase()} and ${IDEAS[b].label.toLowerCase()}.`,
+        noteRu: `Между двумя полюсами: ${IDEAS[a].labelRu.toLowerCase()} и ${IDEAS[b].labelRu.toLowerCase()}.`,
+      })
+    }
+    if (out.length >= 2) break
+  }
+  return out
 }
 
 /** The strongest matching theme, if one is clearly present. */

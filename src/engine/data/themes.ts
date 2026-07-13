@@ -1,4 +1,4 @@
-import type { Concept, ConceptNode } from '../types'
+import type { Concept, ConceptNode, SemanticTension } from '../types'
 
 /**
  * Meaning themes — recognised human ideas.
@@ -20,6 +20,8 @@ export interface Theme {
   interpretationRu: string
   hiddenConcepts: ConceptNode[]
   network: ConceptNode[]
+  /** The opposing forces the theme lives between. */
+  tensions: SemanticTension[]
   /** Languages (by id) whose philosophy fits this theme. */
   preferredLanguages: string[]
 }
@@ -51,6 +53,23 @@ export const THEMES: Theme[] = [
       { en: 'Purpose', ru: 'Смысл' },
       { en: 'Wisdom', ru: 'Мудрость' },
     ],
+    tensions: [
+      {
+        a: 'Survival', aRu: 'Выживание', b: 'Identity death', bRu: 'Смерть личности',
+        note: 'Alive, but no longer the same person.',
+        noteRu: 'Жив, но уже не тот же человек.',
+      },
+      {
+        a: 'Strength', aRu: 'Сила', b: 'Grief', bRu: 'Скорбь',
+        note: 'Stronger now, but permanently marked by what it cost.',
+        noteRu: 'Теперь сильнее, но навсегда отмечен тем, чего это стоило.',
+      },
+      {
+        a: 'Rebirth', aRu: 'Возрождение', b: 'Damage', bRu: 'Разрушение',
+        note: 'Reborn, yet carrying the memory of the destruction that made it.',
+        noteRu: 'Возрождён — и всё же несёт память о разрушении, что его создало.',
+      },
+    ],
     preferredLanguages: ['ashen', 'phoenix', 'obsidian', 'chrysalis'],
   },
   {
@@ -77,6 +96,23 @@ export const THEMES: Theme[] = [
       { en: 'Acceptance', ru: 'Принятие' },
       { en: 'Peace', ru: 'Покой' },
     ],
+    tensions: [
+      {
+        a: 'Love', aRu: 'Любовь', b: 'Absence', bRu: 'Отсутствие',
+        note: 'Love that continues with nowhere left to go.',
+        noteRu: 'Любовь, которой больше некуда идти.',
+      },
+      {
+        a: 'Holding on', aRu: 'Удержать', b: 'Letting go', bRu: 'Отпустить',
+        note: 'Carrying what can no longer be held.',
+        noteRu: 'Нести то, что уже нельзя удержать.',
+      },
+      {
+        a: 'Memory', aRu: 'Память', b: 'Time passing', bRu: 'Ход времени',
+        note: 'Keeping someone present as everything else moves on.',
+        noteRu: 'Хранить кого-то рядом, пока всё остальное идёт дальше.',
+      },
+    ],
     preferredLanguages: ['ashen', 'obsidian', 'chrysalis'],
   },
   {
@@ -100,6 +136,23 @@ export const THEMES: Theme[] = [
       { en: 'Endurance', ru: 'Стойкость' },
       { en: 'Strength', ru: 'Сила' },
       { en: 'Purpose', ru: 'Смысл' },
+    ],
+    tensions: [
+      {
+        a: 'Fear', aRu: 'Страх', b: 'Courage', bRu: 'Мужество',
+        note: 'Moving forward while still afraid.',
+        noteRu: 'Идти вперёд, всё ещё боясь.',
+      },
+      {
+        a: 'Pressure', aRu: 'Давление', b: 'Endurance', bRu: 'Стойкость',
+        note: 'Bending under the weight without breaking.',
+        noteRu: 'Гнуться под грузом, но не ломаться.',
+      },
+      {
+        a: 'Hardship', aRu: 'Испытание', b: 'Becoming', bRu: 'Становление',
+        note: 'The point is not the hardship but who you become by withstanding it.',
+        noteRu: 'Дело не в самих трудностях, а в том, кем ты становишься, выдержав их.',
+      },
     ],
     preferredLanguages: ['obsidian', 'ashen', 'phoenix'],
   },

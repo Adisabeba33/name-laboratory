@@ -345,6 +345,26 @@ export interface ConceptNode {
 }
 
 /**
+ * A semantic tension — two opposing forces the concept lives between.
+ *
+ * Many powerful concepts are not a single feeling but the tension between two:
+ * "alive, but no longer the same person" sits between survival and identity
+ * death. Naming these is more useful than generic emotional percentages, and it
+ * shapes the definitions and word forms downstream.
+ */
+export interface SemanticTension {
+  /** Pole A, a short label (English). */
+  a: string
+  aRu: string
+  /** Pole B, the opposing label (English). */
+  b: string
+  bRu: string
+  /** One human sentence capturing the lived tension between the poles (English). */
+  note: string
+  noteRu: string
+}
+
+/**
  * The Meaning Analysis — the heart of the Meaning Engine.
  *
  * Before any language is discovered, the laboratory states what it believes the
@@ -361,6 +381,8 @@ export interface MeaningAnalysis {
   hiddenConcepts: ConceptNode[]
   /** An ordered relationship map explaining how the prompt was understood. */
   network: ConceptNode[]
+  /** The opposing forces the concept lives between (may be empty). */
+  tensions: SemanticTension[]
   /** The dominant meaning-theme, if one was recognised (e.g. "metamorphosis"). */
   theme?: string
   /** The weighted concept map the interpretation produced. */

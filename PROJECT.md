@@ -216,7 +216,7 @@ Prompt → Interpretation → Hidden layers → Semantic tensions → Concept di
 | — | Bespoke per-word meanings | ✅ done |
 | — | Pronunciation guide + Cyrillic transliteration | ✅ done |
 | **14** | **Use in Language** — EN/RU usage sentences, part of speech, short def | ✅ done |
-| 1 | Meaning confirmation gating — semantic tensions, confirm/refine | ⏳ next |
+| **1** | **Semantic Tensions** + optional "Refine the reading" steer chips (non-blocking, LLM-only) | ✅ done |
 | 2 | Concept Directions (3–5 interpretations; select/combine); `Concept` entity in storage | ⏳ planned |
 | 3 | Word discovery from *independent* phonetic strategies (no template mutation) | ⏳ planned |
 | 5 | Adoption Test — qualitative first, transparent numeric score later | ⏳ planned |

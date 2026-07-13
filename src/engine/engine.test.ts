@@ -54,6 +54,17 @@ describe('Meaning Engine — analysis', () => {
     expect(a.network.length).toBeGreaterThan(3)
   })
 
+  it('names the semantic tensions the concept lives between', () => {
+    const a = analyzeMeaning([], METAMORPHOSIS)
+    expect(a.tensions.length).toBeGreaterThan(0)
+    for (const t of a.tensions) {
+      expect(t.a && t.b && t.note).toBeTruthy()
+      expect(t.aRu && t.bRu && t.noteRu).toBeTruthy()
+    }
+    // The metamorphosis theme pits survival against identity death.
+    expect(a.tensions.some((t) => /identity/i.test(t.b) || /identity/i.test(t.a))).toBe(true)
+  })
+
   it('steers language discovery toward the theme languages', () => {
     const { families } = runLaboratory({ keywords: [], brief: METAMORPHOSIS, count: 4 })
     const names = families.map((f) => f.character.toLowerCase())

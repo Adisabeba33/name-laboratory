@@ -8,13 +8,23 @@ import type { MeaningAnalysis } from '../engine'
  * concept network. This is what makes the product feel like it is reasoning, not
  * guessing — and lets the user catch a wrong reading before trusting the output.
  */
+/** Optional ways to nudge the reading — offered only when the LLM can re-interpret. */
+const TONE_STEERS = ['Warmer', 'Darker', 'More intimate', 'Simpler']
+
 export function InterpretationPanel({
   analysis,
   source,
+  onSteer,
+  steering,
 }: {
   analysis: MeaningAnalysis
   source?: 'llm' | 'engine'
+  /** Re-interpret with an emphasis. Only wired when the LLM is available. */
+  onSteer?: (label: string) => void
+  /** A steer is currently re-running. */
+  steering?: boolean
 }) {
+  const conceptSteers = analysis.hiddenConcepts.slice(0, 3).map((c) => c.en)
   return (
     <section className="interp">
       <div className="interp-head">
@@ -27,6 +37,55 @@ export function InterpretationPanel({
       </div>
       <p className="interp-text">{analysis.interpretation}</p>
       <p className="interp-text ru">{analysis.interpretationRu}</p>
+
+      {analysis.tensions.length > 0 && (
+        <div className="tensions">
+          <h4>Semantic Tensions</h4>
+          <ul className="tension-list">
+            {analysis.tensions.map((t) => (
+              <li className="tension" key={`${t.a}-${t.b}`}>
+                <span className="poles">
+                  <span className="pole">{t.a}</span>
+                  <span className="vs" aria-hidden>↔</span>
+                  <span className="pole">{t.b}</span>
+                </span>
+                <span className="tension-note">{t.note}</span>
+                <span className="tension-note ru">{t.noteRu}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {onSteer && (
+        <div className="steer">
+          <span className="steer-label">Refine the reading{steering ? '…' : ''}</span>
+          <div className="steer-chips">
+            {conceptSteers.map((label) => (
+              <button
+                type="button"
+                key={label}
+                className="steer-chip"
+                disabled={steering}
+                onClick={() => onSteer(`more about "${label}"`)}
+              >
+                More: {label}
+              </button>
+            ))}
+            {TONE_STEERS.map((label) => (
+              <button
+                type="button"
+                key={label}
+                className="steer-chip tone"
+                disabled={steering}
+                onClick={() => onSteer(label.toLowerCase())}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="interp-cols">
         <div>
