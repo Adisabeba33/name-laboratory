@@ -234,6 +234,21 @@ export interface WordEvolution {
 }
 
 /**
+ * The generation context a word was born from — the concept it carries and the
+ * language it belongs to. Kept on the passport so the word can be *evolved*
+ * (its sound changed) while its concept and meaning stay fixed.
+ */
+export interface WordOrigin {
+  lead: Concept
+  support?: Concept
+  concepts: ConceptVector
+  /** The language id (species) the word is a native speaker of. */
+  languageId: string
+  /** Which generation of the word this is (1 = first coined). */
+  generation: number
+}
+
+/**
  * The "Word Passport" — everything a user receives about a generated word. The
  * user should always understand *why* the word exists, not merely receive a name.
  * Meaning leads; etymology recedes.
@@ -280,6 +295,8 @@ export interface WordPassport {
   explanation: string
   /** The underlying phonetic genome, exposed for transparency and future tooling. */
   genome: WordGenome
+  /** Generation context — the concept + language, so the word can be evolved. */
+  origin: WordOrigin
 }
 
 /**

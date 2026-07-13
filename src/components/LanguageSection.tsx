@@ -57,12 +57,7 @@ export function LanguageSection({
 
       <div className="grid">
         {fam.words.map((p) => (
-          <PassportCard
-            p={p}
-            key={p.word}
-            saved={savedWords?.has(p.word.toLowerCase())}
-            onToggleSave={onToggleSave ? () => onToggleSave(p) : undefined}
-          />
+          <PassportCard p={p} key={p.word} savedWords={savedWords} onToggleSave={onToggleSave} />
         ))}
       </div>
     </section>

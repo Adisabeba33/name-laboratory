@@ -13,6 +13,8 @@ import {
   editDistance,
   ratePronunciation,
   assessAdoption,
+  evolveWord,
+  EVOLVE_DIRECTIONS,
   matchBrands,
   speakNative,
   LANGUAGES,
@@ -308,6 +310,32 @@ describe('pronunciation & brand', () => {
         }
       }
     }
+  })
+
+  it('evolves a word’s sound while preserving its concept', () => {
+    const [fam] = generateFamilies(MEDICINE_REQUEST)
+    const base = fam.words[0]
+    const rng = new Rng(7)
+    for (const d of EVOLVE_DIRECTIONS) {
+      const step = evolveWord(base, d.id, rng)
+      // The concept (meaning) is preserved verbatim.
+      expect(step.passport.meaning).toBe(base.meaning)
+      expect(step.passport.origin.lead).toBe(base.origin.lead)
+      // The evolved word is a full, valid passport one generation on.
+      expect(step.passport.word.length).toBeGreaterThanOrEqual(3)
+      expect(step.passport.origin.generation).toBe(base.origin.generation + 1)
+      expect(step.parentWord).toBe(base.word)
+      expect(step.changes.length).toBeGreaterThan(0)
+      expect(['High', 'Moderate', 'Low']).toContain(step.conceptPreservation)
+    }
+  })
+
+  it('“harder” makes a word sharper than “softer” does', () => {
+    const [fam] = generateFamilies(MEDICINE_REQUEST)
+    const base = fam.words[0]
+    const softer = evolveWord(base, 'softer', new Rng(3)).passport
+    const harder = evolveWord(base, 'harder', new Rng(3)).passport
+    expect(harder.genome.sharpness).toBeGreaterThanOrEqual(softer.genome.sharpness)
   })
 
   it('flags a drug-like word as a lower adoption risk than a clean one', () => {

@@ -221,7 +221,7 @@ Prompt → Interpretation → Hidden layers → Semantic tensions → Concept di
 | **3** | **Diverse word discovery** — over-generate a candidate pool, then max-min-diversity select so a language's words never share a stem (no template mutation) | ✅ done |
 | **5** | **Speech Adoption Test** — rule-based, engine-only (free): a qualitative band + scored 6-component breakdown + plain-language strengths & risks (drug/brand/fantasy/length/cross-language) | ✅ done |
 | **6** | **My Lexicon** — save words to a personal, on-device dictionary (localStorage); searchable, removable, keeps meaning/pronunciation/concept/adoption. Collections/tags & cross-device sync deferred. | ✅ done |
-| 7 | Evolve the word — change sound while preserving concept; parent/child lineage | ⏳ planned |
+| **7** | **Evolve the sound** — reshape a word's phonetics toward a direction (softer/darker/simpler/…) while keeping the meaning verbatim; deterministic (free, no LLM), with a parent→child lineage and a "what changed" summary. | ✅ done |
 | 8 | External checks — dictionary / brand / domain / trademark / cross-language negatives | ⏳ later |
 
 ### Design tension to respect

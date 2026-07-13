@@ -193,6 +193,7 @@ export function buildPassport(
     story: buildStory(word, lead, language),
     explanation: buildExplanation(lead, support, language),
     genome,
+    origin: { lead, support, concepts, languageId: language.id, generation },
   }
 }
 

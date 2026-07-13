@@ -1,5 +1,13 @@
-import type { ReactNode } from 'react'
-import type { EmotionalAxis, WordPassport } from '../engine'
+import { useState, type ReactNode } from 'react'
+import {
+  EVOLVE_DIRECTIONS,
+  evolveWord,
+  Rng,
+  hashSeed,
+  type EmotionalAxis,
+  type WordPassport,
+  type WordEvolutionStep,
+} from '../engine'
 
 /** The order emotional axes are shown in — most brand-relevant first. */
 const DNA_ORDER: EmotionalAxis[] = [
@@ -25,14 +33,23 @@ function Stars({ n }: { n: number }) {
  */
 export function PassportCard({
   p,
-  saved,
+  savedWords,
   onToggleSave,
 }: {
   p: WordPassport
-  saved?: boolean
-  onToggleSave?: () => void
+  savedWords?: Set<string>
+  onToggleSave?: (p: WordPassport) => void
 }) {
   const topDNA = DNA_ORDER.filter((axis) => p.emotionalDNA[axis] >= 8).slice(0, 8)
+  const [lineage, setLineage] = useState<WordEvolutionStep[]>([])
+  const isSaved = (w: string) => savedWords?.has(w.toLowerCase()) ?? false
+
+  // Evolving acts on the current tip of the lineage (chain multiple times).
+  const tip = lineage.length ? lineage[lineage.length - 1].passport : p
+  function evolveBy(dirId: string) {
+    const step = evolveWord(tip, dirId, new Rng(hashSeed(`${tip.word}|${dirId}|${lineage.length}`)))
+    setLineage((prev) => [...prev, step])
+  }
 
   const e = p.evolution
   return (
@@ -43,11 +60,11 @@ export function PassportCard({
           {onToggleSave && (
             <button
               type="button"
-              className={`save-btn ${saved ? 'on' : ''}`}
-              onClick={onToggleSave}
-              title={saved ? 'Saved to My Lexicon' : 'Save to My Lexicon'}
+              className={`save-btn ${isSaved(p.word) ? 'on' : ''}`}
+              onClick={() => onToggleSave(p)}
+              title={isSaved(p.word) ? 'Saved to My Lexicon' : 'Save to My Lexicon'}
             >
-              {saved ? '★ Saved' : '☆ Save'}
+              {isSaved(p.word) ? '★ Saved' : '☆ Save'}
             </button>
           )}
           <span className="gen-badge" title="Generation within its language">
@@ -139,6 +156,73 @@ export function PassportCard({
           Can this word actually enter speech? A rule-based estimate from its sound — not an
           external brand, drug or trademark check.
         </p>
+      </div>
+
+      <div className="sec evolve">
+        <div className="evolve-head">
+          <h4>Evolve the sound</h4>
+          {lineage.length > 0 && (
+            <button type="button" className="dir-clear" onClick={() => setLineage([])}>
+              Reset
+            </button>
+          )}
+        </div>
+        <p className="evolve-hint">
+          Reshape how the word sounds — the meaning stays. Free, no AI.
+        </p>
+        <div className="evolve-chips">
+          {EVOLVE_DIRECTIONS.map((d) => (
+            <button
+              type="button"
+              key={d.id}
+              className="steer-chip"
+              onClick={() => evolveBy(d.id)}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+        {lineage.length > 0 && (
+          <div className="lineage">
+            <div className="lineage-chain">
+              <span className="lin-orig">{p.word}</span>
+              {lineage.map((s, i) => (
+                <span className="lin-step" key={i}>
+                  <span className="lin-arrow" aria-hidden>→</span>
+                  <span className="lin-word">{s.passport.word}</span>
+                </span>
+              ))}
+            </div>
+            {lineage.map((s, i) => (
+              <div className="evolved" key={i}>
+                <div className="evolved-top">
+                  <span className="evolved-word">{s.passport.word}</span>
+                  <span className="say-val">{s.passport.pronunciationGuide}</span>
+                  <span className="translit">{s.passport.transliteration}</span>
+                  {onToggleSave && (
+                    <button
+                      type="button"
+                      className={`save-btn ${isSaved(s.passport.word) ? 'on' : ''}`}
+                      onClick={() => onToggleSave(s.passport)}
+                    >
+                      {isSaved(s.passport.word) ? '★ Saved' : '☆ Save'}
+                    </button>
+                  )}
+                </div>
+                <div className="evolved-meta">
+                  <span className="evolved-dir">{s.directionLabel}</span>
+                  <span className="evolved-preserve">
+                    concept preserved: <b>{s.conceptPreservation}</b>
+                  </span>
+                  <span className={`adopt-band ${s.passport.adoption.band.toLowerCase()}`}>
+                    {s.passport.adoption.band}
+                  </span>
+                </div>
+                <div className="evolved-changes">{s.changes.join(' · ')}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="sec">
