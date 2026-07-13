@@ -8,17 +8,30 @@ import type { MeaningAnalysis } from '../engine'
  * case the caller falls back to the self-contained deterministic engine. The API
  * key lives only on the server; the browser never sees it.
  */
+export type AnalyzeMode = 'discover' | 'name'
+
+const cache = new Map<string, MeaningAnalysis>()
+const keyFor = (brief: string, mode: AnalyzeMode) => `${mode}|${brief}`
+
+/** True if this exact prompt was already analysed (so it costs nothing to serve). */
+export function hasCachedAnalysis(brief: string, mode: AnalyzeMode = 'discover'): boolean {
+  return cache.has(keyFor(brief, mode))
+}
+
 export async function analyzeRemote(
   brief: string,
+  mode: AnalyzeMode = 'discover',
   timeoutMs = 55_000,
 ): Promise<MeaningAnalysis | null> {
+  const cached = cache.get(keyFor(brief, mode))
+  if (cached) return cached
   const controller = new AbortController()
   const timer = window.setTimeout(() => controller.abort(), timeoutMs)
   try {
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ brief }),
+      body: JSON.stringify({ brief, mode }),
       signal: controller.signal,
     })
     if (!res.ok) return null
@@ -35,7 +48,9 @@ export async function analyzeRemote(
     // Tolerate an older endpoint that doesn't return tensions/directions.
     if (!Array.isArray(data.tensions)) data.tensions = []
     if (!Array.isArray(data.directions)) data.directions = []
-    return data as MeaningAnalysis
+    const analysis = data as MeaningAnalysis
+    cache.set(keyFor(brief, mode), analysis)
+    return analysis
   } catch {
     return null
   } finally {

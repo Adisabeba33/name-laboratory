@@ -12,6 +12,9 @@ import {
   estimateUniqueness,
   editDistance,
   ratePronunciation,
+  assessAdoption,
+  evolveWord,
+  EVOLVE_DIRECTIONS,
   matchBrands,
   speakNative,
   LANGUAGES,
@@ -349,6 +352,72 @@ describe('pronunciation & brand', () => {
         expect(Array.isArray(w.usage.ru)).toBe(true)
       }
     }
+  })
+
+  it('explains how each word was constructed (honestly)', () => {
+    for (const fam of generateFamilies(MEDICINE_REQUEST)) {
+      for (const w of fam.words) {
+        expect(w.construction.syllables.length).toBeGreaterThan(0)
+        expect(w.construction.syllables.join('')).toBe(w.word.toLowerCase())
+        expect(w.construction.ideas.length).toBeGreaterThan(0)
+        expect(w.construction.species).toBe(fam.character)
+        expect(w.construction.families.length).toBeGreaterThan(0)
+        // Honesty: never claims a part is borrowed from a real word.
+        expect(w.construction.note).toMatch(/no part is copied/i)
+      }
+    }
+  })
+
+  it('assesses speech adoption with a band and a scored breakdown', () => {
+    for (const fam of generateFamilies(MEDICINE_REQUEST)) {
+      for (const w of fam.words) {
+        const a = w.adoption
+        expect(['Low', 'Moderate', 'High', 'Exceptional']).toContain(a.band)
+        expect(a.score).toBeGreaterThanOrEqual(0)
+        expect(a.score).toBeLessThanOrEqual(100)
+        // Components sum to the total, and each stays within its own budget.
+        const total = a.components.reduce((s, c) => s + c.score, 0)
+        expect(total).toBe(a.score)
+        for (const c of a.components) {
+          expect(c.score).toBeGreaterThanOrEqual(0)
+          expect(c.score).toBeLessThanOrEqual(c.max)
+        }
+      }
+    }
+  })
+
+  it('evolves a word’s sound while preserving its concept', () => {
+    const [fam] = generateFamilies(MEDICINE_REQUEST)
+    const base = fam.words[0]
+    const rng = new Rng(7)
+    for (const d of EVOLVE_DIRECTIONS) {
+      const step = evolveWord(base, d.id, rng)
+      // The concept (meaning) is preserved verbatim.
+      expect(step.passport.meaning).toBe(base.meaning)
+      expect(step.passport.origin.lead).toBe(base.origin.lead)
+      // The evolved word is a full, valid passport one generation on.
+      expect(step.passport.word.length).toBeGreaterThanOrEqual(3)
+      expect(step.passport.origin.generation).toBe(base.origin.generation + 1)
+      expect(step.parentWord).toBe(base.word)
+      expect(step.changes.length).toBeGreaterThan(0)
+      expect(['High', 'Moderate', 'Low']).toContain(step.conceptPreservation)
+    }
+  })
+
+  it('“harder” makes a word sharper than “softer” does', () => {
+    const [fam] = generateFamilies(MEDICINE_REQUEST)
+    const base = fam.words[0]
+    const softer = evolveWord(base, 'softer', new Rng(3)).passport
+    const harder = evolveWord(base, 'harder', new Rng(3)).passport
+    expect(harder.genome.sharpness).toBeGreaterThanOrEqual(softer.genome.sharpness)
+  })
+
+  it('flags a drug-like word as a lower adoption risk than a clean one', () => {
+    const clean = assessAdoption('Selora', computeGenome('Selora', ['trust']), ratePronunciation('Selora', computeGenome('Selora', ['trust'])))
+    const pharma = assessAdoption('Vaxozole', computeGenome('Vaxozole', ['trust']), ratePronunciation('Vaxozole', computeGenome('Vaxozole', ['trust'])))
+    const risk = (a: typeof clean) => a.components.find((c) => c.label === 'Collision resistance')!.score
+    expect(risk(pharma)).toBeLessThan(risk(clean))
+    expect(pharma.risks.join(' ')).toMatch(/drug|medical/i)
   })
 
   it('routes a premium/scientific profile toward strong industries', () => {

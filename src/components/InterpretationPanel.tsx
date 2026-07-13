@@ -16,6 +16,7 @@ export function InterpretationPanel({
   source,
   onSteer,
   steering,
+  showTensions = true,
 }: {
   analysis: MeaningAnalysis
   source?: 'llm' | 'engine'
@@ -23,6 +24,8 @@ export function InterpretationPanel({
   onSteer?: (label: string) => void
   /** A steer is currently re-running. */
   steering?: boolean
+  /** Semantic tensions are meaningful for meanings, not names — hide when naming. */
+  showTensions?: boolean
 }) {
   const conceptSteers = analysis.hiddenConcepts.slice(0, 3).map((c) => c.en)
   return (
@@ -38,7 +41,7 @@ export function InterpretationPanel({
       <p className="interp-text">{analysis.interpretation}</p>
       <p className="interp-text ru">{analysis.interpretationRu}</p>
 
-      {analysis.tensions.length > 0 && (
+      {showTensions && analysis.tensions.length > 0 && (
         <div className="tensions">
           <h4>Semantic Tensions</h4>
           <ul className="tension-list">

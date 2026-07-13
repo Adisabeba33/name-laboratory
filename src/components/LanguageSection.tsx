@@ -1,4 +1,4 @@
-import type { WordFamily } from '../engine'
+import type { WordFamily, WordPassport } from '../engine'
 import { PassportCard } from './PassportCard'
 
 /**
@@ -8,7 +8,17 @@ import { PassportCard } from './PassportCard'
  * and its Language Genome — before the word passports, so the words read as
  * evidence the language exists.
  */
-export function LanguageSection({ fam }: { fam: WordFamily }) {
+export function LanguageSection({
+  fam,
+  savedWords,
+  onToggleSave,
+  onRequestUsage,
+}: {
+  fam: WordFamily
+  savedWords?: Set<string>
+  onToggleSave?: (p: WordPassport) => void
+  onRequestUsage?: (p: WordPassport, language: string) => Promise<void>
+}) {
   const g = fam.genome
   return (
     <section className="language" id={`lang-${fam.id}`}>
@@ -49,7 +59,15 @@ export function LanguageSection({ fam }: { fam: WordFamily }) {
 
       <div className="grid">
         {fam.words.map((p) => (
-          <PassportCard p={p} key={p.word} />
+          <PassportCard
+            p={p}
+            key={p.word}
+            savedWords={savedWords}
+            onToggleSave={onToggleSave}
+            onRequestUsage={
+              onRequestUsage ? () => onRequestUsage(p, fam.character) : undefined
+            }
+          />
         ))}
       </div>
     </section>

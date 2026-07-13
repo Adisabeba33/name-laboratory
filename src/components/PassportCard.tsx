@@ -1,5 +1,13 @@
-import type { ReactNode } from 'react'
-import type { EmotionalAxis, WordPassport } from '../engine'
+import { useState, type ReactNode } from 'react'
+import {
+  EVOLVE_DIRECTIONS,
+  evolveWord,
+  Rng,
+  hashSeed,
+  type EmotionalAxis,
+  type WordPassport,
+  type WordEvolutionStep,
+} from '../engine'
 
 /** The order emotional axes are shown in — most brand-relevant first. */
 const DNA_ORDER: EmotionalAxis[] = [
@@ -23,17 +31,60 @@ function Stars({ n }: { n: number }) {
  * brand fit, story and explanation are all on the card (the last two tucked into
  * a details disclosure to keep the grid scannable).
  */
-export function PassportCard({ p }: { p: WordPassport }) {
+export function PassportCard({
+  p,
+  savedWords,
+  onToggleSave,
+  onRequestUsage,
+}: {
+  p: WordPassport
+  savedWords?: Set<string>
+  onToggleSave?: (p: WordPassport) => void
+  onRequestUsage?: () => Promise<void>
+}) {
   const topDNA = DNA_ORDER.filter((axis) => p.emotionalDNA[axis] >= 8).slice(0, 8)
+  const [lineage, setLineage] = useState<WordEvolutionStep[]>([])
+  const [usageLoading, setUsageLoading] = useState(false)
+
+  const hasUsage = p.usage.en.length > 0 || p.usage.ru.length > 0
+  async function loadUsage() {
+    if (!onRequestUsage) return
+    setUsageLoading(true)
+    try {
+      await onRequestUsage()
+    } finally {
+      setUsageLoading(false)
+    }
+  }
+  const isSaved = (w: string) => savedWords?.has(w.toLowerCase()) ?? false
+
+  // Evolving acts on the current tip of the lineage (chain multiple times).
+  const tip = lineage.length ? lineage[lineage.length - 1].passport : p
+  function evolveBy(dirId: string) {
+    const step = evolveWord(tip, dirId, new Rng(hashSeed(`${tip.word}|${dirId}|${lineage.length}`)))
+    setLineage((prev) => [...prev, step])
+  }
 
   const e = p.evolution
   return (
     <article className="passport" id={`word-${p.word}`}>
       <div className="word-row">
         <div className="word">{p.word}</div>
-        <span className="gen-badge" title="Generation within its language">
-          gen {e.generation}
-        </span>
+        <div className="word-actions">
+          {onToggleSave && (
+            <button
+              type="button"
+              className={`save-btn ${isSaved(p.word) ? 'on' : ''}`}
+              onClick={() => onToggleSave(p)}
+              title={isSaved(p.word) ? 'Saved to My Lexicon' : 'Save to My Lexicon'}
+            >
+              {isSaved(p.word) ? '★ Saved' : '☆ Save'}
+            </button>
+          )}
+          <span className="gen-badge" title="Generation within its language">
+            gen {e.generation}
+          </span>
+        </div>
       </div>
       <div className="word-meta">
         {p.pronunciationGuide && (
@@ -61,7 +112,7 @@ export function PassportCard({ p }: { p: WordPassport }) {
         {p.shortMeaning && <p className="short-meaning">{p.shortMeaning}</p>}
       </div>
 
-      {(p.usage.en.length > 0 || p.usage.ru.length > 0) && (
+      {hasUsage ? (
         <div className="sec use">
           <h4>Use in language</h4>
           {p.usage.en.length > 0 && (
@@ -85,9 +136,149 @@ export function PassportCard({ p }: { p: WordPassport }) {
             </div>
           )}
         </div>
+      ) : (
+        onRequestUsage && (
+          <div className="sec use">
+            <button type="button" className="use-load" disabled={usageLoading} onClick={loadUsage}>
+              {usageLoading ? 'Writing sentences…' : 'Show it in a sentence (AI)'}
+            </button>
+          </div>
+        )
       )}
 
       <div className="origin">{p.ancestry.note}</div>
+
+      <div className="sec build">
+        <h4>How this word was made</h4>
+        <div className="build-syl">
+          {p.construction.syllables.map((s, i) => (
+            <span className="syl-chunk" key={i}>
+              {s}
+              {i < p.construction.syllables.length - 1 && <span className="syl-dot" aria-hidden>·</span>}
+            </span>
+          ))}
+        </div>
+        <div className="build-ideas">
+          <span className="build-key">grown around</span>
+          {p.construction.ideas.map((idea) => (
+            <span className="build-idea" key={idea.label}>
+              <b>{idea.label}</b> — {idea.gloss}
+            </span>
+          ))}
+        </div>
+        <div className="build-species">
+          <span className="build-key">species</span>
+          <span>
+            {p.construction.species} · sound influenced by {p.construction.families.join(', ')}
+          </span>
+        </div>
+        <p className="wg-note">{p.construction.note}</p>
+      </div>
+
+      <div className="sec adoption">
+        <div className="adoption-head">
+          <h4>Speech Adoption</h4>
+          <span className={`adopt-band ${p.adoption.band.toLowerCase()}`}>
+            {p.adoption.band} · {p.adoption.score}/100
+          </span>
+        </div>
+        <div className="adopt-components">
+          {p.adoption.components.map((c) => (
+            <div className="adopt-row" key={c.label}>
+              <span className="adopt-name">{c.label}</span>
+              <span className="adopt-bar">
+                <i style={{ width: `${(c.score / c.max) * 100}%` }} />
+              </span>
+              <span className="adopt-val">{c.score}/{c.max}</span>
+            </div>
+          ))}
+        </div>
+        {p.adoption.strengths.length > 0 && (
+          <ul className="adopt-list good">
+            {p.adoption.strengths.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ul>
+        )}
+        {p.adoption.risks.length > 0 && (
+          <ul className="adopt-list risk">
+            {p.adoption.risks.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        )}
+        <p className="wg-note">
+          Can this word actually enter speech? A rule-based estimate from its sound — not an
+          external brand, drug or trademark check.
+        </p>
+      </div>
+
+      <div className="sec evolve">
+        <div className="evolve-head">
+          <h4>Evolve the sound</h4>
+          {lineage.length > 0 && (
+            <button type="button" className="dir-clear" onClick={() => setLineage([])}>
+              Reset
+            </button>
+          )}
+        </div>
+        <p className="evolve-hint">
+          Reshape how the word sounds — the meaning stays. Free, no AI.
+        </p>
+        <div className="evolve-chips">
+          {EVOLVE_DIRECTIONS.map((d) => (
+            <button
+              type="button"
+              key={d.id}
+              className="steer-chip"
+              onClick={() => evolveBy(d.id)}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+        {lineage.length > 0 && (
+          <div className="lineage">
+            <div className="lineage-chain">
+              <span className="lin-orig">{p.word}</span>
+              {lineage.map((s, i) => (
+                <span className="lin-step" key={i}>
+                  <span className="lin-arrow" aria-hidden>→</span>
+                  <span className="lin-word">{s.passport.word}</span>
+                </span>
+              ))}
+            </div>
+            {lineage.map((s, i) => (
+              <div className="evolved" key={i}>
+                <div className="evolved-top">
+                  <span className="evolved-word">{s.passport.word}</span>
+                  <span className="say-val">{s.passport.pronunciationGuide}</span>
+                  <span className="translit">{s.passport.transliteration}</span>
+                  {onToggleSave && (
+                    <button
+                      type="button"
+                      className={`save-btn ${isSaved(s.passport.word) ? 'on' : ''}`}
+                      onClick={() => onToggleSave(s.passport)}
+                    >
+                      {isSaved(s.passport.word) ? '★ Saved' : '☆ Save'}
+                    </button>
+                  )}
+                </div>
+                <div className="evolved-meta">
+                  <span className="evolved-dir">{s.directionLabel}</span>
+                  <span className="evolved-preserve">
+                    concept preserved: <b>{s.conceptPreservation}</b>
+                  </span>
+                  <span className={`adopt-band ${s.passport.adoption.band.toLowerCase()}`}>
+                    {s.passport.adoption.band}
+                  </span>
+                </div>
+                <div className="evolved-changes">{s.changes.join(' · ')}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="sec">
         <h4>Word Genome</h4>

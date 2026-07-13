@@ -34,30 +34,26 @@ const SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['word', 'meaning', 'meaningRu', 'short', 'pos', 'usageEn', 'usageRu'],
+        required: ['word', 'meaning', 'meaningRu', 'short', 'pos'],
         properties: {
           word: { type: 'string' },
           meaning: { type: 'string' },
           meaningRu: { type: 'string' },
           short: { type: 'string' },
           pos: { type: 'string' },
-          usageEn: { type: 'array', items: { type: 'string' } },
-          usageRu: { type: 'array', items: { type: 'string' } },
         },
       },
     },
   },
 }
 
-const SYSTEM = `You are the Meaning Analyst of Word Laboratory. A person is inventing words for one specific human idea, so that the word can be USED inside existing human languages (English and Russian). For each invented word below, write its full "living dictionary" entry.
+const SYSTEM = `You are the Meaning Analyst of Word Laboratory. A person is inventing words for one specific human idea, so that the word can be USED inside existing human languages. For each invented word below, write its dictionary entry.
 
 For every word return:
 - meaning: one sentence in English — a real, specific definition ("the moment when…", "the quiet ache of…"), not a restatement of the idea.
 - meaningRu: the same meaning in fluent, natural Russian (idiomatic, not word-for-word).
 - short: a 3–6 word English distillation ("Identity reborn through survival.").
 - pos: the word's natural grammatical role — usually "noun"; use "verb"/"adjective" only if it truly reads that way.
-- usageEn: EXACTLY 2 natural English sentences that USE the word (keep the given spelling) and teach how it functions — real, human sentences, never awkward "She felt X" templates.
-- usageRu: EXACTLY 2 natural Russian sentences that USE the word. You will be given the exact Cyrillic spelling to use — use THAT spelling verbatim, lower-case, declined naturally into the sentence.
 
 Rules:
 - Make every word's meaning DISTINCT — each names a different facet of the idea.
@@ -83,24 +79,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  // Compact, sanitised list for the model. `translit` is the exact Cyrillic
-  // spelling the Russian example sentences must use, so the shown word and the
-  // word in the sentences always match.
+  // Compact, sanitised list for the model.
   const list = words
     .filter((w: unknown) => w && typeof (w as { word?: unknown }).word === 'string')
-    .map((w: { word: string; language?: string; hint?: string; translit?: string }) => ({
+    .map((w: { word: string; language?: string; hint?: string }) => ({
       word: String(w.word).slice(0, 40),
       language: String(w.language ?? '').slice(0, 40),
       hint: String(w.hint ?? '').slice(0, 160),
-      translit: String(w.translit ?? '').slice(0, 40),
     }))
 
   try {
     const client = new Anthropic({ apiKey })
-    // Each word's full entry (meaning + short + pos + 2 EN + 2 RU sentences) is
-    // large, so writing all of them in one call can overflow the token budget and
-    // truncate the JSON. Split into small chunks and write them in parallel: no
-    // truncation, faster, and a failed chunk doesn't lose the others.
+    // Split into small chunks written in parallel — no truncation, faster, and a
+    // failed chunk doesn't lose the others. (Usage example sentences are written
+    // lazily, per word, by /api/usage — this cheap pass is meanings only.)
     const chunks: (typeof list)[] = []
     for (let i = 0; i < list.length; i += CHUNK_SIZE) chunks.push(list.slice(i, i + CHUNK_SIZE))
 
@@ -125,19 +117,17 @@ interface WordEntry {
   meaningRu: string
   short: string
   pos: string
-  usageEn: string[]
-  usageRu: string[]
 }
 
-/** Write full living-dictionary entries for one small chunk of words. */
+/** Write dictionary entries (meaning + short + pos) for one small chunk of words. */
 async function writeEntries(
   client: Anthropic,
   brief: string,
-  list: Array<{ word: string; language: string; hint: string; translit: string }>,
+  list: Array<{ word: string; language: string; hint: string }>,
 ): Promise<WordEntry[]> {
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 3000,
+    max_tokens: 1600,
     system: SYSTEM,
     output_config: { format: { type: 'json_schema', schema: SCHEMA } },
     messages: [
@@ -145,9 +135,8 @@ async function writeEntries(
         role: 'user',
         content:
           `The idea being named:\n"""${brief}"""\n\n` +
-          `Write the full living-dictionary entry for each of these invented words. ` +
-          `Use each word's language character and concept hint; for the Russian ` +
-          `sentences use exactly the given "translit" Cyrillic spelling:\n` +
+          `Write the dictionary entry for each of these invented words, using each ` +
+          `word's language character and concept hint:\n` +
           JSON.stringify(list),
       },
     ],
@@ -157,11 +146,6 @@ async function writeEntries(
     | { type: 'text'; text: string }
     | undefined
   const raw = JSON.parse(textBlock?.text ?? '{}')
-
-  const asSentences = (v: unknown): string[] =>
-    Array.isArray(v)
-      ? v.filter((s) => typeof s === 'string' && s.trim()).map((s) => String(s).slice(0, 400)).slice(0, 3)
-      : []
 
   return Array.isArray(raw.meanings)
     ? raw.meanings
@@ -178,8 +162,6 @@ async function writeEntries(
           meaningRu: String(m.meaningRu),
           short: String(m.short ?? '').slice(0, 120),
           pos: String(m.pos ?? '').slice(0, 24),
-          usageEn: asSentences(m.usageEn),
-          usageRu: asSentences(m.usageRu),
         }))
     : []
 }

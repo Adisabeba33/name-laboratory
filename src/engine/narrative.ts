@@ -3,10 +3,12 @@ import type {
   Concept,
   EmotionalDNA,
   LanguageFamily,
+  WordConstruction,
   WordGenome,
 } from './types'
 import type { Language } from './data/languages'
 import { IDEAS } from './data/ideas'
+import { splitSyllables } from './pronounce'
 import { dominantEmotions } from './emotional'
 
 /**
@@ -79,6 +81,37 @@ export function buildAncestry(lead: Concept, language: Language): Ancestry {
     character: language.character,
     families: language.families,
     note: `${language.character} — constructed using phonetic patterns associated with ${joinList(families)}, shaped around ${IDEAS[lead].essence}.`,
+  }
+}
+
+/**
+ * An honest "how this word was made" breakdown. It reflects what the engine
+ * actually did — grew the word around one or two ideas and synthesised it as a
+ * native word of a language whose sound is influenced by real families — and
+ * never fakes morpheme etymology.
+ */
+export function buildConstruction(
+  word: string,
+  lead: Concept,
+  support: Concept | undefined,
+  language: Language,
+): WordConstruction {
+  const ideas = [lead, ...(support && support !== lead ? [support] : [])].map((c) => ({
+    label: IDEAS[c].label,
+    gloss: IDEAS[c].def,
+  }))
+  const families = language.families.map((f) => FAMILY_LABEL[f])
+  const ideaWords = ideas.map((i) => i.label.toLowerCase())
+  return {
+    ideas,
+    species: language.character,
+    families,
+    syllables: splitSyllables(word),
+    note:
+      `Synthesised as a native word of the ${language.character} language — its sound ` +
+      `shaped by patterns associated with ${joinList(families)}, grown around ` +
+      `${joinList(ideaWords)}. No part is copied from a real word; the influences ` +
+      `shape only its texture.`,
   }
 }
 

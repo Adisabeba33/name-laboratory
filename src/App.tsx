@@ -7,26 +7,70 @@ import {
   DEFAULT_SPEAKABILITY,
   type CreativeMode,
   type LaboratoryResult,
+  type WordPassport,
 } from './engine'
+import {
+  loadLexicon,
+  addEntry,
+  removeEntry,
+  toEntry,
+  lexId,
+  type LexEntry,
+} from './lib/lexicon'
 import { analyzeRemote } from './lib/analyze'
 import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
+import { fetchUsage, hasCachedUsage } from './lib/usage'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { ConceptDirections } from './components/ConceptDirections'
+import { ConfirmDialog } from './components/ConfirmDialog'
+import { Lexicon } from './components/Lexicon'
 import { LanguageSection } from './components/LanguageSection'
 import { LanguageTree } from './components/LanguageTree'
 import { Logo } from './components/Logo'
 
 const MODE_KEYS = Object.keys(MODES) as CreativeMode[]
 
-/** A few starting prompts, to show the one thing the lab wants: a described meaning. */
-const EXAMPLES = [
-  'the feeling of becoming someone completely different after surviving something that should have destroyed you',
-  'a calm, premium AI company for medicine',
-  'the quiet joy of returning home after a long time away',
-  'a luxury fragrance that smells like rain on warm stone',
-]
+/** The two things the lab does: name a meaning, or name a thing. */
+type AppMode = 'discover' | 'name'
+
+/** Per-mode copy so the one input reads right for what the user is doing. */
+const MODE_COPY: Record<AppMode, {
+  tab: string
+  label: string
+  placeholder: string
+  button: string
+  examples: string[]
+}> = {
+  discover: {
+    tab: 'Discover a meaning',
+    label: 'Describe the word you want',
+    placeholder:
+      'e.g. the feeling of becoming someone completely different after surviving something that should have destroyed you',
+    button: 'Discover words',
+    examples: [
+      'the feeling of becoming someone completely different after surviving something that should have destroyed you',
+      'the quiet joy of returning home after a long time away',
+      'the smell of rain on warm dust after a long dry summer',
+      'the sadness of a perfect moment ending while you are still inside it',
+    ],
+  },
+  name: {
+    tab: 'Name something',
+    label: 'What are you naming?',
+    placeholder:
+      'e.g. a calm, premium AI company for medicine — or an unusual name for a newborn daughter',
+    button: 'Discover names',
+    examples: [
+      'a calm, premium AI company for medicine',
+      'a cozy independent bookstore and coffee house',
+      'a bold sportswear brand for climbers',
+      'a gentle, luminous name for a newborn daughter',
+    ],
+  },
+}
 
 export default function App() {
+  const [appMode, setAppMode] = useState<AppMode>('discover')
   const [brief, setBrief] = useState(
     'A word for the feeling of becoming someone completely different after surviving something that should have destroyed you.',
   )
@@ -43,7 +87,38 @@ export default function App() {
   const [steering, setSteering] = useState(false)
   const [usedLLM, setUsedLLM] = useState(false)
   const [selectedDirections, setSelectedDirections] = useState<string[]>([])
+  // Cost control: every LLM call must be confirmed. `llmAllowed` is the
+  // "don't ask again this session" escape; `confirm` drives the dialog.
+  const [llmAllowed, setLlmAllowed] = useState(false)
+  const [confirm, setConfirm] = useState<{ message: string; resolve: (ok: boolean) => void } | null>(
+    null,
+  )
+  // My Lexicon — the user's saved words, persisted on-device (localStorage).
+  const [lexicon, setLexicon] = useState<LexEntry[]>(() => loadLexicon())
+  const [showLexicon, setShowLexicon] = useState(false)
   const runId = useRef(0)
+
+  // Which of the current results' words are already saved (for this concept).
+  const savedKeys = useMemo(() => {
+    const b = brief.trim()
+    return new Set(lexicon.filter((e) => e.brief === b).map((e) => e.word.toLowerCase()))
+  }, [lexicon, brief])
+
+  function toggleSave(p: WordPassport) {
+    const b = brief.trim()
+    const id = lexId(p.word, b)
+    setLexicon((prev) =>
+      prev.some((e) => e.id === id)
+        ? removeEntry(prev, id)
+        : addEntry(prev, toEntry(p, p.family.name, b, new Date().toISOString())),
+    )
+  }
+
+  /** Ask permission before any AI request. Resolves true if allowed. */
+  function confirmLLM(message: string): Promise<boolean> {
+    if (llmAllowed) return Promise.resolve(true)
+    return new Promise((resolve) => setConfirm({ message, resolve }))
+  }
 
   const keywords = useMemo(
     () =>
@@ -66,7 +141,6 @@ export default function App() {
           word: w.word,
           language: f.character,
           hint: w.meaning.split(' (')[0],
-          translit: w.transliteration,
         })),
       )
       const map = await fetchBespokeMeanings(trimmed, items)
@@ -83,7 +157,6 @@ export default function App() {
                     meaning: `${m.en} (${m.ru})`,
                     shortMeaning: m.short || w.shortMeaning,
                     partOfSpeech: m.pos || w.partOfSpeech,
-                    usage: { en: m.usageEn, ru: m.usageRu },
                   }
                 : w
             }),
@@ -97,8 +170,21 @@ export default function App() {
 
   async function run(reseed = false, steer?: string) {
     if (analyzing) return
-    const myRun = ++runId.current
     const trimmed = brief.trim()
+    if (!trimmed) return
+
+    // Ask before any AI request. Declining still gives a free engine result;
+    // a steer only makes sense with AI, so a declined steer is a no-op.
+    const wantsAI = await confirmLLM(
+      steer
+        ? 'Re-read this meaning with the chosen emphasis and rewrite the word meanings.'
+        : reseed
+          ? 'Discover another set — rewrite the word meanings for the new words.'
+          : 'Read the meaning and write bespoke word meanings for this prompt.',
+    )
+    if (!wantsAI && steer) return
+
+    const myRun = ++runId.current
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
     const request = { brief: trimmed || undefined, keywords, mode, count, speakability, seed }
     // A steer re-interprets the SAME prompt with an added emphasis, without
@@ -111,12 +197,13 @@ export default function App() {
     let result: LaboratoryResult
     let remote = false
     try {
-      // 1) Let the LLM understand the meaning (server-side). Reuse the prior
-      //    LLM analysis on a reseed so "Try another set" doesn't re-bill a call.
-      const analysis =
-        reseed && usedLLM && results && !steer
+      // 1) Let the LLM understand the meaning (server-side) — only if allowed.
+      //    Reuse the prior LLM analysis on a reseed so it doesn't re-bill a call.
+      const analysis = !wantsAI
+        ? null
+        : reseed && usedLLM && results && !steer
           ? results.analysis
-          : await analyzeRemote(analysisBrief)
+          : await analyzeRemote(analysisBrief, appMode)
 
       remote = Boolean(analysis)
       // Build immediately with the engine's meanings, so results show fast.
@@ -145,10 +232,48 @@ export default function App() {
     const trimmed = brief.trim()
     const request = { brief: trimmed || undefined, keywords, mode, count, speakability }
     const focus = focusConcepts(results.analysis.concepts, results.analysis.directions, ids)
+    // Re-focusing the words is a free engine step — apply it immediately.
     const result = discoverFromAnalysis(results.analysis, request, focus)
     setResults(result)
     setNonce((n) => n + 1)
-    if (usedLLM) await enrich(result, myRun, trimmed)
+    // Rewriting the focused words' meanings is an AI request — ask first.
+    if (usedLLM && (await confirmLLM('Rewrite the focused words’ meanings with AI for this angle.'))) {
+      await enrich(result, myRun, trimmed)
+    }
+  }
+
+  /**
+   * Lazily write "Use in Language" example sentences for ONE word, on demand —
+   * the most expensive step, so it runs only when a user asks to see this word
+   * used in a sentence. Free when already cached; otherwise an AI request.
+   */
+  async function requestUsage(p: WordPassport, language: string): Promise<void> {
+    if (!results) return
+    const b = brief.trim()
+    if (!hasCachedUsage(b, p.word)) {
+      const ok = await confirmLLM(`Write example sentences that use “${p.word}” in a real sentence.`)
+      if (!ok) return
+    }
+    const usage = await fetchUsage(b, {
+      word: p.word,
+      language,
+      hint: p.meaning.split(' (')[0],
+      translit: p.transliteration,
+    })
+    if (!usage) return
+    setResults((prev) =>
+      prev
+        ? {
+            ...prev,
+            families: prev.families.map((f) => ({
+              ...f,
+              words: f.words.map((w) =>
+                w.word === p.word ? { ...w, usage: { en: usage.en, ru: usage.ru } } : w,
+              ),
+            })),
+          }
+        : prev,
+    )
   }
 
   function scrollToWord(word: string) {
@@ -163,6 +288,20 @@ export default function App() {
 
   return (
     <div className="app">
+      {confirm && (
+        <ConfirmDialog
+          message={confirm.message}
+          onCancel={() => {
+            confirm.resolve(false)
+            setConfirm(null)
+          }}
+          onAllow={(remember) => {
+            if (remember) setLlmAllowed(true)
+            confirm.resolve(true)
+            setConfirm(null)
+          }}
+        />
+      )}
       <header className="masthead">
         <Logo className="logo" />
         <div>
@@ -172,12 +311,42 @@ export default function App() {
             languages, and the words to name it.
           </p>
         </div>
+        <button
+          type="button"
+          className="btn ghost lex-open"
+          onClick={() => setShowLexicon((v) => !v)}
+        >
+          My Lexicon · {lexicon.length}
+        </button>
       </header>
 
+      {showLexicon && (
+        <Lexicon
+          entries={lexicon}
+          onRemove={(id) => setLexicon((prev) => removeEntry(prev, id))}
+          onClose={() => setShowLexicon(false)}
+        />
+      )}
+
       <section className="lab">
+        <div className="app-modes" role="tablist">
+          {(Object.keys(MODE_COPY) as AppMode[]).map((m) => (
+            <button
+              type="button"
+              key={m}
+              role="tab"
+              aria-selected={appMode === m}
+              className={`app-mode ${appMode === m ? 'on' : ''}`}
+              onClick={() => setAppMode(m)}
+            >
+              {MODE_COPY[m].tab}
+            </button>
+          ))}
+        </div>
+
         <div className="field">
           <label className="lbl" htmlFor="brief">
-            Describe the word you want
+            {MODE_COPY[appMode].label}
           </label>
           <textarea
             id="brief"
@@ -187,16 +356,20 @@ export default function App() {
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && canRun) run(false)
             }}
-            placeholder="e.g. the feeling of becoming someone completely different after surviving something that should have destroyed you"
+            placeholder={MODE_COPY[appMode].placeholder}
             rows={3}
           />
           <p className="hint">
-            Just the meaning or feeling — no keywords, no settings needed. Press ⌘/Ctrl + Enter to run.
+            {appMode === 'name'
+              ? 'Describe what you’re naming — a company, store, brand, or even a baby.'
+              : 'Just the meaning or feeling — no keywords needed.'}{' '}
+            Press ⌘/Ctrl + Enter to run. Anything that uses AI asks first — declining still gives a
+            free engine result.
           </p>
 
           <div className="examples">
             <span className="examples-label">Try:</span>
-            {EXAMPLES.map((ex) => (
+            {MODE_COPY[appMode].examples.map((ex) => (
               <button
                 type="button"
                 key={ex}
@@ -211,7 +384,11 @@ export default function App() {
 
         <div className="actions">
           <button className="btn" onClick={() => run(false)} disabled={!canRun || analyzing}>
-            {analyzing ? 'Reading the meaning…' : 'Discover words'}
+            {analyzing
+              ? appMode === 'name'
+                ? 'Reading the brief…'
+                : 'Reading the meaning…'
+              : MODE_COPY[appMode].button}
           </button>
           {results && !analyzing && (
             <button className="btn ghost" onClick={() => run(true)}>
@@ -300,8 +477,18 @@ export default function App() {
 
       {results === null ? (
         <div className="empty">
-          Describe a meaning and press <b>Discover words</b>. The laboratory reads what you
-          really mean, then surfaces several new languages — each with native-speaker words.
+          {appMode === 'name' ? (
+            <>
+              Describe what you’re naming and press <b>Discover names</b>. The laboratory reads the
+              character it should have, then surfaces several sound-worlds — each with candidate
+              names.
+            </>
+          ) : (
+            <>
+              Describe a meaning and press <b>Discover words</b>. The laboratory reads what you
+              really mean, then surfaces several new languages — each with native-speaker words.
+            </>
+          )}
         </div>
       ) : results.families.length === 0 ? (
         <div className="empty">
@@ -314,9 +501,10 @@ export default function App() {
             source={usedLLM ? 'llm' : 'engine'}
             onSteer={usedLLM ? (label) => run(false, label) : undefined}
             steering={steering}
+            showTensions={appMode === 'discover'}
           />
 
-          {results.analysis.directions.length > 0 && (
+          {appMode === 'discover' && results.analysis.directions.length > 0 && (
             <ConceptDirections
               directions={results.analysis.directions}
               selected={selectedDirections}
@@ -325,9 +513,13 @@ export default function App() {
           )}
 
           <div className="results-head">
-            <h2>{results.families.length} linguistic species discovered</h2>
+            <h2>
+              {results.families.length}{' '}
+              {appMode === 'name' ? 'name families' : 'linguistic species'} discovered
+            </h2>
             <span className="muted">
-              {results.families.reduce((n, f) => n + f.words.length, 0)} native words
+              {results.families.reduce((n, f) => n + f.words.length, 0)}{' '}
+              {appMode === 'name' ? 'candidate names' : 'native words'}
               {refining && <span className="refining"> · writing meanings…</span>}
             </span>
           </div>
@@ -335,7 +527,13 @@ export default function App() {
           <LanguageTree families={results.families} onPick={scrollToWord} />
 
           {results.families.map((fam) => (
-            <LanguageSection fam={fam} key={fam.id} />
+            <LanguageSection
+              fam={fam}
+              key={fam.id}
+              savedWords={savedKeys}
+              onToggleSave={toggleSave}
+              onRequestUsage={usedLLM ? requestUsage : undefined}
+            />
           ))}
         </section>
       )}

@@ -107,13 +107,19 @@ Avoid this language:
 - “AI name generator”, “random word generator”, “build your own language”,
   “generating names…”, “here are your results”, “inspired by”.
 
-There are (eventually) **two modes** that must not be blended into one generic
-generator:
+There are **two modes** (a tab picker on the input), which must not be blended
+into one generic generator:
 
 - **Meaning Discovery** (primary) — for unnamed human experiences and concepts.
-  Optimises for semantic precision, emotional recognition, natural usage.
-- **Naming** (secondary) — for brands, products, characters. Optimises for brand
-  fit, memorability, domain/trademark potential.
+  Optimises for semantic precision, emotional recognition, natural usage. Shows
+  semantic tensions and concept directions.
+- **Naming** (secondary) — for a company, store, brand, product, or even a
+  newborn. Optimises for brand character, memorability, adoption. `api/analyze`
+  switches to a naming system prompt; the UI hides tensions/directions and
+  relabels results ("name families" / "candidate names").
+
+Both run the same discovery/synthesis pipeline underneath — only the analysis
+framing and result copy differ.
 
 ---
 
@@ -181,7 +187,8 @@ passports are unchanged whether the analysis came from the LLM or the fallback.
 | File | Responsibility |
 | --- | --- |
 | `api/analyze.ts` | LLM Meaning Analysis. Returns the `MeaningAnalysis` shape. `501` if no key, `502` on failure → client falls back to the engine. |
-| `api/meanings.ts` | LLM "living dictionary" pass: per word writes meaning EN/RU, short definition, part of speech, and 2 EN + 2 RU natural usage sentences (uses the exact Cyrillic spelling passed in). |
+| `api/meanings.ts` | LLM meaning pass (cheap): per word writes meaning EN/RU, a short definition, and part of speech. Chunked + parallel so it never truncates. |
+| `api/usage.ts` | LLM "Use in Language" for ONE word, on demand: 2 EN + 2 RU natural example sentences. Split out and called lazily (per word the user opens) — the most expensive step, so it isn't run for words nobody looks at. |
 
 - The **API key lives only on the server** (`ANTHROPIC_API_KEY`), never in the browser.
 - `WORDLAB_MODEL` overrides the model (default `claude-haiku-4-5-20251001` for
@@ -223,10 +230,48 @@ Prompt → Interpretation → Hidden layers → Semantic tensions → Concept di
 | **1** | **Semantic Tensions** + optional "Refine the reading" steer chips (non-blocking, LLM-only) | ✅ done |
 | **2** | **Concept Directions** — 3–5 distinct angles; focus word discovery on one or combine two (non-blocking re-weight). `Concept` persistence deferred to Phase 6. | ✅ done |
 | **3** | **Diverse word discovery** — over-generate a candidate pool, then max-min-diversity select so a language's words never share a stem (no template mutation) | ✅ done |
-| 5 | Adoption Test — qualitative first, transparent numeric score later. Speakability band + "Speakable ↔ Ornate" dial shipped as the first step. | 🟡 in progress |
-| 6 | Personal Lexicon — save/search/collections/history | ⏳ planned |
-| 7 | Evolve the word — change sound while preserving concept; parent/child lineage | ⏳ planned |
+| **5** | **Speech Adoption Test** — rule-based, engine-only (free): a qualitative band + scored 6-component breakdown + plain-language strengths & risks (drug/brand/fantasy/length/cross-language) | ✅ done |
+| **6** | **My Lexicon** — save words to a personal, on-device dictionary (localStorage); searchable, removable, keeps meaning/pronunciation/concept/adoption. Collections/tags & cross-device sync deferred. | ✅ done |
+| **7** | **Evolve the sound** — reshape a word's phonetics toward a direction (softer/darker/simpler/…) while keeping the meaning verbatim; deterministic (free, no LLM), with a parent→child lineage and a "what changed" summary. | ✅ done |
+| — | **Cost optimisation** — lazy per-word Use-in-Language (`api/usage.ts`) + in-memory caches for analyze/meanings/usage | ✅ done |
+| **21** | **Two modes** — Discover a meaning vs Name something (company/store/brand/newborn); naming uses its own analyst prompt and result framing | ✅ done |
+| — | **"How this word was made"** — honest per-word construction breakdown (syllables, ideas fused, species, sound influences); no fake morpheme etymology | ✅ done |
+| — | **Speakability bias** — synthesis leans toward everyday-sayable words by default; a "Speakable ↔ Ornate" dial (`speakability` on the request) + a per-word Speakability band, so long "incantation" shapes are avoided or flagged | ✅ done |
 | 8 | External checks — dictionary / brand / domain / trademark / cross-language negatives | ⏳ later |
+| A | **Accounts + database** — profiles, cross-device lexicon sync, request history | ⏳ later (see §7a) |
+| M | **Monetisation** — free daily limit + paid tier (premium model / higher limits) | ⏳ later (see §7a) |
+
+### 7a. Deferred: accounts, database & monetisation
+
+Explicitly parked for later (do not build without the user's go-ahead) — most
+likely done together, since an account is both the sync mechanism *and* the
+natural gate for paid tiers.
+
+**Why it's needed.** Today the lexicon lives in the browser's `localStorage`
+(`src/lib/lexicon.ts`): it works and is free, but it's per-device / per-browser,
+lost if the browser data is cleared, and has no profile or history. Real
+profiles, cross-device sync, and durable history require **authentication + a
+database** — there's no way around storing a user's words "behind the user".
+
+**Recommended shape** (not started):
+- **Stack:** Supabase (auth + Postgres + row-level security) is the lightest fit
+  for this Vite SPA — minimal backend code. Alternatives: Neon/Vercel Postgres +
+  Auth.js, Firebase, or Clerk.
+- **Progressive, non-forced:** anonymous users keep the local lexicon exactly as
+  now; on **sign-in**, local words sync up to the cloud and become available on
+  any device. Never force login just to use the lab.
+- **Auth:** Google / magic-link / email — decide at build time.
+- **Data model:** a `lexicon` table keyed by `user_id` (mirrors the `LexEntry`
+  shape); later a `history` table of prompts/analyses.
+- **Monetisation, on the same foundation:** free daily request limit per account,
+  paid tier for higher limits and/or the premium model (`claude-sonnet-5` /
+  `claude-opus-4-8` via `WORDLAB_MODEL`). Accounts also enable per-user usage
+  metering.
+- **Privacy:** storing user data means adding a short privacy note (what's
+  stored, where) — required once real accounts exist.
+- **Ops note:** the Supabase/DB project and its keys must be created by the
+  product owner; the public `anon` key is safe in the browser, the service key
+  stays server-only. An agent cannot create those external accounts.
 
 ### Design tension to respect
 
@@ -303,6 +348,17 @@ are layered on top progressively.
   `MeaningAnalysis` / passport shapes so the deterministic fallback keeps working.
 - **The app must always work without the LLM.** Every LLM call has a graceful
   fallback; the key never reaches the browser.
+- **Never call the LLM silently.** Every AI request is gated by a confirmation
+  dialog (`ConfirmDialog`) because each call costs money — including the
+  secondary ones (steer chips, concept-direction focus). Declining runs the free
+  engine instead. A "don't ask again this session" opt-out exists, but the
+  default is to ask. Free engine steps (re-discovery, transliteration,
+  pronunciation, adoption, evolve) run without asking.
+- **Spend as little as possible.** The expensive per-word example sentences
+  ("Use in Language") are written lazily — only for the word a user opens, via
+  `api/usage.ts`. The client libs (`lib/analyze`, `lib/meanings`, `lib/usage`)
+  cache results in memory, so an identical repeat costs nothing (and is served
+  without a confirmation prompt, since no request is made).
 - **Follow the honesty rules** (section 5). No fake etymology or fake precision.
 - **Determinism:** engine output must stay deterministic for a seed. Do not use
   `Date.now()` / `Math.random()` in the engine — use the seeded `Rng`.

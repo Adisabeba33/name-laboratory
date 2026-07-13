@@ -20,6 +20,7 @@ import { speakabilityBand } from './phonetics'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
 import { ratePronunciation } from './pronunciation'
+import { assessAdoption } from './adoption'
 import { pronounce } from './pronounce'
 import { translitRu } from './translit'
 import { matchBrands } from './brand'
@@ -31,6 +32,7 @@ import {
   buildMeaning,
   buildPersonality,
   buildStory,
+  buildConstruction,
 } from './narrative'
 
 /** Which languages a creative mode leans toward (a soft boost, not a lock). */
@@ -171,6 +173,7 @@ export function buildPassport(
   const genome = computeGenome(word, usedConcepts)
   const emotionalDNA = computeEmotionalDNA(genome, concepts, language)
   const evolution = computeWordEvolution(word, genome, language, generation, reference, prototype)
+  const pronunciation = ratePronunciation(word, genome)
 
   return {
     word,
@@ -186,12 +189,15 @@ export function buildPassport(
     evolution,
     emotionalDNA,
     personality: buildPersonality(emotionalDNA),
-    pronunciation: ratePronunciation(word, genome),
+    pronunciation,
+    adoption: assessAdoption(word, genome, pronunciation),
     difficulty: buildDifficulty(genome),
     brandFit: matchBrands(emotionalDNA),
     story: buildStory(word, lead, language),
     explanation: buildExplanation(lead, support, language),
     genome,
+    construction: buildConstruction(word, lead, support, language),
+    origin: { lead, support, concepts, languageId: language.id, generation },
   }
 }
 

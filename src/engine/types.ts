@@ -161,6 +161,30 @@ export interface PronunciationRating {
   stars: number
 }
 
+/** One scored component of the Speech Adoption assessment. */
+export interface AdoptionComponent {
+  label: string
+  /** Points earned, out of `max`. */
+  score: number
+  max: number
+}
+
+/**
+ * Speech Adoption — a transparent, rule-based estimate of whether a word could
+ * actually enter everyday speech. Qualitative band first, breakdown second; it
+ * is a structural heuristic, not an external brand/trademark check.
+ */
+export interface SpeechAdoption {
+  band: 'Low' | 'Moderate' | 'High' | 'Exceptional'
+  /** Total across all components, out of 100. */
+  score: number
+  components: AdoptionComponent[]
+  /** What makes it usable, in plain language. */
+  strengths: string[]
+  /** Concrete adoption risks flagged by the rules (may be empty). */
+  risks: string[]
+}
+
 /** Whether a word is a strong or weak fit for a given industry. */
 export interface BrandFit {
   excellentFor: string[]
@@ -210,6 +234,41 @@ export interface WordEvolution {
 }
 
 /**
+ * An honest account of how the engine actually built a word — grown around one
+ * or two ideas, synthesised as a native speaker of a language whose sound is
+ * influenced by real families, broken into syllables. It never claims a part is
+ * "borrowed from Latin meaning X": the word is invented, the influences shape
+ * only its texture.
+ */
+export interface WordConstruction {
+  /** The idea(s) the word was grown around (label + short gloss). */
+  ideas: { label: string; gloss: string }[]
+  /** The language species the word is a native speaker of. */
+  species: string
+  /** The phonetic families whose sound influenced it (texture, not derivation). */
+  families: string[]
+  /** The word split into its written syllables. */
+  syllables: string[]
+  /** One honest sentence stating how it was made. */
+  note: string
+}
+
+/**
+ * The generation context a word was born from — the concept it carries and the
+ * language it belongs to. Kept on the passport so the word can be *evolved*
+ * (its sound changed) while its concept and meaning stay fixed.
+ */
+export interface WordOrigin {
+  lead: Concept
+  support?: Concept
+  concepts: ConceptVector
+  /** The language id (species) the word is a native speaker of. */
+  languageId: string
+  /** Which generation of the word this is (1 = first coined). */
+  generation: number
+}
+
+/**
  * The "Word Passport" — everything a user receives about a generated word. The
  * user should always understand *why* the word exists, not merely receive a name.
  * Meaning leads; etymology recedes.
@@ -246,6 +305,8 @@ export interface WordPassport {
   personality: string[]
   /** Cross-language pronounceability. */
   pronunciation: PronunciationRating[]
+  /** Rule-based estimate of whether the word could enter everyday speech. */
+  adoption: SpeechAdoption
   /** Human-readable difficulty notes. */
   difficulty: string[]
   /** Industries the word naturally fits — and ones it doesn't. */
@@ -256,6 +317,10 @@ export interface WordPassport {
   explanation: string
   /** The underlying phonetic genome, exposed for transparency and future tooling. */
   genome: WordGenome
+  /** An honest breakdown of how the engine assembled this word. */
+  construction: WordConstruction
+  /** Generation context — the concept + language, so the word can be evolved. */
+  origin: WordOrigin
 }
 
 /**
