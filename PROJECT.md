@@ -223,7 +223,42 @@ Prompt → Interpretation → Hidden layers → Semantic tensions → Concept di
 | **5** | **Speech Adoption Test** — rule-based, engine-only (free): a qualitative band + scored 6-component breakdown + plain-language strengths & risks (drug/brand/fantasy/length/cross-language) | ✅ done |
 | **6** | **My Lexicon** — save words to a personal, on-device dictionary (localStorage); searchable, removable, keeps meaning/pronunciation/concept/adoption. Collections/tags & cross-device sync deferred. | ✅ done |
 | **7** | **Evolve the sound** — reshape a word's phonetics toward a direction (softer/darker/simpler/…) while keeping the meaning verbatim; deterministic (free, no LLM), with a parent→child lineage and a "what changed" summary. | ✅ done |
+| — | **Cost optimisation** — lazy per-word Use-in-Language (`api/usage.ts`) + in-memory caches for analyze/meanings/usage | ✅ done |
 | 8 | External checks — dictionary / brand / domain / trademark / cross-language negatives | ⏳ later |
+| A | **Accounts + database** — profiles, cross-device lexicon sync, request history | ⏳ later (see §7a) |
+| M | **Monetisation** — free daily limit + paid tier (premium model / higher limits) | ⏳ later (see §7a) |
+
+### 7a. Deferred: accounts, database & monetisation
+
+Explicitly parked for later (do not build without the user's go-ahead) — most
+likely done together, since an account is both the sync mechanism *and* the
+natural gate for paid tiers.
+
+**Why it's needed.** Today the lexicon lives in the browser's `localStorage`
+(`src/lib/lexicon.ts`): it works and is free, but it's per-device / per-browser,
+lost if the browser data is cleared, and has no profile or history. Real
+profiles, cross-device sync, and durable history require **authentication + a
+database** — there's no way around storing a user's words "behind the user".
+
+**Recommended shape** (not started):
+- **Stack:** Supabase (auth + Postgres + row-level security) is the lightest fit
+  for this Vite SPA — minimal backend code. Alternatives: Neon/Vercel Postgres +
+  Auth.js, Firebase, or Clerk.
+- **Progressive, non-forced:** anonymous users keep the local lexicon exactly as
+  now; on **sign-in**, local words sync up to the cloud and become available on
+  any device. Never force login just to use the lab.
+- **Auth:** Google / magic-link / email — decide at build time.
+- **Data model:** a `lexicon` table keyed by `user_id` (mirrors the `LexEntry`
+  shape); later a `history` table of prompts/analyses.
+- **Monetisation, on the same foundation:** free daily request limit per account,
+  paid tier for higher limits and/or the premium model (`claude-sonnet-5` /
+  `claude-opus-4-8` via `WORDLAB_MODEL`). Accounts also enable per-user usage
+  metering.
+- **Privacy:** storing user data means adding a short privacy note (what's
+  stored, where) — required once real accounts exist.
+- **Ops note:** the Supabase/DB project and its keys must be created by the
+  product owner; the public `anon` key is safe in the browser, the service key
+  stays server-only. An agent cannot create those external accounts.
 
 ### Design tension to respect
 
