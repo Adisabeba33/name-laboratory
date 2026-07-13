@@ -1,16 +1,19 @@
 import type { Language } from './data/languages'
 import { KNOWN_WORDS } from './data/known-words'
 import { Rng } from './rng'
-import { awkwardClusters, isVowel, normalise } from './phonetics'
+import { awkwardClusters, countSyllables, isVowel, normalise } from './phonetics'
+import { editDistance } from './genome'
 
 /**
  * Native-speaker word synthesis.
  *
  * Words are generated as native speakers of a language: each is assembled from
  * the language's own phoneme inventory and obeys its cadence, so the whole set
- * shares a sound world without being stem-mutations of one another. Internal
- * diversity comes from varying syllable counts, coda presence and endings —
- * "words a native speaker would naturally coin", not "Kaix / Kaon / Kaint".
+ * shares a sound world without being stem-mutations of one another. To guarantee
+ * that internal diversity (rather than hope for it), we over-generate a candidate
+ * pool and then select the most *mutually different* subset — spreading them
+ * across syllable counts, onsets, endings and overall shape — so the result reads
+ * as "words a native speaker would coin", never "Kaix / Kaon / Kaint".
  */
 export interface NativeVocabulary {
   /** Distinct native words, capitalised. */
@@ -19,16 +22,19 @@ export interface NativeVocabulary {
   prototype: string
 }
 
+/** How many candidates to pool per requested word before selecting for diversity. */
+const POOL_FACTOR = 5
+
 /** Speak `count` distinct native words of a language. */
 export function speakNative(lang: Language, rng: Rng, count: number): NativeVocabulary {
-  const words: string[] = []
-  const seen = new Set<string>()
   const prototype = buildPrototype(lang)
+  const pool: string[] = []
+  const seen = new Set<string>()
 
+  const target = count * POOL_FACTOR
   let guard = 0
-  while (words.length < count && guard++ < count * 12) {
-    const raw = generateWord(lang, rng)
-    const word = tidy(raw)
+  while (pool.length < target && guard++ < target * 12) {
+    const word = tidy(generateWord(lang, rng))
     const key = word.toLowerCase()
     if (
       key.length >= 4 &&
@@ -39,10 +45,60 @@ export function speakNative(lang: Language, rng: Rng, count: number): NativeVoca
       hasVowel(word)
     ) {
       seen.add(key)
-      words.push(capitalise(word))
+      pool.push(capitalise(word))
     }
   }
-  return { words, prototype }
+
+  return { words: selectDiverse(pool, count), prototype }
+}
+
+/**
+ * Greedily pick the most mutually-different subset (max-min diversity): start
+ * from the first candidate, then repeatedly add the candidate whose *closest*
+ * already-picked neighbour is the furthest away. This maximises spread and, in
+ * particular, avoids two words that share a stem (the "template mutation" smell).
+ */
+function selectDiverse(pool: string[], count: number): string[] {
+  if (pool.length <= count) return pool
+  const picked = [pool[0]]
+  const rest = pool.slice(1)
+  while (picked.length < count && rest.length) {
+    let bestIdx = 0
+    let bestScore = -Infinity
+    for (let i = 0; i < rest.length; i++) {
+      let nearest = Infinity
+      for (const p of picked) nearest = Math.min(nearest, wordDistance(rest[i], p))
+      if (nearest > bestScore) {
+        bestScore = nearest
+        bestIdx = i
+      }
+    }
+    picked.push(rest.splice(bestIdx, 1)[0])
+  }
+  return picked
+}
+
+/**
+ * How different two words are (higher = more different). Blends normalised edit
+ * distance with structural signals, and heavily penalises a shared prefix so
+ * suffix-variations of one root never both survive.
+ */
+function wordDistance(a: string, b: string): number {
+  const la = normalise(a)
+  const lb = normalise(b)
+  let d = editDistance(la, lb) / Math.max(la.length, lb.length, 1)
+  const prefix = commonPrefixLength(la, lb)
+  if (prefix >= 3) d -= 0.6
+  else if (prefix === 2) d -= 0.25
+  if (countSyllables(la) !== countSyllables(lb)) d += 0.15
+  if (la[la.length - 1] !== lb[lb.length - 1]) d += 0.05
+  return d
+}
+
+function commonPrefixLength(a: string, b: string): number {
+  let i = 0
+  while (i < a.length && i < b.length && a[i] === b[i]) i++
+  return i
 }
 
 /** The language's canonical, minimal word — its evolutionary "root form". */

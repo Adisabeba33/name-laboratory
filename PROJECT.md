@@ -218,7 +218,7 @@ Prompt → Interpretation → Hidden layers → Semantic tensions → Concept di
 | **14** | **Use in Language** — EN/RU usage sentences, part of speech, short def | ✅ done |
 | **1** | **Semantic Tensions** + optional "Refine the reading" steer chips (non-blocking, LLM-only) | ✅ done |
 | **2** | **Concept Directions** — 3–5 distinct angles; focus word discovery on one or combine two (non-blocking re-weight). `Concept` persistence deferred to Phase 6. | ✅ done |
-| 3 | Word discovery from *independent* phonetic strategies (no template mutation) | ⏳ planned |
+| **3** | **Diverse word discovery** — over-generate a candidate pool, then max-min-diversity select so a language's words never share a stem (no template mutation) | ✅ done |
 | 5 | Adoption Test — qualitative first, transparent numeric score later | ⏳ planned |
 | 6 | Personal Lexicon — save/search/collections/history | ⏳ planned |
 | 7 | Evolve the word — change sound while preserving concept; parent/child lineage | ⏳ planned |

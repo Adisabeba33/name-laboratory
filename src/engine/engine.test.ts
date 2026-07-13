@@ -153,11 +153,25 @@ describe('native synthesis (diverse speakers of one language)', () => {
   })
 
   it('gives a language real internal diversity (not stem mutations)', () => {
-    const rng = new Rng(7)
-    const vocab = speakNative(languageById('liquid'), rng, 3)
-    // Words should not all share the same 3-letter prefix (the old failure mode).
-    const prefixes = new Set(vocab.words.map((w) => w.slice(0, 3).toLowerCase()))
-    expect(prefixes.size).toBeGreaterThan(1)
+    // Across several languages and seeds, the words of one language must never
+    // read as suffix-variations of one root: each gets its own 3-letter prefix.
+    for (const id of ['crystalline', 'liquid', 'ashen', 'obsidian', 'noble']) {
+      for (const seed of [7, 42, 99]) {
+        const vocab = speakNative(languageById(id), new Rng(seed), 3)
+        const prefixes = new Set(vocab.words.map((w) => w.slice(0, 3).toLowerCase()))
+        expect(prefixes.size).toBe(vocab.words.length)
+        // And no two words share a long common stem.
+        for (let i = 0; i < vocab.words.length; i++) {
+          for (let j = i + 1; j < vocab.words.length; j++) {
+            const a = vocab.words[i].toLowerCase()
+            const b = vocab.words[j].toLowerCase()
+            let p = 0
+            while (p < a.length && p < b.length && a[p] === b[p]) p++
+            expect(p).toBeLessThan(3)
+          }
+        }
+      }
+    }
   })
 
   it('does not expose raw source-root fragments', () => {
