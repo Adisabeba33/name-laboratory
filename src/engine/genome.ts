@@ -86,8 +86,11 @@ export function estimateUniqueness(word: string): number {
     closest = Math.min(closest, rel)
     if (closest === 0) break
   }
-  // rel distance of 0.5+ is comfortably novel.
-  return clamp01(Math.min(1, closest / 0.5))
+  // Map the real distance to the nearest known word onto a score that keeps a
+  // genuine spread and is deliberately capped below 1.0: this is a *structural*
+  // novelty heuristic against a small blocklist, not a verified-unique claim, so
+  // it must never read as a perfect "100%" (see the honesty rules in PROJECT.md).
+  return clamp01(0.5 + Math.min(closest, 1) * 0.47)
 }
 
 /** Classic Levenshtein distance, small-string friendly. */

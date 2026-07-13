@@ -89,12 +89,15 @@ export function PassportCard({ p }: { p: WordPassport }) {
           <div className="wg-cell"><span>Parent language</span><b>{e.parentLanguage}</b></div>
           <div className="wg-cell"><span>Mutation</span><b>{e.mutation}%</b></div>
           <div className="wg-cell"><span>Visual balance</span><b>{e.visualBalance}</b></div>
-          <div className="wg-cell"><span>Originality</span><b>{e.originality}</b></div>
+          <div className="wg-cell"><span>Structural originality</span><b>{e.originality}</b></div>
           <div className="wg-cell"><span>Memorability</span><b>{e.memorability}</b></div>
           <div className="wg-cell"><span>Phonetic stability</span><b>{e.phoneticStability}</b></div>
           <div className="wg-cell"><span>Evolution distance</span><b>{e.evolutionDistance.toFixed(2)}</b></div>
           <div className="wg-cell"><span>Syllables</span><b>{p.genome.syllables}</b></div>
         </div>
+        <p className="wg-note">
+          Structural heuristics — external collision, trademark and domain checks not yet performed.
+        </p>
       </div>
 
       <div className="sec">

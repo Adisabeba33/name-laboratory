@@ -16,6 +16,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 const MODEL = process.env.WORDLAB_MODEL || 'claude-haiku-4-5-20251001'
 const MAX_WORDS = 30
+/** Words per model call — small enough that a full-entry batch never truncates. */
+const CHUNK_SIZE = 6
 
 // Writing ~18 bespoke bilingual definitions with Opus takes well over Vercel's
 // default 10s function limit. Allow up to 60s (the Hobby ceiling) so the call
@@ -95,67 +97,89 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const client = new Anthropic({ apiKey })
-    const response = await client.messages.create({
-      model: MODEL,
-      max_tokens: 4096,
-      system: SYSTEM,
-      output_config: { format: { type: 'json_schema', schema: SCHEMA } },
-      messages: [
-        {
-          role: 'user',
-          content:
-            `The idea being named:\n"""${brief}"""\n\n` +
-            `Write the full living-dictionary entry for each of these invented words. ` +
-            `Use each word's language character and concept hint; for the Russian ` +
-            `sentences use exactly the given "translit" Cyrillic spelling:\n` +
-            JSON.stringify(list),
-        },
-      ],
-    } as Anthropic.MessageCreateParamsNonStreaming)
+    // Each word's full entry (meaning + short + pos + 2 EN + 2 RU sentences) is
+    // large, so writing all of them in one call can overflow the token budget and
+    // truncate the JSON. Split into small chunks and write them in parallel: no
+    // truncation, faster, and a failed chunk doesn't lose the others.
+    const chunks: (typeof list)[] = []
+    for (let i = 0; i < list.length; i += CHUNK_SIZE) chunks.push(list.slice(i, i + CHUNK_SIZE))
 
-    const textBlock = response.content.find((b) => b.type === 'text') as
-      | { type: 'text'; text: string }
-      | undefined
-    const raw = JSON.parse(textBlock?.text ?? '{}')
+    const settled = await Promise.allSettled(chunks.map((chunk) => writeEntries(client, brief, chunk)))
+    const meanings = settled.flatMap((s) => (s.status === 'fulfilled' ? s.value : []))
+    const anyOk = settled.some((s) => s.status === 'fulfilled')
 
-    const asSentences = (v: unknown): string[] =>
-      Array.isArray(v)
-        ? v.filter((s) => typeof s === 'string' && s.trim()).map((s) => String(s).slice(0, 400)).slice(0, 3)
-        : []
-
-    const meanings = Array.isArray(raw.meanings)
-      ? raw.meanings
-          .filter(
-            (m: unknown) =>
-              m &&
-              typeof (m as { word?: unknown }).word === 'string' &&
-              typeof (m as { meaning?: unknown }).meaning === 'string' &&
-              typeof (m as { meaningRu?: unknown }).meaningRu === 'string',
-          )
-          .map(
-            (m: {
-              word: string
-              meaning: string
-              meaningRu: string
-              short?: string
-              pos?: string
-              usageEn?: unknown
-              usageRu?: unknown
-            }) => ({
-              word: String(m.word),
-              meaning: String(m.meaning),
-              meaningRu: String(m.meaningRu),
-              short: String(m.short ?? '').slice(0, 120),
-              pos: String(m.pos ?? '').slice(0, 24),
-              usageEn: asSentences(m.usageEn),
-              usageRu: asSentences(m.usageRu),
-            }),
-          )
-      : []
-
+    if (!anyOk) {
+      res.status(502).json({ error: 'meanings_failed' })
+      return
+    }
     res.setHeader('cache-control', 'no-store')
     res.status(200).json({ meanings })
   } catch {
     res.status(502).json({ error: 'meanings_failed' })
   }
+}
+
+interface WordEntry {
+  word: string
+  meaning: string
+  meaningRu: string
+  short: string
+  pos: string
+  usageEn: string[]
+  usageRu: string[]
+}
+
+/** Write full living-dictionary entries for one small chunk of words. */
+async function writeEntries(
+  client: Anthropic,
+  brief: string,
+  list: Array<{ word: string; language: string; hint: string; translit: string }>,
+): Promise<WordEntry[]> {
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 3000,
+    system: SYSTEM,
+    output_config: { format: { type: 'json_schema', schema: SCHEMA } },
+    messages: [
+      {
+        role: 'user',
+        content:
+          `The idea being named:\n"""${brief}"""\n\n` +
+          `Write the full living-dictionary entry for each of these invented words. ` +
+          `Use each word's language character and concept hint; for the Russian ` +
+          `sentences use exactly the given "translit" Cyrillic spelling:\n` +
+          JSON.stringify(list),
+      },
+    ],
+  } as Anthropic.MessageCreateParamsNonStreaming)
+
+  const textBlock = response.content.find((b) => b.type === 'text') as
+    | { type: 'text'; text: string }
+    | undefined
+  const raw = JSON.parse(textBlock?.text ?? '{}')
+
+  const asSentences = (v: unknown): string[] =>
+    Array.isArray(v)
+      ? v.filter((s) => typeof s === 'string' && s.trim()).map((s) => String(s).slice(0, 400)).slice(0, 3)
+      : []
+
+  return Array.isArray(raw.meanings)
+    ? raw.meanings
+        .filter(
+          (m: unknown) =>
+            m &&
+            typeof (m as { word?: unknown }).word === 'string' &&
+            typeof (m as { meaning?: unknown }).meaning === 'string' &&
+            typeof (m as { meaningRu?: unknown }).meaningRu === 'string',
+        )
+        .map((m: Partial<WordEntry>) => ({
+          word: String(m.word),
+          meaning: String(m.meaning),
+          meaningRu: String(m.meaningRu),
+          short: String(m.short ?? '').slice(0, 120),
+          pos: String(m.pos ?? '').slice(0, 24),
+          usageEn: asSentences(m.usageEn),
+          usageRu: asSentences(m.usageRu),
+        }))
+    : []
 }
