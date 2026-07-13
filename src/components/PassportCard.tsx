@@ -8,6 +8,7 @@ import {
   type WordPassport,
   type WordEvolutionStep,
 } from '../engine'
+import { fetchCollision, type CollisionResult } from '../lib/collision'
 
 /** The order emotional axes are shown in — most brand-relevant first. */
 const DNA_ORDER: EmotionalAxis[] = [
@@ -45,6 +46,21 @@ export function PassportCard({
   const topDNA = DNA_ORDER.filter((axis) => p.emotionalDNA[axis] >= 8).slice(0, 8)
   const [lineage, setLineage] = useState<WordEvolutionStep[]>([])
   const [usageLoading, setUsageLoading] = useState(false)
+  const [collision, setCollision] = useState<CollisionResult | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [checkFailed, setCheckFailed] = useState(false)
+
+  async function runCollisionCheck() {
+    setChecking(true)
+    setCheckFailed(false)
+    try {
+      const r = await fetchCollision(p.word)
+      if (r) setCollision(r)
+      else setCheckFailed(true)
+    } finally {
+      setChecking(false)
+    }
+  }
 
   const hasUsage = p.usage.en.length > 0 || p.usage.ru.length > 0
   async function loadUsage() {
@@ -213,6 +229,49 @@ export function PassportCard({
         </p>
       </div>
 
+      <div className="sec collision">
+        <h4>Availability</h4>
+        <div className={`collide-offline match-${p.collision.match}`}>{p.collision.note}</div>
+        {collision ? (
+          <div className="collide-live">
+            <div className="collide-line">
+              <span className="collide-key">Dictionary</span>
+              <span>
+                {collision.dictionary.isWord
+                  ? 'Already an English word'
+                  : 'Not found in the English dictionary'}
+              </span>
+            </div>
+            {collision.dictionary.definition && (
+              <div className="collide-def">“{collision.dictionary.definition}”</div>
+            )}
+            <div className="collide-domains">
+              {collision.domains.map((d) => (
+                <span key={d.tld} className={`dom dom-${d.status}`}>
+                  .{d.tld} · {d.status}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="use-load"
+            disabled={checking}
+            onClick={runCollisionCheck}
+          >
+            {checking ? 'Checking dictionary & domains…' : 'Check dictionary & domains (live)'}
+          </button>
+        )}
+        {checkFailed && !collision && (
+          <p className="wg-note">Live check unavailable right now — try again in a moment.</p>
+        )}
+        <p className="wg-note">
+          Live check covers the English dictionary and domain registration only — not trademarks,
+          social handles or meanings in other languages.
+        </p>
+      </div>
+
       <div className="sec evolve">
         <div className="evolve-head">
           <h4>Evolve the sound</h4>
@@ -293,7 +352,8 @@ export function PassportCard({
           <div className="wg-cell"><span>Syllables</span><b>{p.genome.syllables}</b></div>
         </div>
         <p className="wg-note">
-          Structural heuristics — external collision, trademark and domain checks not yet performed.
+          Structural heuristics. For real-world collisions see Availability above (dictionary +
+          domains); trademark and cross-language checks are still not performed.
         </p>
       </div>
 

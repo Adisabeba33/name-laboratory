@@ -17,6 +17,7 @@ import {
   EVOLVE_DIRECTIONS,
   matchBrands,
   speakNative,
+  offlineCollision,
   LANGUAGES,
   languageById,
   MODES,
@@ -239,6 +240,31 @@ describe('speakability — words that stay sayable', () => {
     const words = generateWords({ ...MEDICINE_REQUEST, count: 5 })
     for (const w of words) {
       expect(['Speakable', 'Balanced', 'Ornate']).toContain(w.speakability)
+    }
+  })
+})
+
+describe('offline collision check', () => {
+  it('flags common words and known brands as exact matches', () => {
+    expect(offlineCollision('nova').match).toBe('exact') // brand list
+    expect(offlineCollision('vera').match).toBe('exact')
+    expect(offlineCollision('river').match).toBe('exact') // common word
+  })
+
+  it('flags one-edit neighbours of everyday words as near', () => {
+    expect(offlineCollision('lyon').match).toBe('near') // one edit from "lion"
+    expect(offlineCollision('rivor').match).toBe('near') // one edit from "river"
+  })
+
+  it('reports invented words as no known collision (but never claims "unused")', () => {
+    const r = offlineCollision('Vaslilen')
+    expect(r.match).toBe('none')
+    expect(r.note.toLowerCase()).toContain('does not confirm')
+  })
+
+  it('ships an offline collision verdict on every passport', () => {
+    for (const w of generateWords({ ...MEDICINE_REQUEST, count: 5 })) {
+      expect(['exact', 'near', 'none']).toContain(w.collision.match)
     }
   })
 })

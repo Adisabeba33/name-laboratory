@@ -237,7 +237,7 @@ Prompt → Interpretation → Hidden layers → Semantic tensions → Concept di
 | **21** | **Two modes** — Discover a meaning vs Name something (company/store/brand/newborn); naming uses its own analyst prompt and result framing | ✅ done |
 | — | **"How this word was made"** — honest per-word construction breakdown (syllables, ideas fused, species, sound influences); no fake morpheme etymology | ✅ done |
 | — | **Speakability bias** — synthesis leans toward everyday-sayable words by default; a "Speakable ↔ Ornate" dial (`speakability` on the request) + a per-word Speakability band, so long "incantation" shapes are avoided or flagged | ✅ done |
-| 8 | External checks — dictionary / brand / domain / trademark / cross-language negatives | ⏳ later |
+| **8** | External checks — dictionary / brand / domain / trademark / cross-language negatives. Shipped: offline collision flag (bundled word/brand list) on every passport + a live per-word check (`api/collision.ts`, key-free: English dictionary via dictionaryapi.dev + domain RDAP). Trademark, social handles & cross-language meaning still to do. | 🟡 in progress |
 | A | **Accounts + database** — profiles, cross-device lexicon sync, request history | ⏳ later (see §7a) |
 | M | **Monetisation** — free daily limit + paid tier (premium model / higher limits) | ⏳ later (see §7a) |
 

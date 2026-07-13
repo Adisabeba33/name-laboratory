@@ -185,6 +185,16 @@ export interface SpeechAdoption {
   risks: string[]
 }
 
+/**
+ * The offline collision verdict — whether a coined word is actually a known word
+ * or a near-miss of one, from a small bundled list. Honest by construction: a
+ * `'none'` result means "not in our built-in list", not "verified unused".
+ */
+export interface Collision {
+  match: 'exact' | 'near' | 'none'
+  note: string
+}
+
 /** Whether a word is a strong or weak fit for a given industry. */
 export interface BrandFit {
   excellentFor: string[]
@@ -295,6 +305,8 @@ export interface WordPassport {
   pronunciationGuide: string
   /** How readily the word enters everyday speech — a qualitative band. */
   speakability: SpeakabilityBand
+  /** Offline collision verdict against the built-in word/brand list. */
+  collision: Collision
   /** Where the word's sound descends from — species + phonetic ancestry. */
   ancestry: Ancestry
   /** The word's own inherited genome / evolution profile. */

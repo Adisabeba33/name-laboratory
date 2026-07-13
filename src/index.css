@@ -1628,6 +1628,69 @@ textarea:focus {
   border-color: color-mix(in srgb, #b08328 45%, var(--border));
 }
 
+/* --- Availability (collision) check --- */
+.collide-offline {
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: var(--text-muted, var(--text-faint));
+  margin-bottom: 8px;
+}
+.collide-offline.match-exact {
+  color: #c0392b;
+  border-color: color-mix(in srgb, #c0392b 40%, var(--border));
+}
+.collide-offline.match-near {
+  color: #b08328;
+  border-color: color-mix(in srgb, #b08328 40%, var(--border));
+}
+.collide-live {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.collide-line {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 14px;
+}
+.collide-key {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  min-width: 84px;
+}
+.collide-def {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-muted, var(--text-faint));
+}
+.collide-domains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+.dom {
+  font-size: 12px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+}
+.dom-available {
+  color: #2f9e69;
+  border-color: color-mix(in srgb, #2f9e69 45%, var(--border));
+}
+.dom-taken {
+  color: #c0392b;
+  border-color: color-mix(in srgb, #c0392b 45%, var(--border));
+}
+
 .short-meaning {
   margin: 6px 0 0;
   font-size: 12.5px;
