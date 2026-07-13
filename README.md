@@ -1,17 +1,23 @@
 # Word Laboratory
 
-**An AI-powered laboratory that invents new words that have never existed before** —
-words carrying a deep semantic structure, an emotional identity, a linguistic logic,
-and brand potential. The goal is for every invented word to feel as if it could have
-lived in a language for centuries.
+**A dictionary for things humanity has felt but never named.** Word Laboratory
+understands the deep meaning of a request *first*, then invents a new word for it —
+a word that can actually be **used inside an existing human language** (English,
+Russian, …). A Russian speaker keeps speaking Russian and says «я прошёл через
+**варетис**»; an English speaker says “I did not recover. I entered **varethis**.”
 
-Word Laboratory is **not** a name generator. It is a **Meaning Discovery Engine**: it
-first works out what you are *really* describing, then invents the languages and words to
-name it. Meaning is the product; words are the vessels that carry it.
+It is **not** a random word generator, **not** a fantasy-language builder, and
+**not** just an AI name generator. It does not replace language — it **expands** it,
+adding a new semantic word where ordinary vocabulary runs out. Meaning is the
+product; the word is the vessel that carries it.
+
+> **📖 New here (human or agent)? Read [`PROJECT.md`](PROJECT.md)** — the full,
+> canonical description of the project: vision, architecture, honesty rules,
+> roadmap and conventions. Agents working in this repo should also read
+> [`CLAUDE.md`](CLAUDE.md).
 
 ```
-Prompt → Meaning Analysis → Hidden Concepts → Concept Network
-       → Language Discovery → Language Genome → Word Evolution → Word
+Meaning → Concept → Emotional Identity → Sound Architecture → Word → Use in Language
 ```
 
 > **Meaning first.** For the prompt _“a word for becoming someone completely different
@@ -186,9 +192,9 @@ vocabulary, an optional theme), and the rest of the pipeline is unchanged.
   step runs only when the LLM is available; otherwise the deterministic meanings stay.
 
 **Enable it on Vercel:** set `ANTHROPIC_API_KEY` in Project → Settings → Environment
-Variables. Optionally set `WORDLAB_MODEL` (defaults to `claude-opus-4-8`; `claude-sonnet-5`
-or `claude-haiku-4-5` are faster and cheaper for this task — roughly 1–2¢ and <1¢ per
-analysis respectively). See [`.env.example`](.env.example).
+Variables. Optionally set `WORDLAB_MODEL` (defaults to `claude-haiku-4-5-20251001` for
+speed and cost; use `claude-sonnet-5` or `claude-opus-4-8` for deeper, slower reads).
+See [`.env.example`](.env.example).
 
 ---
 
