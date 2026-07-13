@@ -12,6 +12,7 @@ import {
   estimateUniqueness,
   editDistance,
   ratePronunciation,
+  assessAdoption,
   matchBrands,
   speakNative,
   LANGUAGES,
@@ -289,6 +290,32 @@ describe('pronunciation & brand', () => {
         expect(Array.isArray(w.usage.ru)).toBe(true)
       }
     }
+  })
+
+  it('assesses speech adoption with a band and a scored breakdown', () => {
+    for (const fam of generateFamilies(MEDICINE_REQUEST)) {
+      for (const w of fam.words) {
+        const a = w.adoption
+        expect(['Low', 'Moderate', 'High', 'Exceptional']).toContain(a.band)
+        expect(a.score).toBeGreaterThanOrEqual(0)
+        expect(a.score).toBeLessThanOrEqual(100)
+        // Components sum to the total, and each stays within its own budget.
+        const total = a.components.reduce((s, c) => s + c.score, 0)
+        expect(total).toBe(a.score)
+        for (const c of a.components) {
+          expect(c.score).toBeGreaterThanOrEqual(0)
+          expect(c.score).toBeLessThanOrEqual(c.max)
+        }
+      }
+    }
+  })
+
+  it('flags a drug-like word as a lower adoption risk than a clean one', () => {
+    const clean = assessAdoption('Selora', computeGenome('Selora', ['trust']), ratePronunciation('Selora', computeGenome('Selora', ['trust'])))
+    const pharma = assessAdoption('Vaxozole', computeGenome('Vaxozole', ['trust']), ratePronunciation('Vaxozole', computeGenome('Vaxozole', ['trust'])))
+    const risk = (a: typeof clean) => a.components.find((c) => c.label === 'Collision resistance')!.score
+    expect(risk(pharma)).toBeLessThan(risk(clean))
+    expect(pharma.risks.join(' ')).toMatch(/drug|medical/i)
   })
 
   it('routes a premium/scientific profile toward strong industries', () => {

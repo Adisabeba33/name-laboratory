@@ -83,6 +83,44 @@ export function PassportCard({ p }: { p: WordPassport }) {
 
       <div className="origin">{p.ancestry.note}</div>
 
+      <div className="sec adoption">
+        <div className="adoption-head">
+          <h4>Speech Adoption</h4>
+          <span className={`adopt-band ${p.adoption.band.toLowerCase()}`}>
+            {p.adoption.band} · {p.adoption.score}/100
+          </span>
+        </div>
+        <div className="adopt-components">
+          {p.adoption.components.map((c) => (
+            <div className="adopt-row" key={c.label}>
+              <span className="adopt-name">{c.label}</span>
+              <span className="adopt-bar">
+                <i style={{ width: `${(c.score / c.max) * 100}%` }} />
+              </span>
+              <span className="adopt-val">{c.score}/{c.max}</span>
+            </div>
+          ))}
+        </div>
+        {p.adoption.strengths.length > 0 && (
+          <ul className="adopt-list good">
+            {p.adoption.strengths.map((s) => (
+              <li key={s}>{s}</li>
+            ))}
+          </ul>
+        )}
+        {p.adoption.risks.length > 0 && (
+          <ul className="adopt-list risk">
+            {p.adoption.risks.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        )}
+        <p className="wg-note">
+          Can this word actually enter speech? A rule-based estimate from its sound — not an
+          external brand, drug or trademark check.
+        </p>
+      </div>
+
       <div className="sec">
         <h4>Word Genome</h4>
         <div className="wg">

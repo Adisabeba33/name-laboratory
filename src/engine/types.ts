@@ -161,6 +161,30 @@ export interface PronunciationRating {
   stars: number
 }
 
+/** One scored component of the Speech Adoption assessment. */
+export interface AdoptionComponent {
+  label: string
+  /** Points earned, out of `max`. */
+  score: number
+  max: number
+}
+
+/**
+ * Speech Adoption — a transparent, rule-based estimate of whether a word could
+ * actually enter everyday speech. Qualitative band first, breakdown second; it
+ * is a structural heuristic, not an external brand/trademark check.
+ */
+export interface SpeechAdoption {
+  band: 'Low' | 'Moderate' | 'High' | 'Exceptional'
+  /** Total across all components, out of 100. */
+  score: number
+  components: AdoptionComponent[]
+  /** What makes it usable, in plain language. */
+  strengths: string[]
+  /** Concrete adoption risks flagged by the rules (may be empty). */
+  risks: string[]
+}
+
 /** Whether a word is a strong or weak fit for a given industry. */
 export interface BrandFit {
   excellentFor: string[]
@@ -244,6 +268,8 @@ export interface WordPassport {
   personality: string[]
   /** Cross-language pronounceability. */
   pronunciation: PronunciationRating[]
+  /** Rule-based estimate of whether the word could enter everyday speech. */
+  adoption: SpeechAdoption
   /** Human-readable difficulty notes. */
   difficulty: string[]
   /** Industries the word naturally fits — and ones it doesn't. */
