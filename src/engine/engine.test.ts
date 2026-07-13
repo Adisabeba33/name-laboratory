@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   runLaboratory,
   analyzeMeaning,
+  focusConcepts,
   generateFamilies,
   generateWords,
   buildConceptMap,
@@ -63,6 +64,28 @@ describe('Meaning Engine — analysis', () => {
     }
     // The metamorphosis theme pits survival against identity death.
     expect(a.tensions.some((t) => /identity/i.test(t.b) || /identity/i.test(t.a))).toBe(true)
+  })
+
+  it('offers distinct concept directions with concept emphasis', () => {
+    const a = analyzeMeaning([], METAMORPHOSIS)
+    expect(a.directions.length).toBeGreaterThanOrEqual(3)
+    const ids = a.directions.map((d) => d.id)
+    expect(new Set(ids).size).toBe(ids.length) // ids are unique
+    for (const d of a.directions) {
+      expect(d.title && d.titleRu && d.definition && d.definitionRu).toBeTruthy()
+      expect(Object.keys(d.emphasis).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('focusing on a direction re-weights the concept vector toward it', () => {
+    const a = analyzeMeaning([], METAMORPHOSIS)
+    const scar = a.directions.find((d) => /scar/i.test(d.title)) ?? a.directions[0]
+    const focused = focusConcepts(a.concepts, a.directions, [scar.id])
+    // The emphasised concept should rank at least as high as in the base vector.
+    const lead = Object.entries(scar.emphasis).sort((x, y) => y[1] - x[1])[0][0] as keyof typeof focused
+    expect((focused[lead] ?? 0)).toBeGreaterThanOrEqual((a.concepts[lead] ?? 0))
+    // No selection returns the base vector unchanged.
+    expect(focusConcepts(a.concepts, a.directions, [])).toBe(a.concepts)
   })
 
   it('steers language discovery toward the theme languages', () => {

@@ -80,8 +80,13 @@ export function generateFamilies(request: GenerationRequest): WordFamily[] {
 export function discoverFromAnalysis(
   analysis: MeaningAnalysis,
   request: GenerationRequest,
+  focus?: ConceptVector,
 ): LaboratoryResult {
-  return { analysis, families: discoverFamilies(request, analysis) }
+  // A focus (from chosen concept directions) re-weights discovery without
+  // changing the analysis the UI shows — the interpretation stays stable while
+  // the words sharpen toward the selected angle.
+  const forDiscovery = focus ? { ...analysis, concepts: focus } : analysis
+  return { analysis, families: discoverFamilies(request, forDiscovery) }
 }
 
 function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis): WordFamily[] {

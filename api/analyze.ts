@@ -56,16 +56,40 @@ const TENSION_SCHEMA = {
   },
 }
 
+const CONCEPT_WEIGHT_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['name', 'weight'],
+  properties: {
+    name: { type: 'string', enum: CONCEPTS },
+    weight: { type: 'number' },
+  },
+}
+
+const DIRECTION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['title', 'titleRu', 'definition', 'definitionRu', 'emphasis'],
+  properties: {
+    title: { type: 'string' },
+    titleRu: { type: 'string' },
+    definition: { type: 'string' },
+    definitionRu: { type: 'string' },
+    emphasis: { type: 'array', items: CONCEPT_WEIGHT_SCHEMA },
+  },
+}
+
 const SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['interpretation', 'interpretationRu', 'hiddenConcepts', 'network', 'tensions', 'concepts', 'theme'],
+  required: ['interpretation', 'interpretationRu', 'hiddenConcepts', 'network', 'tensions', 'directions', 'concepts', 'theme'],
   properties: {
     interpretation: { type: 'string' },
     interpretationRu: { type: 'string' },
     hiddenConcepts: { type: 'array', items: NODE_SCHEMA },
     network: { type: 'array', items: NODE_SCHEMA },
     tensions: { type: 'array', items: TENSION_SCHEMA },
+    directions: { type: 'array', items: DIRECTION_SCHEMA },
     concepts: {
       type: 'array',
       items: {
@@ -96,6 +120,7 @@ Given a short description, produce a structured analysis:
 3. hiddenConcepts: 4–6 ideas (not keywords) that live beneath the request — each as {en, ru}. These are phrases like "Death without dying" / "Смерть без смерти", not single words.
 4. network: 5–7 ordered concept nodes {en, ru} showing how the meaning flows (e.g. Destruction → Survival → Transformation → Identity → Rebirth).
 5b. tensions: 2–4 semantic tensions — the opposing forces the concept lives between. Each is {a, aRu, b, bRu, note, noteRu}: two short opposing pole labels (a vs b) and one human sentence (note) capturing the lived tension, e.g. a="Survival" b="Identity death", note="Alive, but no longer the same person." These are more useful than emotional percentages; only include tensions the request genuinely contains. If it carries no real opposition, return an empty array.
+5c. directions: 3–5 distinct concept directions — genuinely different angles the same idea could be named from (not synonyms). Each is {title, titleRu, definition, definitionRu, emphasis}. title is a short evocative name for the angle (e.g. "Scar-born self", "Death without dying"); definition is one sentence. emphasis is an array of {name, weight} onto the allowed concepts capturing what THIS direction leans into (so focusing on it shifts the words). Make the directions meaningfully different from each other.
 5. concepts: a weighted map onto the lab's fixed vocabulary. Return an array of {name, weight} where name is ONE OF the allowed concepts and weight is 0–1 (1 = central). Include 3–8 of the most relevant. Pick whatever genuinely fits: for a sensory or physical request use the concrete concepts (water, nature, earth, fire, light, calm, movement…); for an emotional one, the deep concepts (transformation, rebirth, survival, identity, resilience, loss, memory, longing, grief, hope…). Do not force deep/emotional concepts onto a concrete request, and do not default to shallow ones on a profound one — follow the actual meaning.
 6. theme: one of "metamorphosis", "grief", "resilience", or "none" if none clearly dominates. metamorphosis = irreversible transformation/rebirth after destruction; grief = loss and love-after-loss; resilience = strength/courage under pressure.
 
@@ -159,6 +184,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       hiddenConcepts: sanitiseNodes(raw.hiddenConcepts),
       network: sanitiseNodes(raw.network),
       tensions: sanitiseTensions(raw.tensions),
+      directions: sanitiseDirections(raw.directions),
       concepts,
       theme: raw.theme && raw.theme !== 'none' ? String(raw.theme) : undefined,
     }
@@ -194,4 +220,34 @@ function sanitiseTensions(input: unknown) {
       b: String(t.b), bRu: String(t.bRu ?? t.b),
       note: String(t.note), noteRu: String(t.noteRu ?? t.note),
     }))
+}
+
+function sanitiseDirections(input: unknown) {
+  if (!Array.isArray(input)) return []
+  return input
+    .filter(
+      (d) => d && typeof d.title === 'string' && typeof d.definition === 'string',
+    )
+    .slice(0, 5)
+    .map((d, i) => {
+      const emphasis: Record<string, number> = {}
+      let max = 0
+      for (const entry of Array.isArray(d.emphasis) ? d.emphasis : []) {
+        const name = entry?.name
+        const weight = Number(entry?.weight)
+        if (CONCEPTS.includes(name) && weight > 0) {
+          emphasis[name] = (emphasis[name] ?? 0) + weight
+          max = Math.max(max, emphasis[name])
+        }
+      }
+      if (max > 0) for (const k of Object.keys(emphasis)) emphasis[k] = emphasis[k] / max
+      return {
+        id: `dir-${i}`,
+        title: String(d.title).slice(0, 60),
+        titleRu: String(d.titleRu ?? d.title).slice(0, 60),
+        definition: String(d.definition).slice(0, 240),
+        definitionRu: String(d.definitionRu ?? d.definition).slice(0, 240),
+        emphasis,
+      }
+    })
 }

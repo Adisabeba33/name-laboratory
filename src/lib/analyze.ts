@@ -32,8 +32,9 @@ export async function analyzeRemote(
     ) {
       return null
     }
-    // Tolerate an older endpoint that doesn't return tensions.
+    // Tolerate an older endpoint that doesn't return tensions/directions.
     if (!Array.isArray(data.tensions)) data.tensions = []
+    if (!Array.isArray(data.directions)) data.directions = []
     return data as MeaningAnalysis
   } catch {
     return null

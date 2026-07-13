@@ -1,4 +1,4 @@
-import type { Concept, ConceptNode, SemanticTension } from '../types'
+import type { Concept, ConceptDirection, ConceptNode, SemanticTension } from '../types'
 
 /**
  * Meaning themes — recognised human ideas.
@@ -22,6 +22,8 @@ export interface Theme {
   network: ConceptNode[]
   /** The opposing forces the theme lives between. */
   tensions: SemanticTension[]
+  /** Distinct angles the word could name (each re-weights discovery). */
+  directions: ConceptDirection[]
   /** Languages (by id) whose philosophy fits this theme. */
   preferredLanguages: string[]
 }
@@ -70,6 +72,32 @@ export const THEMES: Theme[] = [
         noteRu: 'Возрождён — и всё же несёт память о разрушении, что его создало.',
       },
     ],
+    directions: [
+      {
+        id: 'dir-scar-born', title: 'Scar-born self', titleRu: 'Я, рождённое из шрама',
+        definition: 'A new identity formed directly out of the wound that caused it.',
+        definitionRu: 'Новая личность, рождённая прямо из раны, что её создала.',
+        emphasis: { identity: 1, destruction: 0.7, resilience: 0.5 },
+      },
+      {
+        id: 'dir-death-without-dying', title: 'Death without dying', titleRu: 'Смерть без смерти',
+        definition: 'The ending of a former self while the body lives on.',
+        definitionRu: 'Конец прежнего «я» при живом теле.',
+        emphasis: { destruction: 1, loss: 0.8, transformation: 0.6 },
+      },
+      {
+        id: 'dir-survivors-metamorphosis', title: "Survivor's metamorphosis", titleRu: 'Метаморфоза уцелевшего',
+        definition: 'A transformation that could only happen by surviving destruction.',
+        definitionRu: 'Преображение, возможное лишь через выживание в разрушении.',
+        emphasis: { transformation: 1, survival: 0.8, rebirth: 0.6 },
+      },
+      {
+        id: 'dir-irreversible-becoming', title: 'Irreversible becoming', titleRu: 'Необратимое становление',
+        definition: 'The realization that returning to the former self is no longer possible.',
+        definitionRu: 'Осознание, что вернуться к прежнему себе уже нельзя.',
+        emphasis: { transformation: 1, identity: 0.7, memory: 0.5 },
+      },
+    ],
     preferredLanguages: ['ashen', 'phoenix', 'obsidian', 'chrysalis'],
   },
   {
@@ -113,6 +141,26 @@ export const THEMES: Theme[] = [
         noteRu: 'Хранить кого-то рядом, пока всё остальное идёт дальше.',
       },
     ],
+    directions: [
+      {
+        id: 'dir-love-after-loss', title: 'Love after loss', titleRu: 'Любовь после утраты',
+        definition: 'Love that keeps going with nowhere left to arrive.',
+        definitionRu: 'Любовь, что продолжается, хотя ей больше некуда прийти.',
+        emphasis: { grief: 1, loss: 0.7, longing: 0.6 },
+      },
+      {
+        id: 'dir-shape-of-absence', title: 'The shape of absence', titleRu: 'Форма пустоты',
+        definition: 'How a missing presence keeps reshaping everything that remains.',
+        definitionRu: 'Как отсутствие продолжает менять форму всего, что осталось.',
+        emphasis: { loss: 1, memory: 0.7, shadow: 0.4 },
+      },
+      {
+        id: 'dir-what-memory-keeps', title: 'What memory keeps', titleRu: 'Что хранит память',
+        definition: 'The part of someone that stays alive only in remembering.',
+        definitionRu: 'Часть человека, что жива лишь в воспоминании.',
+        emphasis: { memory: 1, longing: 0.6, hope: 0.3 },
+      },
+    ],
     preferredLanguages: ['ashen', 'obsidian', 'chrysalis'],
   },
   {
@@ -152,6 +200,26 @@ export const THEMES: Theme[] = [
         a: 'Hardship', aRu: 'Испытание', b: 'Becoming', bRu: 'Становление',
         note: 'The point is not the hardship but who you become by withstanding it.',
         noteRu: 'Дело не в самих трудностях, а в том, кем ты становишься, выдержав их.',
+      },
+    ],
+    directions: [
+      {
+        id: 'dir-forward-through-fear', title: 'Forward through fear', titleRu: 'Вперёд сквозь страх',
+        definition: 'Moving ahead precisely while still afraid.',
+        definitionRu: 'Идти вперёд именно тогда, когда всё ещё страшно.',
+        emphasis: { courage: 1, hope: 0.5, survival: 0.4 },
+      },
+      {
+        id: 'dir-tempered-self', title: 'The tempered self', titleRu: 'Закалённое «я»',
+        definition: 'Strength forged by the very thing that tried to break it.',
+        definitionRu: 'Сила, закалённая тем самым, что пыталось её сломать.',
+        emphasis: { resilience: 1, strength: 0.7, identity: 0.4 },
+      },
+      {
+        id: 'dir-unbroken-under-weight', title: 'Unbroken under weight', titleRu: 'Несломленность под грузом',
+        definition: 'Bending under pressure without ever breaking.',
+        definitionRu: 'Гнуться под давлением, но так и не сломаться.',
+        emphasis: { resilience: 1, survival: 0.6, strength: 0.5 },
       },
     ],
     preferredLanguages: ['obsidian', 'ashen', 'phoenix'],

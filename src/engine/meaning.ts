@@ -1,5 +1,6 @@
 import type {
   Concept,
+  ConceptDirection,
   ConceptNode,
   ConceptVector,
   MeaningAnalysis,
@@ -55,9 +56,49 @@ export function analyzeMeaning(keywords: string[], brief?: string): MeaningAnaly
     hiddenConcepts: theme ? theme.hiddenConcepts : genericHidden(top),
     network: theme ? theme.network : genericNetwork(top),
     tensions: theme ? theme.tensions : genericTensions(concepts, top),
+    directions: theme ? theme.directions : genericDirections(top),
     theme: theme?.id,
     concepts,
   }
+}
+
+/**
+ * Generic concept directions: one angle per dominant concept. Grounded in the
+ * concepts actually present, each leaning into its own facet so focusing on it
+ * meaningfully shifts which languages and words surface.
+ */
+function genericDirections(top: Concept[]): ConceptDirection[] {
+  return top.slice(0, 4).map((c, i) => ({
+    id: `dir-${c}`,
+    title: IDEAS[c].label,
+    titleRu: IDEAS[c].labelRu,
+    definition: `${cap(IDEAS[c].def)}.`,
+    definitionRu: `${cap(IDEAS[c].defRu)}.`,
+    emphasis: { [c]: 1, [top[(i + 1) % top.length]]: 0.4 } as ConceptVector,
+  }))
+}
+
+/**
+ * Re-weight a concept vector toward the chosen direction(s). The base meaning is
+ * kept (so the words never drift off-concept) and the selected emphases are added
+ * on top, then renormalised. With nothing selected, the base vector is returned.
+ */
+export function focusConcepts(
+  base: ConceptVector,
+  directions: ConceptDirection[],
+  selectedIds: string[],
+): ConceptVector {
+  if (selectedIds.length === 0) return base
+  const chosen = directions.filter((d) => selectedIds.includes(d.id))
+  if (chosen.length === 0) return base
+  const out: ConceptVector = {}
+  for (const [c, w] of Object.entries(base) as [Concept, number][]) out[c] = w * 0.6
+  for (const dir of chosen) {
+    for (const [c, w] of Object.entries(dir.emphasis) as [Concept, number][]) {
+      out[c] = (out[c] ?? 0) + w
+    }
+  }
+  return normaliseVector(out)
 }
 
 /**
@@ -146,4 +187,8 @@ function joinEn(items: string[]): string {
 function joinRu(items: string[]): string {
   if (items.length <= 1) return items[0] ?? ''
   return `${items.slice(0, -1).join(', ')} и ${items[items.length - 1]}`
+}
+
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }

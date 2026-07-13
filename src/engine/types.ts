@@ -365,6 +365,28 @@ export interface SemanticTension {
 }
 
 /**
+ * A concept direction — one distinct interpretation the word could name.
+ *
+ * A single request usually hides several angles ("the scar-born self", "death
+ * without dying", "survivor's grief"). Rather than average them into one blurred
+ * word, the lab surfaces 3–5 directions; the user can focus word discovery on one
+ * (or combine two). Each carries an `emphasis` that re-weights the concept vector
+ * toward its facet. The concept stays stable; the direction sharpens the words.
+ */
+export interface ConceptDirection {
+  /** Stable id within an analysis, e.g. "dir-0". */
+  id: string
+  /** Short name of the angle (English), e.g. "Scar-born self". */
+  title: string
+  titleRu: string
+  /** One-sentence definition of this angle (English). */
+  definition: string
+  definitionRu: string
+  /** Concepts this direction leans into — used to re-weight discovery. */
+  emphasis: ConceptVector
+}
+
+/**
  * The Meaning Analysis — the heart of the Meaning Engine.
  *
  * Before any language is discovered, the laboratory states what it believes the
@@ -383,6 +405,8 @@ export interface MeaningAnalysis {
   network: ConceptNode[]
   /** The opposing forces the concept lives between (may be empty). */
   tensions: SemanticTension[]
+  /** Distinct angles the word could name; the user can focus discovery on one. */
+  directions: ConceptDirection[]
   /** The dominant meaning-theme, if one was recognised (e.g. "metamorphosis"). */
   theme?: string
   /** The weighted concept map the interpretation produced. */

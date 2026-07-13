@@ -7,7 +7,7 @@
  */
 export * from './types'
 export { runLaboratory, generateFamilies, generateWords, buildPassport, discoverFromAnalysis } from './generator'
-export { analyzeMeaning, matchTheme } from './meaning'
+export { analyzeMeaning, matchTheme, focusConcepts } from './meaning'
 export { THEMES } from './data/themes'
 export { buildConceptMap, topConcepts, conceptMatch } from './concepts'
 export { computeGenome, genomeQuality, estimateUniqueness, editDistance } from './genome'

@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import {
   runLaboratory,
   discoverFromAnalysis,
+  focusConcepts,
   MODES,
   type CreativeMode,
   type LaboratoryResult,
@@ -9,6 +10,7 @@ import {
 import { analyzeRemote } from './lib/analyze'
 import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
 import { InterpretationPanel } from './components/InterpretationPanel'
+import { ConceptDirections } from './components/ConceptDirections'
 import { LanguageSection } from './components/LanguageSection'
 import { LanguageTree } from './components/LanguageTree'
 import { Logo } from './components/Logo'
@@ -38,6 +40,7 @@ export default function App() {
   const [refining, setRefining] = useState(false)
   const [steering, setSteering] = useState(false)
   const [usedLLM, setUsedLLM] = useState(false)
+  const [selectedDirections, setSelectedDirections] = useState<string[]>([])
   const runId = useRef(0)
 
   const keywords = useMemo(
@@ -48,6 +51,47 @@ export default function App() {
         .filter(Boolean),
     [extra],
   )
+
+  /**
+   * Progressive enhancement: have the LLM write a bespoke meaning + usage for
+   * each word and swap them in place. Only runs when the LLM is available.
+   */
+  async function enrich(result: LaboratoryResult, myRun: number, trimmed: string) {
+    setRefining(true)
+    try {
+      const items: WordItem[] = result.families.flatMap((f) =>
+        f.words.map((w) => ({
+          word: w.word,
+          language: f.character,
+          hint: w.meaning.split(' (')[0],
+          translit: w.transliteration,
+        })),
+      )
+      const map = await fetchBespokeMeanings(trimmed, items)
+      if (map && runId.current === myRun) {
+        setResults({
+          ...result,
+          families: result.families.map((f) => ({
+            ...f,
+            words: f.words.map((w) => {
+              const m = map.get(w.word.toLowerCase())
+              return m
+                ? {
+                    ...w,
+                    meaning: `${m.en} (${m.ru})`,
+                    shortMeaning: m.short || w.shortMeaning,
+                    partOfSpeech: m.pos || w.partOfSpeech,
+                    usage: { en: m.usageEn, ru: m.usageRu },
+                  }
+                : w
+            }),
+          })),
+        })
+      }
+    } finally {
+      if (runId.current === myRun) setRefining(false)
+    }
+  }
 
   async function run(reseed = false, steer?: string) {
     if (analyzing) return
@@ -61,6 +105,7 @@ export default function App() {
 
     setAnalyzing(true)
     if (steer) setSteering(true)
+    setSelectedDirections([]) // a new reading starts unfocused
     let result: LaboratoryResult
     let remote = false
     try {
@@ -81,45 +126,27 @@ export default function App() {
       setAnalyzing(false)
     }
 
-    // 2) Progressive enhancement: have the LLM write a bespoke meaning for each
-    //    word, then swap them in place. Only when the LLM is actually available.
-    if (remote) {
-      setRefining(true)
-      try {
-        const items: WordItem[] = result.families.flatMap((f) =>
-          f.words.map((w) => ({
-            word: w.word,
-            language: f.character,
-            hint: w.meaning.split(' (')[0],
-            translit: w.transliteration,
-          })),
-        )
-        const map = await fetchBespokeMeanings(trimmed, items)
-        if (map && runId.current === myRun) {
-          setResults({
-            ...result,
-            families: result.families.map((f) => ({
-              ...f,
-              words: f.words.map((w) => {
-                const m = map.get(w.word.toLowerCase())
-                return m
-                  ? {
-                      ...w,
-                      meaning: `${m.en} (${m.ru})`,
-                      shortMeaning: m.short || w.shortMeaning,
-                      partOfSpeech: m.pos || w.partOfSpeech,
-                      usage: { en: m.usageEn, ru: m.usageRu },
-                    }
-                  : w
-              }),
-            })),
-          })
-        }
-      } finally {
-        if (runId.current === myRun) setRefining(false)
-      }
-    }
+    if (remote) await enrich(result, myRun, trimmed)
     if (runId.current === myRun) setSteering(false)
+  }
+
+  /**
+   * Focus word discovery on the chosen concept direction(s). Re-uses the current
+   * analysis (no new LLM analysis call) — it only re-weights discovery and, if
+   * the LLM is on, re-writes the new words' meanings. Toggling with no selection
+   * returns to the whole-concept reading.
+   */
+  async function focusOn(ids: string[]) {
+    if (!results || analyzing) return
+    const myRun = ++runId.current
+    setSelectedDirections(ids)
+    const trimmed = brief.trim()
+    const request = { brief: trimmed || undefined, keywords, mode, count }
+    const focus = focusConcepts(results.analysis.concepts, results.analysis.directions, ids)
+    const result = discoverFromAnalysis(results.analysis, request, focus)
+    setResults(result)
+    setNonce((n) => n + 1)
+    if (usedLLM) await enrich(result, myRun, trimmed)
   }
 
   function scrollToWord(word: string) {
@@ -266,6 +293,14 @@ export default function App() {
             onSteer={usedLLM ? (label) => run(false, label) : undefined}
             steering={steering}
           />
+
+          {results.analysis.directions.length > 0 && (
+            <ConceptDirections
+              directions={results.analysis.directions}
+              selected={selectedDirections}
+              onToggle={focusOn}
+            />
+          )}
 
           <div className="results-head">
             <h2>{results.families.length} linguistic species discovered</h2>
