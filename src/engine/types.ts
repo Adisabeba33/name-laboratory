@@ -234,6 +234,26 @@ export interface WordEvolution {
 }
 
 /**
+ * An honest account of how the engine actually built a word — grown around one
+ * or two ideas, synthesised as a native speaker of a language whose sound is
+ * influenced by real families, broken into syllables. It never claims a part is
+ * "borrowed from Latin meaning X": the word is invented, the influences shape
+ * only its texture.
+ */
+export interface WordConstruction {
+  /** The idea(s) the word was grown around (label + short gloss). */
+  ideas: { label: string; gloss: string }[]
+  /** The language species the word is a native speaker of. */
+  species: string
+  /** The phonetic families whose sound influenced it (texture, not derivation). */
+  families: string[]
+  /** The word split into its written syllables. */
+  syllables: string[]
+  /** One honest sentence stating how it was made. */
+  note: string
+}
+
+/**
  * The generation context a word was born from — the concept it carries and the
  * language it belongs to. Kept on the passport so the word can be *evolved*
  * (its sound changed) while its concept and meaning stay fixed.
@@ -295,6 +315,8 @@ export interface WordPassport {
   explanation: string
   /** The underlying phonetic genome, exposed for transparency and future tooling. */
   genome: WordGenome
+  /** An honest breakdown of how the engine assembled this word. */
+  construction: WordConstruction
   /** Generation context — the concept + language, so the word can be evolved. */
   origin: WordOrigin
 }

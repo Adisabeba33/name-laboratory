@@ -294,6 +294,20 @@ describe('pronunciation & brand', () => {
     }
   })
 
+  it('explains how each word was constructed (honestly)', () => {
+    for (const fam of generateFamilies(MEDICINE_REQUEST)) {
+      for (const w of fam.words) {
+        expect(w.construction.syllables.length).toBeGreaterThan(0)
+        expect(w.construction.syllables.join('')).toBe(w.word.toLowerCase())
+        expect(w.construction.ideas.length).toBeGreaterThan(0)
+        expect(w.construction.species).toBe(fam.character)
+        expect(w.construction.families.length).toBeGreaterThan(0)
+        // Honesty: never claims a part is borrowed from a real word.
+        expect(w.construction.note).toMatch(/no part is copied/i)
+      }
+    }
+  })
+
   it('assesses speech adoption with a band and a scored breakdown', () => {
     for (const fam of generateFamilies(MEDICINE_REQUEST)) {
       for (const w of fam.words) {

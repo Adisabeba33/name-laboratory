@@ -1309,6 +1309,58 @@ textarea:focus {
   font-style: italic;
 }
 
+.build-syl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.syl-chunk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--serif);
+  font-size: 18px;
+  color: var(--text);
+}
+
+.syl-chunk:first-child::before {
+  content: '';
+}
+
+.syl-dot {
+  color: var(--text-faint);
+}
+
+.build-ideas,
+.build-species {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.build-key {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 700;
+}
+
+.build-idea b {
+  color: var(--text);
+}
+
+.build-species span {
+  color: var(--text);
+}
+
 .adoption-head {
   display: flex;
   align-items: baseline;

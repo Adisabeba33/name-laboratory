@@ -47,6 +47,14 @@ interface Syl {
   coda: string
 }
 
+/** Split a word into its written syllables, e.g. "veliara" → ["ve","lia","ra"]. */
+export function splitSyllables(word: string): string[] {
+  const w = word.toLowerCase().replace(/[^a-zë-ü]/gi, '')
+  if (!w) return [word]
+  const parts = syllabify(w).map((s) => s.onset + s.nucleus + s.coda).filter(Boolean)
+  return parts.length ? parts : [w]
+}
+
 /** A romanised word → a stress-marked spoken guide, e.g. "so-LEE-ar-lye". */
 export function pronounce(word: string, stressPattern: Stress): string {
   const w = normaliseSpelling(word.toLowerCase().replace(/[^a-zë-ü]/gi, ''))

@@ -142,6 +142,33 @@ export function PassportCard({
 
       <div className="origin">{p.ancestry.note}</div>
 
+      <div className="sec build">
+        <h4>How this word was made</h4>
+        <div className="build-syl">
+          {p.construction.syllables.map((s, i) => (
+            <span className="syl-chunk" key={i}>
+              {s}
+              {i < p.construction.syllables.length - 1 && <span className="syl-dot" aria-hidden>·</span>}
+            </span>
+          ))}
+        </div>
+        <div className="build-ideas">
+          <span className="build-key">grown around</span>
+          {p.construction.ideas.map((idea) => (
+            <span className="build-idea" key={idea.label}>
+              <b>{idea.label}</b> — {idea.gloss}
+            </span>
+          ))}
+        </div>
+        <div className="build-species">
+          <span className="build-key">species</span>
+          <span>
+            {p.construction.species} · sound influenced by {p.construction.families.join(', ')}
+          </span>
+        </div>
+        <p className="wg-note">{p.construction.note}</p>
+      </div>
+
       <div className="sec adoption">
         <div className="adoption-head">
           <h4>Speech Adoption</h4>

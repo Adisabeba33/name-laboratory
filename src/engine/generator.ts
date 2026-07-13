@@ -31,6 +31,7 @@ import {
   buildMeaning,
   buildPersonality,
   buildStory,
+  buildConstruction,
 } from './narrative'
 
 /** Which languages a creative mode leans toward (a soft boost, not a lock). */
@@ -193,6 +194,7 @@ export function buildPassport(
     story: buildStory(word, lead, language),
     explanation: buildExplanation(lead, support, language),
     genome,
+    construction: buildConstruction(word, lead, support, language),
     origin: { lead, support, concepts, languageId: language.id, generation },
   }
 }
