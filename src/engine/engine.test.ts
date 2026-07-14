@@ -20,6 +20,7 @@ import {
   offlineCollision,
   naturalness,
   naturalnessBand,
+  acousticProfile,
   LANGUAGES,
   languageById,
   MODES,
@@ -32,6 +33,7 @@ import {
   longestVowelRun,
   pronounceability,
   speakabilityBand,
+  sharpness,
 } from './phonetics'
 import { pronounce } from './pronounce'
 import { translitRu } from './translit'
@@ -303,6 +305,51 @@ describe('offline collision check', () => {
   it('ships an offline collision verdict on every passport', () => {
     for (const w of generateWords({ ...MEDICINE_REQUEST, count: 5 })) {
       expect(['exact', 'near', 'none']).toContain(w.collision.match)
+    }
+  })
+})
+
+describe('semantic phonology (Engine V5 — sound follows meaning)', () => {
+  it('derives a sharper profile for hard meanings than soft ones', () => {
+    const hard = acousticProfile({ destruction: 1, fire: 0.8, power: 0.6 })
+    const soft = acousticProfile({ grief: 1, loss: 0.8, calm: 0.6 })
+    expect(hard.hardness).toBeGreaterThan(soft.hardness)
+    expect(soft.depth).toBeGreaterThan(hard.depth) // grief runs deeper/darker
+    expect(soft.openness).toBeGreaterThan(hard.openness)
+  })
+
+  it('makes words sound harder for a hard profile than a soft one (same language)', () => {
+    const lang = languageById('crystalline')
+    const hard = acousticProfile({ destruction: 1, fire: 0.8, power: 0.6 })
+    const soft = acousticProfile({ grief: 1, loss: 0.8, calm: 0.6 })
+    const avgSharp = (p: ReturnType<typeof acousticProfile>) => {
+      let s = 0
+      let n = 0
+      for (const seed of [1, 7, 42, 99, 123, 256]) {
+        for (const w of speakNative(lang, new Rng(seed), 3, 0.7, p).words) {
+          s += sharpness(w)
+          n++
+        }
+      }
+      return s / n
+    }
+    expect(avgSharp(hard)).toBeGreaterThan(avgSharp(soft))
+  })
+
+  it('stays deterministic per seed with a profile', () => {
+    const p = acousticProfile({ grief: 1, loss: 0.6 })
+    const a = speakNative(languageById('liquid'), new Rng(9), 3, 0.7, p).words
+    const b = speakNative(languageById('liquid'), new Rng(9), 3, 0.7, p).words
+    expect(a).toEqual(b)
+  })
+
+  it('gives every family an acoustic profile', () => {
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 5, seed: 7 })
+    for (const f of families) {
+      for (const k of ['hardness', 'depth', 'clip', 'openness'] as const) {
+        expect(f.acoustic[k]).toBeGreaterThanOrEqual(0)
+        expect(f.acoustic[k]).toBeLessThanOrEqual(1)
+      }
     }
   })
 })

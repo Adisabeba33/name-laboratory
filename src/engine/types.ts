@@ -393,6 +393,8 @@ export interface WordFamily {
    * that no two languages in a run share a lens: 18 viewpoints, not 18 synonyms.
    */
   lens: LanguageLens
+  /** The meaning's acoustic profile this language's words were shaped by (V5). */
+  acoustic: AcousticProfile
   /** The native-speaker words that prove the language exists. */
   words: WordPassport[]
 }
@@ -403,6 +405,21 @@ export interface LanguageLens {
   role: string
   /** The question this viewpoint answers, e.g. "Who did you become?". */
   question: string
+}
+
+/**
+ * Semantic Acoustic Profile (Engine V5) — a meaning's "emotional physics" reduced
+ * to four phonetic-facing axes (each 0–1) that bias how its word is synthesised.
+ */
+export interface AcousticProfile {
+  /** soft/liquid consonants (0) ↔ hard/plosive (1). */
+  hardness: number
+  /** bright/front vowels (0) ↔ deep/back/round vowels (1). */
+  depth: number
+  /** long, flowing shapes (0) ↔ short, abrupt shapes (1). */
+  clip: number
+  /** closed, hard endings (0) ↔ open, airy, unfinished endings (1). */
+  openness: number
 }
 
 /** The creative styles that bias which roots and endings the engine reaches for. */

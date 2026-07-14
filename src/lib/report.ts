@@ -87,6 +87,11 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
   for (const fam of families) {
     L.push('')
     L.push(`### ${fam.character} — lens: ${fam.lens.role} (${fam.lens.question})`)
+    const a = fam.acoustic
+    L.push(
+      `_acoustic: hardness ${a.hardness.toFixed(2)} · depth ${a.depth.toFixed(2)} · ` +
+        `clip ${a.clip.toFixed(2)} · openness ${a.openness.toFixed(2)}_`,
+    )
     for (const w of fam.words) L.push(wordBlock(w))
   }
 

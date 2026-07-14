@@ -20,6 +20,7 @@ import { computeGenome } from './genome'
 import { speakabilityBand } from './phonetics'
 import { offlineCollision } from './collision'
 import { naturalness, naturalnessBand } from './naturalness'
+import { acousticProfile, blendAcoustic, conceptAcoustic } from './acoustics'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
 import { ratePronunciation } from './pronunciation'
@@ -121,6 +122,8 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
   // A wide, distinct spread of angles so each language can lead with a DIFFERENT
   // primary concept instead of all converging on the single strongest one.
   const anglePool = topConcepts(concepts, Math.max(languageCount, 8))
+  // Engine V5 — the meaning's overall acoustic physics, blended per-language below.
+  const meaningAcoustic = acousticProfile(concepts)
 
   const seed =
     request.seed ??
@@ -144,7 +147,10 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
     // takes a different lead/support pair from this list, so every word gets its
     // own shade of meaning while staying on the language's distinct angle.
     const langConcepts = pickLanguageConcepts(language, concepts, leadConcepts, primary)
-    const vocab = speakNative(language, rng, WORDS_PER_LANGUAGE, request.speakability)
+    // V5 — this language's sound leans toward its own angle, anchored to the whole
+    // meaning, so a grief-angle language sounds different from a fire-angle one.
+    const acoustic = blendAcoustic(conceptAcoustic(primary), meaningAcoustic, 0.6)
+    const vocab = speakNative(language, rng, WORDS_PER_LANGUAGE, request.speakability, acoustic)
     const fresh = vocab.words.filter((w) => {
       const key = w.toLowerCase()
       if (seenWords.has(key)) return false
@@ -174,6 +180,7 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
       ancestry: language.families,
       theme: IDEAS[langConcepts[0]].noun,
       lens,
+      acoustic,
       words,
     })
   })

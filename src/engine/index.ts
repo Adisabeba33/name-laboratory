@@ -22,6 +22,7 @@ export { speakabilityBand, longestVowelRun, pronounceability } from './phonetics
 export { offlineCollision } from './collision'
 export { naturalness, naturalnessBand } from './naturalness'
 export type { NaturalnessBand } from './naturalness'
+export { acousticProfile, conceptAcoustic, blendAcoustic } from './acoustics'
 export { computeLanguageGenome, computeWordEvolution } from './language'
 export { pronounce } from './pronounce'
 export { translitRu } from './translit'

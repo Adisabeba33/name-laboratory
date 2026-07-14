@@ -3,6 +3,7 @@ import { KNOWN_WORDS } from './data/known-words'
 import { Rng } from './rng'
 import {
   awkwardClusters,
+  clamp01,
   countSyllables,
   isVowel,
   longestVowelRun,
@@ -11,6 +12,13 @@ import {
 } from './phonetics'
 import { editDistance } from './genome'
 import { naturalness } from './naturalness'
+import {
+  consonantHardness,
+  endsOpen,
+  vowelDepth,
+  weightedPick,
+  type AcousticProfile,
+} from './acoustics'
 
 /**
  * Native-speaker word synthesis.
@@ -95,6 +103,7 @@ export function speakNative(
   rng: Rng,
   count: number,
   speakability: number = DEFAULT_SPEAKABILITY,
+  profile?: AcousticProfile,
 ): NativeVocabulary {
   const ctl = speakControls(speakability)
   const prototype = buildPrototype(lang)
@@ -104,7 +113,7 @@ export function speakNative(
   const target = count * POOL_FACTOR
   let guard = 0
   while (pool.length < target && guard++ < target * 16) {
-    const word = smoothVowels(tidy(generateWord(lang, rng, ctl.maxSyllables)), ctl)
+    const word = smoothVowels(tidy(generateWord(lang, rng, ctl.maxSyllables, profile)), ctl)
     const key = word.toLowerCase()
     if (
       key.length >= 4 &&
@@ -205,26 +214,47 @@ function buildPrototype(lang: Language): string {
   return tidy(stem + lang.endings[0])
 }
 
-/** Assemble one native word from the language's phonotactics. */
-function generateWord(lang: Language, rng: Rng, maxSyllables: number): string {
+/**
+ * Assemble one native word from the language's phonotactics. When an acoustic
+ * `profile` is given (Engine V5), phoneme and shape choices are *biased* toward
+ * the meaning's physics — harder onsets for hard meanings, deeper vowels for
+ * heavy ones, more codas / shorter syllables for clipped ones, open endings for
+ * airy ones — all still drawn from THIS language's own inventory.
+ */
+function generateWord(lang: Language, rng: Rng, maxSyllables: number, profile?: AcousticProfile): string {
   const [min, max] = lang.syllables
-  const hi = Math.max(1, Math.min(max, maxSyllables))
+  let hi = Math.max(1, Math.min(max, maxSyllables))
   const lo = Math.min(min, hi)
+  // Clipped meanings pull the upper bound down (short, abrupt); flowing ones keep it.
+  if (profile && hi > lo) hi = Math.max(lo, Math.round(hi - profile.clip * (hi - lo)))
   const sylCount = lo + rng.int(hi - lo + 1)
+
+  // Meaning shifts how often a syllable slams shut (clip) vs stays open (openness).
+  const codaBias = profile
+    ? clamp01(lang.codaBias + (profile.clip - 0.5) * 0.5 - (profile.openness - 0.5) * 0.5)
+    : lang.codaBias
+
+  const pickOnset = (list: string[]) =>
+    profile ? weightedPick(list, rng, (o) => 1 - Math.abs(profile.hardness - consonantHardness(o))) : rng.pick(list)
 
   let word = ''
   for (let i = 0; i < sylCount; i++) {
     const first = i === 0
-    const onset = rng.pick(first ? lang.onsets : lang.medials)
-    const nucleus = rng.pick(lang.nuclei)
-    const wantCoda = i < sylCount - 1 || rng.next() < lang.codaBias
-    const coda = wantCoda && rng.next() < lang.codaBias ? rng.pick(lang.codas) : ''
+    const onset = pickOnset(first ? lang.onsets : lang.medials)
+    const nucleus = profile
+      ? weightedPick(lang.nuclei, rng, (n) => 1 - Math.abs(profile.depth - vowelDepth(n)))
+      : rng.pick(lang.nuclei)
+    const wantCoda = i < sylCount - 1 || rng.next() < codaBias
+    const coda = wantCoda && rng.next() < codaBias ? rng.pick(lang.codas) : ''
     word = joinSyllable(word, onset, nucleus, coda)
   }
 
-  // Sometimes finish on a signature ending instead of the last raw coda.
+  // Sometimes finish on a signature ending; airy meanings favour open (vowel) ones.
   if (rng.next() < lang.endingBias) {
-    word = attachEnding(word, rng.pick(lang.endings), lang, rng)
+    const ending = profile
+      ? weightedPick(lang.endings, rng, (e) => (endsOpen(e) ? 0.4 + profile.openness * 0.8 : 0.4 + (1 - profile.openness) * 0.8))
+      : rng.pick(lang.endings)
+    word = attachEnding(word, ending, lang, rng)
   }
   return word
 }
