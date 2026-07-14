@@ -20,6 +20,8 @@ import {
 import { analyzeRemote } from './lib/analyze'
 import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
 import { fetchUsage, hasCachedUsage } from './lib/usage'
+import { fetchSemanticGap, hasCachedGap, type SemanticGapResult } from './lib/semantic-search'
+import { SemanticGap } from './components/SemanticGap'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { ConceptDirections } from './components/ConceptDirections'
 import { ConfirmDialog } from './components/ConfirmDialog'
@@ -93,6 +95,9 @@ export default function App() {
   const [usedLLM, setUsedLLM] = useState(false)
   const [selectedDirections, setSelectedDirections] = useState<string[]>([])
   const [openWord, setOpenWord] = useState<WordPassport | null>(null)
+  // Semantic Gap Search — "does a word already exist for this?" (LLM, discover mode).
+  const [gap, setGap] = useState<SemanticGapResult | null>(null)
+  const [gapLoading, setGapLoading] = useState(false)
   // Cost control: every LLM call must be confirmed. `llmAllowed` is the
   // "don't ask again this session" escape; `confirm` drives the dialog.
   const [llmAllowed, setLlmAllowed] = useState(false)
@@ -103,6 +108,7 @@ export default function App() {
   const [lexicon, setLexicon] = useState<LexEntry[]>(() => loadLexicon())
   const runId = useRef(0)
   const workspaceRef = useRef<HTMLDivElement>(null)
+  const wordsRef = useRef<HTMLDivElement>(null)
 
   // Which of the current results' words are already saved (for this concept).
   const savedKeys = useMemo(() => {
@@ -192,6 +198,7 @@ export default function App() {
 
     const myRun = ++runId.current
     setOpenWord(null)
+    if (!reseed && !steer) setGap(null) // a fresh meaning restarts the vocabulary search
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
     const request = { brief: trimmed || undefined, keywords, mode, count, speakability, seed }
     // A steer re-interprets the SAME prompt with an added emphasis, without
@@ -222,8 +229,27 @@ export default function App() {
       setAnalyzing(false)
     }
 
-    if (remote) await enrich(result, myRun, trimmed)
+    if (remote) {
+      // Reverse-dictionary search runs alongside the word meanings (discover mode
+      // only, and not on a reseed/steer of the same meaning). It never blocks the
+      // words — it reads *above* them as "did language already have this word?".
+      if (appMode === 'discover' && !reseed && !steer) {
+        void runGapSearch(trimmed, result.analysis.interpretation, myRun)
+      }
+      await enrich(result, myRun, trimmed)
+    }
     if (runId.current === myRun) setSteering(false)
+  }
+
+  /** Search existing vocabulary for the meaning (LLM), then show the gap panel. */
+  async function runGapSearch(trimmed: string, interpretation: string, myRun: number) {
+    if (!hasCachedGap(trimmed)) setGapLoading(true)
+    try {
+      const g = await fetchSemanticGap(trimmed, interpretation)
+      if (runId.current === myRun) setGap(g)
+    } finally {
+      if (runId.current === myRun) setGapLoading(false)
+    }
   }
 
   /**
@@ -451,6 +477,16 @@ export default function App() {
                     showTensions={appMode === 'discover'}
                   />
 
+                  {appMode === 'discover' && (gapLoading || gap) && (
+                    <SemanticGap
+                      result={gap}
+                      loading={gapLoading}
+                      onDiscover={() =>
+                        wordsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
+                    />
+                  )}
+
                   {appMode === 'discover' && results.analysis.directions.length > 0 && (
                     <ConceptDirections
                       directions={results.analysis.directions}
@@ -459,7 +495,7 @@ export default function App() {
                     />
                   )}
 
-                  <div className="results-head">
+                  <div className="results-head" ref={wordsRef}>
                     <div>
                       <h2>{allWords.length} words discovered</h2>
                       <p className="results-sub">
