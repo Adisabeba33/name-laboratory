@@ -23,10 +23,16 @@ import { fetchUsage, hasCachedUsage } from './lib/usage'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { ConceptDirections } from './components/ConceptDirections'
 import { ConfirmDialog } from './components/ConfirmDialog'
-import { Lexicon } from './components/Lexicon'
-import { LanguageSection } from './components/LanguageSection'
-import { LanguageTree } from './components/LanguageTree'
-import { Logo } from './components/Logo'
+import { Sidebar } from './components/Sidebar'
+import { BottomNav } from './components/BottomNav'
+import { Hero } from './components/Hero'
+import { StepFlow } from './components/StepFlow'
+import { DiscoverInput } from './components/DiscoverInput'
+import { LexiconRail } from './components/LexiconRail'
+import { WordCard } from './components/WordCard'
+import { WordDetail } from './components/WordDetail'
+import { LanguagesView, LexiconView, RoomView } from './components/views'
+import type { ViewKey } from './components/nav'
 
 const MODE_KEYS = Object.keys(MODES) as CreativeMode[]
 
@@ -43,15 +49,15 @@ const MODE_COPY: Record<AppMode, {
 }> = {
   discover: {
     tab: 'Discover a meaning',
-    label: 'Describe the word you want',
+    label: 'Describe the meaning you want to uncover',
     placeholder:
       'e.g. the feeling of becoming someone completely different after surviving something that should have destroyed you',
     button: 'Discover words',
     examples: [
-      'the feeling of becoming someone completely different after surviving something that should have destroyed you',
       'the quiet joy of returning home after a long time away',
-      'the smell of rain on warm dust after a long dry summer',
-      'the sadness of a perfect moment ending while you are still inside it',
+      'the smell of rain on warm dust after a dry summer',
+      'a perfect moment ending while you are still inside it',
+      'becoming someone new after surviving what should have destroyed you',
     ],
   },
   name: {
@@ -70,10 +76,9 @@ const MODE_COPY: Record<AppMode, {
 }
 
 export default function App() {
+  const [view, setView] = useState<ViewKey>('discover')
   const [appMode, setAppMode] = useState<AppMode>('discover')
-  const [brief, setBrief] = useState(
-    'A word for the feeling of becoming someone completely different after surviving something that should have destroyed you.',
-  )
+  const [brief, setBrief] = useState('')
   // Advanced-only controls — most people never open them.
   const [mode, setMode] = useState<CreativeMode>('timeless')
   const [count, setCount] = useState(6)
@@ -87,6 +92,7 @@ export default function App() {
   const [steering, setSteering] = useState(false)
   const [usedLLM, setUsedLLM] = useState(false)
   const [selectedDirections, setSelectedDirections] = useState<string[]>([])
+  const [openWord, setOpenWord] = useState<WordPassport | null>(null)
   // Cost control: every LLM call must be confirmed. `llmAllowed` is the
   // "don't ask again this session" escape; `confirm` drives the dialog.
   const [llmAllowed, setLlmAllowed] = useState(false)
@@ -95,8 +101,8 @@ export default function App() {
   )
   // My Lexicon — the user's saved words, persisted on-device (localStorage).
   const [lexicon, setLexicon] = useState<LexEntry[]>(() => loadLexicon())
-  const [showLexicon, setShowLexicon] = useState(false)
   const runId = useRef(0)
+  const workspaceRef = useRef<HTMLDivElement>(null)
 
   // Which of the current results' words are already saved (for this concept).
   const savedKeys = useMemo(() => {
@@ -185,6 +191,7 @@ export default function App() {
     if (!wantsAI && steer) return
 
     const myRun = ++runId.current
+    setOpenWord(null)
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
     const request = { brief: trimmed || undefined, keywords, mode, count, speakability, seed }
     // A steer re-interprets the SAME prompt with an added emphasis, without
@@ -261,33 +268,48 @@ export default function App() {
       translit: p.transliteration,
     })
     if (!usage) return
+    const apply = (w: WordPassport): WordPassport =>
+      w.word === p.word ? { ...w, usage: { en: usage.en, ru: usage.ru } } : w
     setResults((prev) =>
       prev
         ? {
             ...prev,
-            families: prev.families.map((f) => ({
-              ...f,
-              words: f.words.map((w) =>
-                w.word === p.word ? { ...w, usage: { en: usage.en, ru: usage.ru } } : w,
-              ),
-            })),
+            families: prev.families.map((f) => ({ ...f, words: f.words.map(apply) })),
           }
         : prev,
     )
+    // Keep the open full-page word in sync too.
+    setOpenWord((prev) => (prev ? apply(prev) : prev))
   }
 
-  function scrollToWord(word: string) {
-    const el = document.getElementById(`word-${word}`)
-    if (!el) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    el.classList.add('flash')
-    window.setTimeout(() => el.classList.remove('flash'), 1200)
+  /** Navigate to the discovery workspace and scroll it into view. */
+  function goDiscover() {
+    setView('discover')
+    setOpenWord(null)
+    window.requestAnimationFrame(() =>
+      workspaceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    )
   }
 
-  const canRun = brief.trim().length > 0
+  /** Open a saved lexicon word: reuse the live passport if it's in the current
+   *  results, otherwise take the user back to re-discover its concept. */
+  function openLexEntry(e: LexEntry) {
+    const match = results?.families.flatMap((f) => f.words).find((w) => w.word === e.word)
+    if (match && e.brief === brief.trim()) {
+      setView('discover')
+      setOpenWord(match)
+      return
+    }
+    setBrief(e.brief)
+    setView('discover')
+  }
+
+  const copy = MODE_COPY[appMode]
+  const allWords = results?.families.flatMap((f) => f.words) ?? []
+  const stage = analyzing ? 'concept' : results ? 'word' : brief.trim() ? 'meaning' : 'idea'
 
   return (
-    <div className="app">
+    <div className="shell">
       {confirm && (
         <ConfirmDialog
           message={confirm.message}
@@ -302,253 +324,208 @@ export default function App() {
           }}
         />
       )}
-      <header className="masthead">
-        <Logo className="logo" />
-        <div>
-          <h1>Word Laboratory</h1>
-          <p className="tag">
-            Describe a meaning. The laboratory works out the rest — the concepts, the
-            languages, and the words to name it.
-          </p>
-        </div>
-        <button
-          type="button"
-          className="btn ghost lex-open"
-          onClick={() => setShowLexicon((v) => !v)}
-        >
-          My Lexicon · {lexicon.length}
-        </button>
-      </header>
 
-      {showLexicon && (
-        <Lexicon
-          entries={lexicon}
-          onRemove={(id) => setLexicon((prev) => removeEntry(prev, id))}
-          onClose={() => setShowLexicon(false)}
-        />
-      )}
+      <Sidebar view={view} onNavigate={(v) => { setView(v); setOpenWord(null) }} lexiconCount={lexicon.length} />
 
-      <section className="lab">
-        <div className="app-modes" role="tablist">
-          {(Object.keys(MODE_COPY) as AppMode[]).map((m) => (
-            <button
-              type="button"
-              key={m}
-              role="tab"
-              aria-selected={appMode === m}
-              className={`app-mode ${appMode === m ? 'on' : ''}`}
-              onClick={() => setAppMode(m)}
-            >
-              {MODE_COPY[m].tab}
-            </button>
-          ))}
-        </div>
-
-        <div className="field">
-          <label className="lbl" htmlFor="brief">
-            {MODE_COPY[appMode].label}
-          </label>
-          <textarea
-            id="brief"
-            className="hero-input"
-            value={brief}
-            onChange={(e) => setBrief(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && canRun) run(false)
-            }}
-            placeholder={MODE_COPY[appMode].placeholder}
-            rows={3}
-          />
-          <p className="hint">
-            {appMode === 'name'
-              ? 'Describe what you’re naming — a company, store, brand, or even a baby.'
-              : 'Just the meaning or feeling — no keywords needed.'}{' '}
-            Press ⌘/Ctrl + Enter to run. Anything that uses AI asks first — declining still gives a
-            free engine result.
-          </p>
-
-          <div className="examples">
-            <span className="examples-label">Try:</span>
-            {MODE_COPY[appMode].examples.map((ex) => (
-              <button
-                type="button"
-                key={ex}
-                className="example"
-                onClick={() => setBrief(ex)}
-              >
-                {ex.length > 46 ? ex.slice(0, 46) + '…' : ex}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="actions">
-          <button className="btn" onClick={() => run(false)} disabled={!canRun || analyzing}>
-            {analyzing
-              ? appMode === 'name'
-                ? 'Reading the brief…'
-                : 'Reading the meaning…'
-              : MODE_COPY[appMode].button}
-          </button>
-          {results && !analyzing && (
-            <button className="btn ghost" onClick={() => run(true)}>
-              Try another set
-            </button>
-          )}
-        </div>
-
-        <details className="advanced">
-          <summary>Advanced options</summary>
-          <div className="advanced-body">
-            <div className="field">
-              <label className="lbl">Creative register (optional)</label>
-              <div className="modes">
-                {MODE_KEYS.map((key) => (
-                  <button
-                    type="button"
-                    key={key}
-                    className={`mode ${mode === key ? 'on' : ''}`}
-                    onClick={() => setMode(key)}
-                  >
-                    <b>{MODES[key].label}</b>
-                    <span>{MODES[key].description}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="hint">
-                Leave as-is to let the meaning choose. A register only nudges which languages surface.
-              </p>
-            </div>
-
-            <div className="field">
-              <label className="lbl" htmlFor="speakability">
-                Word style — {speakability >= 0.66 ? 'Speakable' : speakability >= 0.4 ? 'Balanced' : 'Ornate'}
-              </label>
-              <div className="count-control">
-                <input
-                  id="speakability"
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={speakability}
-                  onChange={(e) => setSpeakability(Number(e.target.value))}
-                />
-                <span className="hint" style={{ marginTop: 0 }}>
-                  Speakable ↔ Ornate — how far words may drift from everyday speech
-                </span>
-              </div>
-            </div>
-
-            <div className="field">
-              <label className="lbl" htmlFor="count">
-                How many languages — {count}
-              </label>
-              <div className="count-control">
-                <input
-                  id="count"
-                  type="range"
-                  min={3}
-                  max={8}
-                  value={count}
-                  onChange={(e) => setCount(Number(e.target.value))}
-                />
-                <span className="hint" style={{ marginTop: 0 }}>
-                  each with 2–3 native words
-                </span>
-              </div>
-            </div>
-
-            <div className="field">
-              <label className="lbl" htmlFor="extra">
-                Force specific concepts (optional)
-              </label>
-              <input
-                id="extra"
-                type="text"
-                value={extra}
-                onChange={(e) => setExtra(e.target.value)}
-                placeholder="e.g. rebirth, memory, fire — comma-separated"
-              />
-            </div>
-          </div>
-        </details>
-      </section>
-
-      {results === null ? (
-        <div className="empty">
-          {appMode === 'name' ? (
-            <>
-              Describe what you’re naming and press <b>Discover names</b>. The laboratory reads the
-              character it should have, then surfaces several sound-worlds — each with candidate
-              names.
-            </>
+      <main className="content">
+        {view === 'discover' &&
+          (openWord ? (
+            <WordDetail
+              p={openWord}
+              brief={brief.trim()}
+              saved={savedKeys.has(openWord.word.toLowerCase())}
+              onToggleSave={() => toggleSave(openWord)}
+              onBack={() => setOpenWord(null)}
+              onRequestUsage={usedLLM ? () => requestUsage(openWord, openWord.family.name) : undefined}
+            />
           ) : (
-            <>
-              Describe a meaning and press <b>Discover words</b>. The laboratory reads what you
-              really mean, then surfaces several new languages — each with native-speaker words.
-            </>
-          )}
-        </div>
-      ) : results.families.length === 0 ? (
-        <div className="empty">
-          Nothing cleared the novelty check for that input. Try describing it a little differently.
-        </div>
-      ) : (
-        <section className="results" key={nonce}>
-          <InterpretationPanel
-            analysis={results.analysis}
-            source={usedLLM ? 'llm' : 'engine'}
-            onSteer={usedLLM ? (label) => run(false, label) : undefined}
-            steering={steering}
-            showTensions={appMode === 'discover'}
-          />
+            <div className="discover">
+              {!results && <Hero onDiscover={goDiscover} onLearnMore={goDiscover} />}
 
-          {appMode === 'discover' && results.analysis.directions.length > 0 && (
-            <ConceptDirections
-              directions={results.analysis.directions}
-              selected={selectedDirections}
-              onToggle={focusOn}
-            />
-          )}
+              <div className="workspace" ref={workspaceRef}>
+                <div className="workspace-grid">
+                  <div className="workspace-left">
+                    <div className="app-modes" role="tablist">
+                      {(Object.keys(MODE_COPY) as AppMode[]).map((m) => (
+                        <button
+                          type="button"
+                          key={m}
+                          role="tab"
+                          aria-selected={appMode === m}
+                          className={`app-mode ${appMode === m ? 'on' : ''}`}
+                          onClick={() => setAppMode(m)}
+                        >
+                          {MODE_COPY[m].tab}
+                        </button>
+                      ))}
+                    </div>
 
-          <div className="results-head">
-            <h2>
-              {results.families.length}{' '}
-              {appMode === 'name' ? 'name families' : 'linguistic species'} discovered
-            </h2>
-            <span className="muted">
-              {results.families.reduce((n, f) => n + f.words.length, 0)}{' '}
-              {appMode === 'name' ? 'candidate names' : 'native words'}
-              {refining && <span className="refining"> · writing meanings…</span>}
-            </span>
-          </div>
+                    <DiscoverInput
+                      mode={appMode}
+                      brief={brief}
+                      onBrief={setBrief}
+                      onRun={() => run(false)}
+                      running={analyzing}
+                      runLabel={copy.button}
+                      label={copy.label}
+                      placeholder={copy.placeholder}
+                      suggestions={copy.examples}
+                      onPick={setBrief}
+                    >
+                      <details className="advanced">
+                        <summary>Advanced options</summary>
+                        <div className="advanced-body">
+                          <div className="field">
+                            <label className="lbl">Creative register</label>
+                            <div className="modes">
+                              {MODE_KEYS.map((key) => (
+                                <button
+                                  type="button"
+                                  key={key}
+                                  className={`mode ${mode === key ? 'on' : ''}`}
+                                  onClick={() => setMode(key)}
+                                >
+                                  <b>{MODES[key].label}</b>
+                                  <span>{MODES[key].description}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="field">
+                            <label className="lbl" htmlFor="speakability">
+                              Word style — {speakability >= 0.66 ? 'Speakable' : speakability >= 0.4 ? 'Balanced' : 'Ornate'}
+                            </label>
+                            <input
+                              id="speakability"
+                              type="range"
+                              min={0}
+                              max={1}
+                              step={0.1}
+                              value={speakability}
+                              onChange={(e) => setSpeakability(Number(e.target.value))}
+                            />
+                          </div>
+                          <div className="field">
+                            <label className="lbl" htmlFor="count">How many languages — {count}</label>
+                            <input
+                              id="count"
+                              type="range"
+                              min={3}
+                              max={8}
+                              value={count}
+                              onChange={(e) => setCount(Number(e.target.value))}
+                            />
+                          </div>
+                          <div className="field">
+                            <label className="lbl" htmlFor="extra">Force specific concepts</label>
+                            <input
+                              id="extra"
+                              type="text"
+                              value={extra}
+                              onChange={(e) => setExtra(e.target.value)}
+                              placeholder="e.g. rebirth, memory, fire — comma-separated"
+                            />
+                          </div>
+                        </div>
+                      </details>
+                    </DiscoverInput>
+                  </div>
 
-          <LanguageTree families={results.families} onPick={scrollToWord} />
+                  <div className="workspace-center">
+                    <StepFlow active={stage} />
+                  </div>
 
-          {results.families.map((fam) => (
-            <LanguageSection
-              fam={fam}
-              key={fam.id}
-              savedWords={savedKeys}
-              onToggleSave={toggleSave}
-              onRequestUsage={usedLLM ? requestUsage : undefined}
-            />
+                  <div className="workspace-right">
+                    <LexiconRail entries={lexicon} onOpen={openLexEntry} onViewAll={() => setView('lexicon')} />
+                  </div>
+                </div>
+              </div>
+
+              {results && results.families.length > 0 && (
+                <section className="results" key={nonce}>
+                  <InterpretationPanel
+                    analysis={results.analysis}
+                    source={usedLLM ? 'llm' : 'engine'}
+                    onSteer={usedLLM ? (label) => run(false, label) : undefined}
+                    steering={steering}
+                    showTensions={appMode === 'discover'}
+                  />
+
+                  {appMode === 'discover' && results.analysis.directions.length > 0 && (
+                    <ConceptDirections
+                      directions={results.analysis.directions}
+                      selected={selectedDirections}
+                      onToggle={focusOn}
+                    />
+                  )}
+
+                  <div className="results-head">
+                    <div>
+                      <h2>{allWords.length} words discovered</h2>
+                      <p className="results-sub">
+                        across {results.families.length}{' '}
+                        {appMode === 'name' ? 'sound-worlds' : 'living languages'}
+                        {refining && <span className="refining"> · writing meanings…</span>}
+                      </p>
+                    </div>
+                    <button className="btn ghost sm" onClick={() => run(true)} disabled={analyzing}>
+                      Try another set
+                    </button>
+                  </div>
+
+                  {results.families.map((fam) => (
+                    <div className="langgroup" key={fam.id}>
+                      <div className="langgroup-head">
+                        <span className="langgroup-name">{fam.character}</span>
+                        <span className="langgroup-feel">{fam.description.split('.')[0]}.</span>
+                      </div>
+                      <div className="wgrid">
+                        {fam.words.map((p) => (
+                          <WordCard
+                            key={p.word}
+                            p={p}
+                            saved={savedKeys.has(p.word.toLowerCase())}
+                            onOpen={() => setOpenWord(p)}
+                            onToggleSave={() => toggleSave(p)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {results && results.families.length === 0 && (
+                <div className="view-empty">
+                  <p>Nothing cleared the novelty check for that input. Try describing it a little differently.</p>
+                </div>
+              )}
+            </div>
           ))}
-        </section>
-      )}
 
-      <footer className="footer">
-        Word Laboratory understands your meaning first, then invents the languages and words
-        to carry it — every word synthesised from a measurable genome, never copied from a
-        dictionary.
-        <br />
-        Meaning → Concept → Language Discovery → Word Evolution → Word.
-        <br />
-        <span className="build" title="Changes on every deploy — refresh to see if a new build is live">
-          v{__APP_VERSION__} · build {__BUILD_SHA__} · {__BUILD_TIME__} UTC
-        </span>
-      </footer>
+        {view === 'lexicon' && (
+          <LexiconView
+            entries={lexicon}
+            onOpen={openLexEntry}
+            onRemove={(id) => setLexicon((prev) => removeEntry(prev, id))}
+            onDiscover={goDiscover}
+          />
+        )}
+        {view === 'languages' && <LanguagesView />}
+        {view === 'collections' && <RoomView room="collections" />}
+        {view === 'experiments' && <RoomView room="experiments" />}
+        {view === 'settings' && <RoomView room="settings" />}
+        {view === 'help' && <RoomView room="help" />}
+
+        <footer className="footer">
+          <span>Meaning → Concept → Language → Word → Lexicon.</span>
+          <span className="build" title="Changes on every deploy — refresh to see if a new build is live">
+            v{__APP_VERSION__} · build {__BUILD_SHA__} · {__BUILD_TIME__} UTC
+          </span>
+        </footer>
+      </main>
+
+      <BottomNav view={view} onNavigate={(v) => { setView(v); setOpenWord(null) }} />
     </div>
   )
 }

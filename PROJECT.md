@@ -198,11 +198,34 @@ passports are unchanged whether the analysis came from the LLM or the fallback.
 
 ### Client (thin presentational layer)
 
-`src/App.tsx` (single-input flow, progressive enhancement) over
-`src/components/`: `InterpretationPanel`, `LanguageTree`, `LanguageSection`,
-`PassportCard`, `Logo`. Build-time constants `__APP_VERSION__` / `__BUILD_SHA__` /
-`__BUILD_TIME__` are injected via `vite.config.ts` `buildDefine()` and shown as a
-footer **build stamp** so a fresh deploy is detectable by refreshing.
+`src/App.tsx` orchestrates the state/data flow (single-input flow, progressive
+enhancement) inside the **v4 "laboratory" shell** — a persistent left `Sidebar`
+(desktop) / `BottomNav` (mobile PWA feel) around a routed content area with these
+rooms: **Discover** (Hero + three-zone workspace + results), **Lexicon**,
+**Languages**, and future-laboratory placeholders (Collections, Experiments,
+Settings, Help). Design language: near-black canvas (`#090A0F`), barely-there
+purple/blue borders, a Fraunces display serif over Inter, generous whitespace and
+slow, subtle motion ("Apple meets CERN", not an AI generator).
+
+Key components in `src/components/`:
+- **Shell/nav:** `Sidebar`, `BottomNav`, `nav.tsx` (shared model), `icons.tsx`
+  (thin line-icon set), `Logo`.
+- **Discover flow:** `Hero`, `DiscoverInput` (the writing surface + suggestion
+  pills), `StepFlow` (Idea → Meaning → Concept → Language → Word → Lexicon
+  narrative), `LexiconRail` (workspace glance), `WordCard` (compact result that
+  opens a full page), `InterpretationPanel`, `ConceptDirections`.
+- **Word page:** `WordDetail` — a discovered word opens as a **full page with
+  tabs** (Usage · Meaning · Evolution · Genome · Translations · Notes) and a held
+  space for a future illustration, not a dense card. Notes persist on-device
+  (`lib/notes.ts`).
+- **Views/placeholders:** `views.tsx` (Languages catalogue, Lexicon room, future
+  rooms), `ComingSoon` (future-laboratory teasers), `Placeholder` (labelled
+  stand-ins for future visual assets — 700×700 hero artifact, 500×700
+  illustration — so images are easy to drop in later).
+
+Build-time constants `__APP_VERSION__` / `__BUILD_SHA__` / `__BUILD_TIME__` are
+injected via `vite.config.ts` `buildDefine()` and shown as a footer **build stamp**
+so a fresh deploy is detectable by refreshing.
 
 ---
 
