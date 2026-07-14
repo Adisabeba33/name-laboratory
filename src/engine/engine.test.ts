@@ -487,6 +487,70 @@ describe('language refusals (Engine V4 — a worldview that cannot hold a meanin
   })
 })
 
+describe('selection quality (Engine v0.36 — direct vs adjacent, dynamic lenses)', () => {
+  it('separates direct answers from adjacent discoveries', () => {
+    const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const direct = r.families.filter((f) => f.direct)
+    // A meaning with a clear core yields at least one direct answer…
+    expect(direct.length).toBeGreaterThanOrEqual(1)
+    // …and every direct family used a direct lens and carries a core concept.
+    for (const f of direct) {
+      expect(f.lens.direct).toBe(true)
+      expect(f.fidelity.band).toBe('direct')
+      expect(f.fidelity.matched.length).toBeGreaterThan(0)
+      expect(f.fidelity.driftDetected).toBe(false)
+    }
+    // Adjacent families are classified, never marked direct.
+    for (const f of r.families.filter((f) => !f.direct && !f.refusal)) {
+      expect(f.fidelity.band).not.toBe('direct')
+    }
+  })
+
+  it('selects lenses by relevance, each with a distinct semantic role', () => {
+    const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const roles = r.families.map((f) => f.semanticRole)
+    // No two families share a semantic role (dynamic-lens uniqueness rule).
+    expect(new Set(roles).size).toBe(roles.length)
+    // At least one direct_target lens is always present to rank.
+    expect(roles).toContain('direct_target')
+  })
+
+  it('states an honest conclusion naming the confirmed gap', () => {
+    const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    expect(r.conclusion.length).toBeGreaterThan(0)
+    const directCount = r.families.filter((f) => f.direct).length
+    if (directCount === 0) {
+      expect(r.conclusion.toLowerCase()).toContain('another evolutionary cycle')
+    } else {
+      expect(r.conclusion).toMatch(/direct candidate/i)
+    }
+  })
+
+  it('varies the number of families with the meaning (not a fixed 18/6)', () => {
+    // A spare, single-note prompt should support fewer lenses than a rich one.
+    const spare = runLaboratory({ brief: 'order', keywords: [], count: 8, seed: 3 })
+    const rich = runLaboratory({
+      brief: 'becoming a new person after surviving loss, grief and rebirth',
+      keywords: [],
+      count: 8,
+      seed: 3,
+    })
+    expect(spare.families.length).toBeGreaterThanOrEqual(3)
+    // The count is driven by relevant lenses, so it need not hit the requested max.
+    expect(spare.families.length).toBeLessThanOrEqual(8)
+    expect(rich.families.length).toBeGreaterThanOrEqual(spare.families.length)
+  })
+
+  it('is deterministic per seed', () => {
+    const a = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const b = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    expect(a.families.map((f) => [f.semanticRole, f.direct, f.fidelity.band])).toEqual(
+      b.families.map((f) => [f.semanticRole, f.direct, f.fidelity.band]),
+    )
+    expect(a.conclusion).toBe(b.conclusion)
+  })
+})
+
 describe('speakability — words that stay sayable', () => {
   const LANGS = ['crystalline', 'liquid', 'ancient', 'noble', 'earthen', 'ashen']
 

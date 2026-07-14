@@ -1,5 +1,6 @@
 import type {
   Concept,
+  ConceptFidelity,
   ConceptVector,
   CreativeMode,
   EvolutionStats,
@@ -66,21 +67,71 @@ const MODE_LANGUAGES: Record<CreativeMode, string[]> = {
 const WORDS_PER_LANGUAGE = 3
 
 /**
- * Semantic viewpoints (anti-convergence). Each discovered language is assigned a
- * DIFFERENT lens so the run reads as several civilizations looking at the same
- * meaning from different sides — not one observation restated 18 times. These
- * deliberately point away from the convergence trap ("what remains / the core").
+ * Semantic viewpoints (anti-convergence, v0.36 dynamic-lens pool). Each lens has a
+ * distinct `semanticRole`, and adjacent lenses declare the concepts they `requires`
+ * — a lens is only offered when the meaning actually contains one of them, so
+ * "the cost / the observer / the person" no longer force irrelevant angles onto a
+ * prompt that has nothing to do with them. DIRECT lenses (which name the meaning
+ * itself) carry no requirement and are always eligible, so a run always has at
+ * least one direct answer to rank.
+ *
+ * The deterministic engine SELECTS from this pool by relevance; the LLM path can
+ * later generate truly bespoke lenses into the same shape.
  */
-const LENSES: LanguageLens[] = [
-  { role: 'the event', question: 'What actually happened?' },
-  { role: 'the person', question: 'Who did you become?' },
-  { role: 'the feeling', question: 'What does it feel like from the inside?' },
-  { role: 'the turning point', question: 'The exact moment it changed?' },
-  { role: 'the cost', question: 'What did it take from you?' },
-  { role: 'the observer', question: 'What would someone else notice?' },
-  { role: 'what emerged', question: 'What is new that was not there before?' },
-  { role: 'the aftermath', question: 'What does ordinary life become now?' },
+interface LensDef extends LanguageLens {
+  /** Concepts that must be present for an adjacent lens to be offered (empty = always). */
+  requires: Concept[]
+}
+
+const LENS_POOL: LensDef[] = [
+  // Direct lenses — name the meaning itself; always eligible.
+  { role: 'the meaning itself', question: 'What is it, named directly?', semanticRole: 'direct_target', direct: true, requires: [] },
+  { role: 'the threshold', question: 'The exact moment it becomes real?', semanticRole: 'event', direct: true, requires: [] },
+  // Process — a general, always-eligible fallback so a run can always be filled.
+  { role: 'the process', question: 'How does it unfold?', semanticRole: 'process', direct: false, requires: [] },
+  // Adjacent lenses — offered only when the meaning supports them.
+  { role: 'the capacity', question: 'What new ability does it grant?', semanticRole: 'consequence', direct: false, requires: ['future', 'creation', 'knowledge', 'intelligence', 'transformation', 'vision'] },
+  { role: 'the person', question: 'Who did you become?', semanticRole: 'actor', direct: false, requires: ['human', 'identity'] },
+  { role: 'the feeling', question: 'What does it feel like from the inside?', semanticRole: 'emotional_response', direct: false, requires: ['grief', 'hope', 'longing', 'loss', 'courage', 'calm'] },
+  { role: 'the cost', question: 'What did it take from you?', semanticRole: 'cost', direct: false, requires: ['loss', 'grief', 'survival'] },
+  { role: 'the observer', question: 'What would someone else notice?', semanticRole: 'observer', direct: false, requires: ['human', 'vision'] },
+  { role: 'the aftermath', question: 'What does ordinary life become now?', semanticRole: 'aftermath', direct: false, requires: ['transformation', 'future', 'memory', 'rebirth'] },
 ]
+
+/** Concepts that are recurrent engine archetypes — drift when a prompt did not ask for them. */
+const ARCHETYPE_ATTRACTORS: Concept[] = [
+  'survival', 'identity', 'rebirth', 'grief', 'loss', 'shadow',
+  'destruction', 'resilience', 'memory', 'transformation',
+]
+
+/** A concept counts as "present" in the meaning above this weight. */
+const PRESENT_THRESHOLD = 0.25
+
+/**
+ * Choose the lenses for this meaning (v0.36). Direct lenses lead and are always
+ * kept; adjacent lenses are added only when the meaning contains a concept they
+ * require; each semantic role appears at most once. Returns at most `max` lenses,
+ * so a meaning with few relevant angles yields few families (variable output).
+ */
+function selectLenses(concepts: ConceptVector, max: number): LensDef[] {
+  const present = (c: Concept) => (concepts[c] ?? 0) >= PRESENT_THRESHOLD
+  const chosen: LensDef[] = []
+  const roles = new Set<string>()
+  const take = (lens: LensDef) => {
+    if (roles.has(lens.semanticRole) || chosen.length >= max) return
+    roles.add(lens.semanticRole)
+    chosen.push(lens)
+  }
+  // Direct lenses first (always eligible).
+  for (const lens of LENS_POOL) if (lens.direct) take(lens)
+  // Then relevant adjacent lenses, strongest-supported first.
+  const adjacent = LENS_POOL.filter((l) => !l.direct)
+    .map((l) => ({ l, weight: l.requires.length === 0 ? 0.2 : Math.max(...l.requires.map((c) => concepts[c] ?? 0)) }))
+    .filter((x) => x.l.requires.length === 0 || x.l.requires.some(present))
+    .sort((a, b) => b.weight - a.weight)
+  for (const { l } of adjacent) take(l)
+  return chosen
+}
 
 /**
  * The laboratory's front door — the full Meaning Engine pipeline.
@@ -95,7 +146,12 @@ const LENSES: LanguageLens[] = [
 export function runLaboratory(request: GenerationRequest): LaboratoryResult {
   const analysis = analyzeMeaning(request.keywords, request.brief)
   const families = discoverFamilies(request, analysis)
-  return { analysis, families, population: aggregatePopulation(families) }
+  return {
+    analysis,
+    families,
+    population: aggregatePopulation(families),
+    conclusion: buildConclusion(families, analysis),
+  }
 }
 
 /** Discover just the languages (the UI uses {@link runLaboratory}). */
@@ -118,7 +174,12 @@ export function discoverFromAnalysis(
   // the words sharpen toward the selected angle.
   const forDiscovery = focus ? { ...analysis, concepts: focus } : analysis
   const families = discoverFamilies(request, forDiscovery)
-  return { analysis, families, population: aggregatePopulation(families) }
+  return {
+    analysis,
+    families,
+    population: aggregatePopulation(families),
+    conclusion: buildConclusion(families, analysis),
+  }
 }
 
 /**
@@ -156,14 +217,20 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
     hashSeed(`${request.keywords.join(',')}|${request.brief ?? ''}|${mode}`)
   const rng = new Rng(seed)
 
+  // Step 2 — Dynamic lenses (v0.36): choose only the viewpoints this meaning
+  // actually supports. Fewer relevant lenses → fewer families (variable output),
+  // never fewer than the always-eligible direct + process lenses.
+  const lenses = selectLenses(concepts, languageCount)
+  const effectiveCount = lenses.length
+
   // Step 2 — Language Discovery: languages whose philosophy fits the meaning.
-  const chosen = selectLanguages(concepts, mode, languageCount, rng, analysis.theme)
+  const chosen = selectLanguages(concepts, mode, effectiveCount, rng, analysis.theme)
 
   // Step 2b — Refusals (V4): a language whose worldview cannot hold a strong strand
   // of this meaning declines to translate it, rather than force a word that would
   // lie. Kept rare and never at the expense of a usable run: at most a couple of
   // languages refuse, and at least MIN_PRODUCERS always produce words.
-  const refusals = planRefusals(chosen, concepts, languageCount)
+  const refusals = planRefusals(chosen, concepts, effectiveCount)
 
   // Step 3 — for each language, derive its genome and generate native words.
   const families: WordFamily[] = []
@@ -174,7 +241,7 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
     // (round-robin over the spread, so families don't all pick the same concept),
     // and takes a distinct semantic lens (the event / the person / the feeling…).
     const primary = anglePool.length ? anglePool[i % anglePool.length] : leadConcepts[0]
-    const lens = LENSES[i % LENSES.length]
+    const lens = lenses[i % lenses.length]
     // V5 — this language's sound leans toward its own angle, anchored to the whole
     // meaning, so a grief-angle language sounds different from a fire-angle one.
     const acoustic = blendAcoustic(conceptAcoustic(primary), meaningAcoustic, 0.6)
@@ -192,6 +259,16 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
         ancestry: language.families,
         theme: IDEAS[refusal.concept].noun,
         lens,
+        semanticRole: lens.semanticRole,
+        direct: false,
+        fidelity: {
+          band: 'weak',
+          matched: [],
+          missing: [],
+          extraneous: [],
+          driftDetected: false,
+          note: 'This language declined to translate the meaning.',
+        },
         acoustic,
         stats: { generated: 0, rejected: 0, survived: 0, recommended: 0, exceptional: 0 },
         refusal,
@@ -242,6 +319,10 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
       ).length,
     }
 
+    // v0.36 — how directly this family answers the confirmed gap, and whether it
+    // has drifted into a recurrent archetype the prompt never asked for.
+    const fidelity = computeFidelity(lens, langConcepts, concepts)
+
     families.push({
       id: `${language.id}-${i}`,
       name: language.character,
@@ -252,6 +333,9 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
       ancestry: language.families,
       theme: IDEAS[langConcepts[0]].noun,
       lens,
+      semanticRole: lens.semanticRole,
+      direct: fidelity.band === 'direct',
+      fidelity,
       acoustic,
       stats,
       words,
@@ -353,6 +437,58 @@ function selectLanguages(
   }).sort((x, y) => y.score - x.score)
 
   return ranked.slice(0, Math.min(count, LANGUAGES.length)).map((r) => r.language)
+}
+
+/**
+ * Concept Fidelity (v0.36) — how directly a family answers the confirmed gap,
+ * judged structurally. `matched` = the meaning's core concepts the family carries;
+ * `extraneous` = archetype attractors it carries that the prompt never raised;
+ * `driftDetected` when such an intrusion dominates. A family is `direct` only if
+ * its lens is a direct one, it carries a core concept, and it has NOT drifted —
+ * so a language-and-cognition meaning never lets a grief/survival word pose as a
+ * direct answer. This is a structural read (concept overlap), stated as such.
+ */
+function computeFidelity(lens: LensDef, carried: Concept[], concepts: ConceptVector): ConceptFidelity {
+  const core = topConcepts(concepts, 6)
+  const coreSet = new Set(core)
+  const matched = carried.filter((c) => coreSet.has(c))
+  const missing = core.filter((c) => !carried.includes(c))
+  const extraneous = carried.filter(
+    (c) => ARCHETYPE_ATTRACTORS.includes(c) && !coreSet.has(c),
+  )
+  const driftDetected = extraneous.length > 0 && matched.length === 0
+
+  let band: ConceptFidelity['band']
+  let note: string
+  if (driftDetected) {
+    band = 'weak'
+    note = `Drifted into ${extraneous[0]} — a theme the prompt did not raise.`
+  } else if (lens.direct && matched.length > 0) {
+    band = 'direct'
+    note = `Names the gap directly through ${matched.slice(0, 2).join(' / ')}.`
+  } else {
+    band = 'adjacent'
+    note = lens.direct
+      ? 'A direct viewpoint, but only loosely tied to the core concepts.'
+      : `An adjacent viewpoint (${lens.role}) on the meaning, not the meaning itself.`
+  }
+  return { band, matched, missing, extraneous, driftDetected, note }
+}
+
+/**
+ * The laboratory's honest conclusion (v0.36). States the confirmed gap and how
+ * many DIRECT candidates survived — including the honest empty case, which is a
+ * strength: the engine would rather recommend another cycle than dress up an
+ * adjacent word as a direct answer.
+ */
+function buildConclusion(families: WordFamily[], analysis: MeaningAnalysis): string {
+  const direct = families.filter((f) => f.direct).length
+  const gap = (analysis.interpretation || '').trim().replace(/\s+/g, ' ')
+  const gapLine = gap ? `Confirmed gap: ${gap}` : 'Confirmed gap identified.'
+  if (direct === 0) {
+    return `${gapLine} — No candidate passed every required gate as a direct answer; the laboratory recommends another evolutionary cycle. Adjacent discoveries are shown below.`
+  }
+  return `${gapLine} — ${direct} direct candidate${direct === 1 ? '' : 's'} survived; the rest are adjacent discoveries.`
 }
 
 /** Concept weight above which a meaning is "centred on" a concept (refusal gate). */

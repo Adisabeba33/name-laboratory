@@ -20,7 +20,7 @@ export interface ReportInput {
 }
 
 export function buildReport({ brief, results, gap, usedLLM, version, stamp }: ReportInput): string {
-  const { analysis, families, population } = results
+  const { analysis, families, population, conclusion } = results
   const L: string[] = []
   const words = families.flatMap((f) => f.words)
 
@@ -32,6 +32,14 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
   if (stamp) L.push(`- **Generated:** ${stamp}`)
   L.push(`- **Discovered:** ${words.length} words across ${families.length} languages`)
   L.push('')
+
+  // ── Laboratory conclusion (v0.36) ───────────────────────────────────
+  if (conclusion) {
+    L.push('## Laboratory conclusion')
+    L.push('')
+    L.push(conclusion)
+    L.push('')
+  }
 
   // ── Lexical evolution (Engine V6) ───────────────────────────────────
   // The honest funnel: the engine bred a population, most forms failed, a few
@@ -101,16 +109,20 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
   }
   L.push('')
 
-  // ── Words ───────────────────────────────────────────────────────────
-  L.push('## Words')
-  for (const fam of families) {
+  // ── Words, grouped by directness (v0.36) ────────────────────────────
+  const direct = families.filter((f) => f.direct)
+  const adjacent = families.filter((f) => !f.direct && !f.refusal)
+  const refused = families.filter((f) => f.refusal)
+
+  const familyBlock = (fam: (typeof families)[number]) => {
     L.push('')
-    if (fam.refusal) {
-      L.push(`### ${fam.character} — declines to translate`)
-      L.push(`_${fam.refusal.reason}_`)
-      continue
-    }
     L.push(`### ${fam.character} — lens: ${fam.lens.role} (${fam.lens.question})`)
+    L.push(
+      `_role: ${fam.semanticRole} · fidelity: ${fam.fidelity.band}` +
+        (fam.fidelity.matched.length ? ` (carries ${fam.fidelity.matched.join(', ')})` : '') +
+        (fam.fidelity.driftDetected ? ` · DRIFT: ${fam.fidelity.extraneous.join(', ')}` : '') +
+        `_`,
+    )
     const a = fam.acoustic
     L.push(
       `_acoustic: hardness ${a.hardness.toFixed(2)} · depth ${a.depth.toFixed(2)} · ` +
@@ -122,6 +134,28 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
         `shipped ${fmt(s.recommended)} · exceptional ${fmt(s.exceptional)}_`,
     )
     for (const w of fam.words) L.push(wordBlock(w))
+  }
+
+  L.push('## Words')
+  L.push('')
+  L.push('### Direct discoveries')
+  if (direct.length) direct.forEach(familyBlock)
+  else L.push('\n_No candidate named the gap directly — the laboratory recommends another cycle._')
+
+  if (adjacent.length) {
+    L.push('')
+    L.push('### Adjacent discoveries')
+    adjacent.forEach(familyBlock)
+  }
+
+  if (refused.length) {
+    L.push('')
+    L.push('### Declined')
+    for (const fam of refused) {
+      L.push('')
+      L.push(`#### ${fam.character} — declines to translate`)
+      L.push(`_${fam.refusal!.reason}_`)
+    }
   }
 
   return L.join('\n')

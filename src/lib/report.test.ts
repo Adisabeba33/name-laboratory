@@ -21,6 +21,8 @@ describe('buildReport', () => {
     })
     expect(text).toContain('# Word Laboratory — run report')
     expect(text).toContain('## Interpretation')
+    expect(text).toContain('## Laboratory conclusion')
+    expect(text).toContain('### Direct discoveries')
     expect(text).toContain('## Lexical evolution')
     expect(text).toContain('candidate forms')
     expect(text).toContain('## Semantic gap search')

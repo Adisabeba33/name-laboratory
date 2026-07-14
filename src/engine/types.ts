@@ -401,6 +401,16 @@ export interface WordFamily {
    * that no two languages in a run share a lens: 18 viewpoints, not 18 synonyms.
    */
   lens: LanguageLens
+  /** The lens's semantic role, hoisted for convenience (Engine v0.36). */
+  semanticRole: string
+  /**
+   * True when this family's words directly name the confirmed semantic gap
+   * (v0.36): a direct lens whose concept fidelity holds. Adjacent families are
+   * valuable discoveries but must not compete with direct answers.
+   */
+  direct: boolean
+  /** How directly this family's words answer the gap (structural, v0.36). */
+  fidelity: ConceptFidelity
   /** The meaning's acoustic profile this language's words were shaped by (V5). */
   acoustic: AcousticProfile
   /** This language's slice of the lexical-evolution funnel (V6): what it bred. */
@@ -432,6 +442,39 @@ export interface LanguageLens {
   role: string
   /** The question this viewpoint answers, e.g. "Who did you become?". */
   question: string
+  /**
+   * The lens's semantic role (Engine v0.36), e.g. "direct_target", "actor",
+   * "emotional_response", "consequence". Drives direct-vs-adjacent separation.
+   */
+  semanticRole: string
+  /** True when this lens names the meaning itself (a candidate for direct results). */
+  direct: boolean
+}
+
+/**
+ * Concept Fidelity (Engine v0.36) — how directly a family's words answer the
+ * confirmed semantic gap, judged structurally by concept overlap.
+ *
+ * Honest by construction: this is a STRUCTURAL fidelity (which concepts the words
+ * carry vs the meaning's core concepts), not an LLM semantic read — the band is
+ * the product, the numbers are derived and explained. `direct` families that drift
+ * into a recurrent engine archetype (survival / identity …) absent from the prompt
+ * are demoted, so a language-and-cognition meaning never surfaces a grief word as
+ * a direct answer.
+ */
+export interface ConceptFidelity {
+  /** Qualitative verdict: names the gap, sits nearby, or has drifted off. */
+  band: 'direct' | 'adjacent' | 'weak'
+  /** Core meaning concepts the words genuinely carry. */
+  matched: Concept[]
+  /** Core meaning concepts the words do NOT carry (informational). */
+  missing: Concept[]
+  /** Concepts the words carry that are archetype intrusions absent from the prompt. */
+  extraneous: Concept[]
+  /** True when a dominant archetype (survival/identity/…) has intruded. */
+  driftDetected: boolean
+  /** One honest sentence explaining the verdict. */
+  note: string
 }
 
 /**
@@ -711,4 +754,11 @@ export interface LaboratoryResult {
   families: WordFamily[]
   /** The run-level lexical-evolution census, summed across all languages (V6). */
   population: EvolutionStats
+  /**
+   * The laboratory's honest conclusion (v0.36): a short statement of the confirmed
+   * gap and how many DIRECT candidates survived — including the honest case where
+   * none did ("recommends another evolutionary cycle"). Adjacent families still
+   * appear, but this speaks to the direct answers only.
+   */
+  conclusion: string
 }

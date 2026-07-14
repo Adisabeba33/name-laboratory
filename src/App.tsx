@@ -7,6 +7,7 @@ import {
   DEFAULT_SPEAKABILITY,
   type CreativeMode,
   type LaboratoryResult,
+  type WordFamily,
   type WordPassport,
 } from './engine'
 import {
@@ -373,6 +374,39 @@ export default function App() {
   const allWords = results?.families.flatMap((f) => f.words) ?? []
   const stage = analyzing ? 'concept' : results ? 'word' : brief.trim() ? 'meaning' : 'idea'
 
+  /** One language's card — its words, or its refusal note (v0.36 grouping). */
+  const renderFamily = (fam: WordFamily) =>
+    fam.refusal ? (
+      <div className="langgroup refused" key={fam.id}>
+        <div className="langgroup-head">
+          <span className="langgroup-name">{fam.character}</span>
+          <span className="langgroup-refuse-tag">declines to translate</span>
+        </div>
+        <p className="refusal-note">{fam.refusal.reason}</p>
+      </div>
+    ) : (
+      <div className="langgroup" key={fam.id}>
+        <div className="langgroup-head">
+          <span className="langgroup-name">{fam.character}</span>
+          <span className="langgroup-lens" title={fam.lens.question}>
+            {fam.lens.role}
+          </span>
+          <span className="langgroup-feel">{fam.description.split('.')[0]}.</span>
+        </div>
+        <div className="wgrid">
+          {fam.words.map((p) => (
+            <WordCard
+              key={p.word}
+              p={p}
+              saved={savedKeys.has(p.word.toLowerCase())}
+              onOpen={() => setOpenWord(p)}
+              onToggleSave={() => toggleSave(p)}
+            />
+          ))}
+        </div>
+      </div>
+    )
+
   return (
     <div className="shell">
       {confirm && (
@@ -580,38 +614,50 @@ export default function App() {
                     </div>
                   </div>
 
-                  {results.families.map((fam) =>
-                    fam.refusal ? (
-                      <div className="langgroup refused" key={fam.id}>
-                        <div className="langgroup-head">
-                          <span className="langgroup-name">{fam.character}</span>
-                          <span className="langgroup-refuse-tag">declines to translate</span>
-                        </div>
-                        <p className="refusal-note">{fam.refusal.reason}</p>
-                      </div>
-                    ) : (
-                      <div className="langgroup" key={fam.id}>
-                        <div className="langgroup-head">
-                          <span className="langgroup-name">{fam.character}</span>
-                          <span className="langgroup-lens" title={fam.lens.question}>
-                            {fam.lens.role}
-                          </span>
-                          <span className="langgroup-feel">{fam.description.split('.')[0]}.</span>
-                        </div>
-                        <div className="wgrid">
-                          {fam.words.map((p) => (
-                            <WordCard
-                              key={p.word}
-                              p={p}
-                              saved={savedKeys.has(p.word.toLowerCase())}
-                              onOpen={() => setOpenWord(p)}
-                              onToggleSave={() => toggleSave(p)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ),
+                  {results.conclusion && (
+                    <p className="lab-conclusion">{results.conclusion}</p>
                   )}
+
+                  {(() => {
+                    const direct = results.families.filter((f) => f.direct)
+                    const adjacent = results.families.filter((f) => !f.direct && !f.refusal)
+                    const refused = results.families.filter((f) => f.refusal)
+                    return (
+                      <>
+                        {direct.length > 0 ? (
+                          <div className="famsection">
+                            <h3 className="famsection-title">Direct discoveries</h3>
+                            <p className="famsection-sub">These name the confirmed gap itself.</p>
+                            {direct.map(renderFamily)}
+                          </div>
+                        ) : (
+                          <div className="famsection">
+                            <p className="famsection-none">
+                              No candidate named the gap directly. The laboratory recommends another
+                              evolutionary cycle — the discoveries below sit adjacent to the meaning.
+                            </p>
+                          </div>
+                        )}
+
+                        {adjacent.length > 0 && (
+                          <div className="famsection">
+                            <h3 className="famsection-title">Adjacent discoveries</h3>
+                            <p className="famsection-sub">
+                              Related angles — the person, the feeling, the aftermath — not the meaning itself.
+                            </p>
+                            {adjacent.map(renderFamily)}
+                          </div>
+                        )}
+
+                        {refused.length > 0 && (
+                          <div className="famsection">
+                            <h3 className="famsection-title">Declined</h3>
+                            {refused.map(renderFamily)}
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </section>
               )}
 
