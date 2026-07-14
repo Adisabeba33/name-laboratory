@@ -41,17 +41,19 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
     L.push('')
   }
 
-  // ── Top discovery (v0.36) ───────────────────────────────────────────
+  // ── Top discovery (v0.36 + Morutho fix) ─────────────────────────────
   const directWords = families.filter((f) => f.direct).flatMap((f) => f.words)
   const top = [...directWords].sort((a, b) => b.discovery.score - a.discovery.score)[0]
+  L.push('## Top discovery')
+  L.push('')
   if (top) {
-    L.push('## Top discovery')
-    L.push('')
     L.push(`**${top.word}** — ${top.discovery.classification}, ${top.discovery.score}/100`)
     if (top.shortMeaning || top.meaning) L.push(`\n${top.shortMeaning || top.meaning}`)
     if (top.discovery.penalties.length) L.push(`\n_Risks: ${top.discovery.penalties.join(' ')}_`)
-    L.push('')
+  } else {
+    L.push('_No direct candidate survived this cycle — the winning word must name the exact kind of thing asked for, and none did._')
   }
+  L.push('')
 
   // ── Lexical evolution (Engine V6) ───────────────────────────────────
   // The honest funnel: the engine bred a population, most forms failed, a few

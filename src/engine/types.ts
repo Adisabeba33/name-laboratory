@@ -444,10 +444,16 @@ export interface WordFamily {
   lens: LanguageLens
   /** The lens's semantic role, hoisted for convenience (Engine v0.36). */
   semanticRole: string
+  /** The KIND of thing this family's words name (Morutho fix): moment / principle / … */
+  candidateType: HeadType
+  /** 0–1 match between this family's candidate type and the prompt's target type. */
+  targetMatch: number
   /**
    * True when this family's words directly name the confirmed semantic gap
-   * (v0.36): a direct lens whose concept fidelity holds. Adjacent families are
-   * valuable discoveries but must not compete with direct answers.
+   * (v0.36): a direct lens whose concept fidelity holds AND (Morutho fix) whose
+   * ontological type matches the target when the target is confidently known.
+   * Adjacent families are valuable discoveries but must not compete with direct
+   * answers.
    */
   direct: boolean
   /** How directly this family's words answer the gap (structural, v0.36). */
@@ -477,6 +483,42 @@ export interface LanguageRefusal {
   reason: string
 }
 
+/**
+ * The KIND of lexical object a prompt asks for (Morutho ranking fix §1). A word for
+ * a *moment* is ontologically different from a word for a *principle*, even when
+ * they are semantically close.
+ */
+export type HeadType =
+  | 'moment' | 'event' | 'process' | 'state' | 'feeling' | 'realization'
+  | 'person' | 'trait' | 'capacity' | 'relationship' | 'principle'
+  | 'condition' | 'object' | 'action' | 'social_phenomenon'
+  | 'bodily_sensation' | 'cultural_phenomenon'
+
+/**
+ * A locked, structured statement of what the user is asking for, decided BEFORE
+ * generation (§1). The decision layer gates candidates on this — a candidate whose
+ * type does not match the target cannot become a direct answer, no matter how
+ * semantically close (§2). `confidence` is low when no clear cue was found, and the
+ * gate is only enforced strictly when confidence is high (so vague prompts are not
+ * over-constrained).
+ */
+export interface TargetType {
+  /** Composite label, e.g. "moment_of_recognition". */
+  targetType: string
+  /** The ontological head — the kind of thing the word must name. */
+  headType: HeadType
+  /** A finer subtype when detectable, e.g. "recognition", "equivalence". */
+  subtype?: string
+  /** Structural participants, e.g. ["person_a","person_b"] for interpersonal meanings. */
+  participants: string[]
+  /** A short note on the causal mechanism, when the prompt states one. */
+  mechanism?: string
+  requiredTemporality: 'instantaneous' | 'durative' | 'timeless' | 'unspecified'
+  requiredSociality: 'interpersonal' | 'collective' | 'individual' | 'unspecified'
+  /** How confident the detection is — the gate only bites hard when 'high'. */
+  confidence: 'high' | 'low'
+}
+
 /** A language's assigned semantic viewpoint on the meaning (anti-convergence). */
 export interface LanguageLens {
   /** Short role label, e.g. "the event", "the person", "what emerged". */
@@ -490,6 +532,8 @@ export interface LanguageLens {
   semanticRole: string
   /** True when this lens names the meaning itself (a candidate for direct results). */
   direct: boolean
+  /** The KIND of thing this lens produces (Morutho fix): moment / principle / … */
+  outputType: HeadType
 }
 
 /**
@@ -896,6 +940,8 @@ export interface MeaningAnalysis {
   theme?: string
   /** The weighted concept map the interpretation produced. */
   concepts: ConceptVector
+  /** The KIND of lexical object the prompt asks for (Morutho fix), locked pre-generation. */
+  targetType?: TargetType
 }
 
 /**

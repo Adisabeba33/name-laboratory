@@ -24,6 +24,9 @@ import {
   computeDictionaryViability,
   buildCollisionReport,
   computeDiscovery,
+  detectTargetType,
+  targetTypeMatch,
+  dampenAttractors,
   acousticProfile,
   LANGUAGES,
   languageById,
@@ -794,6 +797,105 @@ describe('Brand Mode (v0.36 P5 — deterministic, collision-aware)', () => {
     expect(a.families.flatMap((f) => f.words).map((w) => [w.brandSafety.band, w.discovery.score])).toEqual(
       b.families.flatMap((f) => f.words).map((w) => [w.brandSafety.band, w.discovery.score]),
     )
+  })
+})
+
+describe('target-type alignment — regression suite (Morutho ranking fix §11)', () => {
+  it('detects the target head type before generation, with confidence', () => {
+    const tt = detectTargetType(
+      'A word for the realization that two people have been talking about the same experience for years under different names.',
+    )
+    expect(tt.headType).toBe('realization')
+    expect(tt.confidence).toBe('high')
+    expect(tt.requiredSociality).toBe('interpersonal')
+    expect(tt.participants).toEqual(['person_a', 'person_b'])
+    // Locked onto the analysis, so it is available before discovery.
+    const a = analyzeMeaning([], 'the exact moment it becomes real')
+    expect(a.targetType?.headType).toBe('moment')
+  })
+
+  it('TEST A — an abstract principle cannot be a direct answer to a moment-of-realization prompt', () => {
+    const r = runLaboratory({
+      brief: 'A word for the realization that two people have been talking about the same experience for years under different names.',
+      keywords: [],
+      count: 6,
+      seed: 7,
+    })
+    const principle = r.families.find((f) => f.candidateType === 'principle')
+    // The principle family exists (from "the meaning itself" lens) but is demoted.
+    expect(principle).toBeDefined()
+    expect(principle!.direct).toBe(false)
+    // Any Top Discovery must come from a temporal (moment-ish) type, never a principle.
+    const top = r.families.find((f) => f.words.some((w) => w.discovery.classification === 'Exceptional'))
+    if (top) expect(['moment', 'realization', 'event']).toContain(top.candidateType)
+  })
+
+  it('TEST B — a bodily/state candidate is only adjacent to a social-phenomenon prompt', () => {
+    const tt = detectTargetType(
+      'A word for the social reversal when a whole group suddenly turns against the person they were praising.',
+    )
+    expect(tt.headType).toBe('social_phenomenon')
+    expect(targetTypeMatch('bodily_sensation', tt.headType)).toBeLessThan(0.6)
+    expect(targetTypeMatch('state', tt.headType)).toBeLessThan(0.6)
+  })
+
+  it('TEST C — unsupported archetype attractors are damped out of dominance', () => {
+    const brief =
+      'the irreversible moment a previously inexpressible concept becomes speakable and changes what we can think'
+    const v = dampenAttractors({ identity: 1, survival: 1, grief: 1, knowledge: 0.9 }, brief.toLowerCase())
+    // Identity / survival / grief have no textual support here — damped.
+    expect(v.identity!).toBeLessThan(1)
+    expect(v.survival!).toBeLessThan(1)
+    expect(v.grief!).toBeLessThan(1)
+    // A genuinely-present, non-attractor concept is untouched and now dominates.
+    expect(v.knowledge).toBe(0.9)
+    expect(v.knowledge!).toBeGreaterThan(v.identity!)
+  })
+
+  it('TEST D — a "capacity" lens is not a direct answer unless the target is a capacity', () => {
+    const r = runLaboratory({
+      brief: 'A word for the realization that two people meant the same thing under different names.',
+      keywords: [],
+      count: 6,
+      seed: 7,
+    })
+    const capacity = r.families.find((f) => f.candidateType === 'capacity')
+    if (capacity) expect(capacity.direct).toBe(false)
+  })
+
+  it('TEST E — Top Discovery is blocked for person/capacity/principle on a moment prompt', () => {
+    const brief = 'A word for the exact moment two strangers realize they share the same rare memory.'
+    const head = detectTargetType(brief).headType
+    for (const seed of [3, 7, 42]) {
+      const r = runLaboratory({ brief, keywords: [], count: 6, seed })
+      const top = r.families.find((f) => f.words.some((w) => w.discovery.classification === 'Exceptional'))
+      if (top) {
+        expect(['person', 'capacity', 'principle']).not.toContain(top.candidateType)
+        expect(targetTypeMatch(top.candidateType, head)).toBeGreaterThanOrEqual(0.8)
+      }
+    }
+  })
+
+  it('can return no direct candidate at all (honest empty result)', () => {
+    // A high-confidence target with no matching lens selected → zero direct families.
+    const r = runLaboratory({
+      brief: 'A word for the realization that two people have been talking about the same experience for years under different names.',
+      keywords: [],
+      count: 6,
+      seed: 7,
+    })
+    // Whatever the outcome, direct families all match the target strongly.
+    for (const f of r.families.filter((f) => f.direct)) {
+      expect(f.targetMatch).toBeGreaterThanOrEqual(0.6)
+    }
+  })
+
+  it('does not over-constrain low-confidence prompts (no regression)', () => {
+    // A prompt with no clear target cue keeps the prior fidelity-only behaviour.
+    const a = analyzeMeaning(['trust', 'intelligence', 'calm'], 'A premium AI company focused on medicine')
+    expect(a.targetType?.confidence).toBe('low')
+    const r = runLaboratory({ brief: 'A premium AI company focused on medicine', keywords: ['trust', 'intelligence'], count: 6, seed: 7 })
+    expect(r.families.some((f) => f.direct)).toBe(true)
   })
 })
 

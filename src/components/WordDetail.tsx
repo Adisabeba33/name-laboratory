@@ -96,16 +96,13 @@ export function WordDetail({
             </div>
             <p className="wd-lede">{p.meaning}</p>
             <div className="wd-badges">
-              <span className={`band band-${p.adoption.band.toLowerCase()}`}>
-                {p.adoption.band} · speech adoption
+              <span
+                className={`disc disc-${p.discovery.classification.toLowerCase()}`}
+                title="Lexical Discovery Score — computed from weighted components against real thresholds, not enthusiasm"
+              >
+                {p.discovery.classification} · {p.discovery.score}/100
               </span>
               <span className={`speak speak-${p.speakability.toLowerCase()}`}>{p.speakability}</span>
-              <span
-                className={`nat nat-${p.naturalness.toLowerCase()}`}
-                title="How real the word feels — could it already exist in a living human language?"
-              >
-                {p.naturalness}
-              </span>
               <span className="wd-origin-species">{p.construction.species}</span>
             </div>
             {onOpenRelated &&

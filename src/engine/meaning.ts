@@ -10,6 +10,41 @@ import { PATTERNS } from './data/patterns'
 import { THEMES, type Theme } from './data/themes'
 import { IDEAS } from './data/ideas'
 import { normaliseVector, resolveKeyword, topConcepts } from './concepts'
+import { detectTargetType } from './target-type'
+
+/**
+ * Recurrent "engine favourite" concepts and the prompt cues that would justify
+ * them (Morutho fix §7). When one of these appears in the vector but the prompt
+ * contains none of its signature phrases, it is a broad emotional association the
+ * engine reached for, not something the user asked for — so it is damped. This
+ * stops identity / hope / transformation from dominating a prompt about, say,
+ * semantic equivalence between two speakers.
+ */
+const ATTRACTOR_SIGNATURES: Partial<Record<Concept, RegExp>> = {
+  identity: /\b(identity|who i (am|was)|the person i (was|am|became)|myself|sense of self|(become|becoming|became) (someone|a (different|new) person)|different person)\b/,
+  hope: /\b(hope|hopeful|optimis|looking forward|a better (day|future|life))\b/,
+  longing: /\b(long(ing)?|yearn|ache for|miss(ing)?|nostalg)\b/,
+  transformation: /\b(transform|becom(e|ing)|became|change(d|s)? into|metamorph|turn(ed|ing) into)\b/,
+  memory: /\b(memor|remember|recall|forget|reminisc|the past)\b/,
+  survival: /\b(surviv|endur|made it through|lived through|barely)\b/,
+  grief: /\b(grief|griev|mourn|loss|bereave|sorrow)\b/,
+  rebirth: /\b(rebirth|reborn|born again|renew|from the ashes)\b/,
+}
+
+/**
+ * Damp any attractor concept the prompt does not actually support (§7). Pure:
+ * returns a new vector. An unsupported attractor keeps 40% of its weight (so a
+ * faint, still-traceable echo survives) rather than dominating.
+ */
+export function dampenAttractors(vector: ConceptVector, text: string): ConceptVector {
+  const out: ConceptVector = { ...vector }
+  for (const [concept, signature] of Object.entries(ATTRACTOR_SIGNATURES) as [Concept, RegExp][]) {
+    if (out[concept] != null && !signature.test(text)) {
+      out[concept] = (out[concept] as number) * 0.4
+    }
+  }
+  return out
+}
 
 /**
  * Meaning Analysis — the heart of the Meaning Engine.
@@ -46,7 +81,9 @@ export function analyzeMeaning(keywords: string[], brief?: string): MeaningAnaly
   }
   if (Object.keys(vector).length === 0) add('creation', 1)
 
-  const concepts = normaliseVector(vector)
+  // §7 — strip broad "engine favourite" concepts the prompt does not support, so
+  // the vector reflects the extracted structure, not the engine's habits.
+  const concepts = normaliseVector(dampenAttractors(vector, text))
   const theme = matchTheme(concepts)
   const top = topConcepts(concepts, 7)
 
@@ -59,6 +96,8 @@ export function analyzeMeaning(keywords: string[], brief?: string): MeaningAnaly
     directions: theme ? theme.directions : genericDirections(top),
     theme: theme?.id,
     concepts,
+    // §1 — lock the target type before generation (from the raw brief).
+    targetType: detectTargetType(brief ?? ''),
   }
 }
 

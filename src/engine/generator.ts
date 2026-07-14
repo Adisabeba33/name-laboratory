@@ -31,6 +31,7 @@ import { computeParadigm } from './morphology'
 import { computeEtymology } from './etymology'
 import { computePhonology } from './phonology'
 import { computeSemanticNetwork } from './network'
+import { targetTypeMatch, detectTargetType } from './target-type'
 import { acousticProfile, blendAcoustic, conceptAcoustic } from './acoustics'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
@@ -88,19 +89,27 @@ interface LensDef extends LanguageLens {
 }
 
 const LENS_POOL: LensDef[] = [
-  // Direct lenses — name the meaning itself; always eligible.
-  { role: 'the meaning itself', question: 'What is it, named directly?', semanticRole: 'direct_target', direct: true, requires: [] },
-  { role: 'the threshold', question: 'The exact moment it becomes real?', semanticRole: 'event', direct: true, requires: [] },
+  // Direct lenses — name the meaning itself; always eligible. Their OUTPUT TYPE is
+  // what the ranking fix keys on: "the meaning itself" yields a principle, "the
+  // threshold" yields a moment — so a moment prompt makes the moment lens direct
+  // and demotes the principle lens, and vice versa.
+  { role: 'the meaning itself', question: 'What is it, named directly?', semanticRole: 'direct_target', direct: true, outputType: 'principle', requires: [] },
+  { role: 'the threshold', question: 'The exact moment it becomes real?', semanticRole: 'event', direct: true, outputType: 'moment', requires: [] },
   // Process — a general, always-eligible fallback so a run can always be filled.
-  { role: 'the process', question: 'How does it unfold?', semanticRole: 'process', direct: false, requires: [] },
+  { role: 'the process', question: 'How does it unfold?', semanticRole: 'process', direct: false, outputType: 'process', requires: [] },
   // Adjacent lenses — offered only when the meaning supports them.
-  { role: 'the capacity', question: 'What new ability does it grant?', semanticRole: 'consequence', direct: false, requires: ['future', 'creation', 'knowledge', 'intelligence', 'transformation', 'vision'] },
-  { role: 'the person', question: 'Who did you become?', semanticRole: 'actor', direct: false, requires: ['human', 'identity'] },
-  { role: 'the feeling', question: 'What does it feel like from the inside?', semanticRole: 'emotional_response', direct: false, requires: ['grief', 'hope', 'longing', 'loss', 'courage', 'calm'] },
-  { role: 'the cost', question: 'What did it take from you?', semanticRole: 'cost', direct: false, requires: ['loss', 'grief', 'survival'] },
-  { role: 'the observer', question: 'What would someone else notice?', semanticRole: 'observer', direct: false, requires: ['human', 'vision'] },
-  { role: 'the aftermath', question: 'What does ordinary life become now?', semanticRole: 'aftermath', direct: false, requires: ['transformation', 'future', 'memory', 'rebirth'] },
+  { role: 'the capacity', question: 'What new ability does it grant?', semanticRole: 'consequence', direct: false, outputType: 'capacity', requires: ['future', 'creation', 'knowledge', 'intelligence', 'transformation', 'vision'] },
+  { role: 'the person', question: 'Who did you become?', semanticRole: 'actor', direct: false, outputType: 'person', requires: ['human', 'identity'] },
+  { role: 'the feeling', question: 'What does it feel like from the inside?', semanticRole: 'emotional_response', direct: false, outputType: 'feeling', requires: ['grief', 'hope', 'longing', 'loss', 'courage', 'calm'] },
+  { role: 'the cost', question: 'What did it take from you?', semanticRole: 'cost', direct: false, outputType: 'state', requires: ['loss', 'grief', 'survival'] },
+  { role: 'the observer', question: 'What would someone else notice?', semanticRole: 'observer', direct: false, outputType: 'state', requires: ['human', 'vision'] },
+  { role: 'the aftermath', question: 'What does ordinary life become now?', semanticRole: 'aftermath', direct: false, outputType: 'state', requires: ['transformation', 'future', 'memory', 'rebirth'] },
 ]
+
+/** A family whose type matches the target this well (or better) can be a direct answer. */
+const DIRECT_TARGET_MATCH = 0.6
+/** A family must match the target this well to be eligible for Top Discovery (§6). */
+const TOP_TARGET_MATCH = 0.8
 
 /** Concepts that are recurrent engine archetypes — drift when a prompt did not ask for them. */
 const ARCHETYPE_ATTRACTORS: Concept[] = [
@@ -175,8 +184,12 @@ export function discoverFromAnalysis(
 ): LaboratoryResult {
   // A focus (from chosen concept directions) re-weights discovery without
   // changing the analysis the UI shows — the interpretation stays stable while
-  // the words sharpen toward the selected angle.
-  const forDiscovery = focus ? { ...analysis, concepts: focus } : analysis
+  // the words sharpen toward the selected angle. If the (LLM) analysis carries no
+  // target type, detect it from the brief so the ranking gate still applies.
+  const withTarget: MeaningAnalysis = analysis.targetType
+    ? analysis
+    : { ...analysis, targetType: detectTargetType(request.brief ?? '') }
+  const forDiscovery = focus ? { ...withTarget, concepts: focus } : withTarget
   const families = discoverFamilies(request, forDiscovery)
   return {
     analysis,
@@ -208,6 +221,8 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
   const mode: CreativeMode = request.mode ?? DEFAULT_MODE
   const languageCount = Math.max(3, Math.min(8, request.count ?? 6))
 
+  // Morutho ranking fix — the locked target type, decided before generation.
+  const target = analysis.targetType
   const concepts = analysis.concepts
   const leadConcepts = topConcepts(concepts, 8)
   // A wide, distinct spread of angles so each language can lead with a DIFFERENT
@@ -264,6 +279,8 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
         theme: IDEAS[refusal.concept].noun,
         lens,
         semanticRole: lens.semanticRole,
+        candidateType: lens.outputType,
+        targetMatch: target ? targetTypeMatch(lens.outputType, target.headType) : 1,
         direct: false,
         fidelity: {
           band: 'weak',
@@ -327,6 +344,16 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
     // has drifted into a recurrent archetype the prompt never asked for.
     const fidelity = computeFidelity(lens, langConcepts, concepts)
 
+    // Morutho ranking fix — target-type gate. A family is direct only if its
+    // ontological type matches the prompt's target (when the target is confidently
+    // known), so an abstract principle can never pose as a direct moment. When the
+    // target is uncertain (low confidence), we don't over-constrain: fidelity alone
+    // decides, exactly as before.
+    const candidateType = lens.outputType
+    const targetMatch = target ? targetTypeMatch(candidateType, target.headType) : 1
+    const typeOk = !target || target.confidence === 'low' || targetMatch >= DIRECT_TARGET_MATCH
+    const direct = fidelity.band === 'direct' && typeOk
+
     families.push({
       id: `${language.id}-${i}`,
       name: language.character,
@@ -338,7 +365,9 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
       theme: IDEAS[langConcepts[0]].noun,
       lens,
       semanticRole: lens.semanticRole,
-      direct: fidelity.band === 'direct',
+      candidateType,
+      targetMatch,
+      direct,
       fidelity,
       acoustic,
       stats,
@@ -377,10 +406,15 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
     }
   }
 
-  // v0.36 — award "Exceptional" to at most ONE word per run: the strongest DIRECT
-  // candidate that also clears the absolute bar. Many runs clear it for no one, and
-  // that honest zero is a strength, not a bug (spec §11, §17).
-  const directWords = families.filter((f) => f.direct).flatMap((f) => f.words)
+  // v0.36 + Morutho fix — award "Exceptional" (the Top Discovery) to at most ONE
+  // word per run: the strongest DIRECT candidate that also clears the absolute
+  // bar AND, when the target type is confidently known, strongly matches it (§6).
+  // So an adjacent principle can never be crowned over a direct moment, and many
+  // runs honestly crown no one.
+  const eligibleFamilies = families.filter(
+    (f) => f.direct && (!target || target.confidence === 'low' || f.targetMatch >= TOP_TARGET_MATCH),
+  )
+  const directWords = eligibleFamilies.flatMap((f) => f.words)
   let top: WordPassport | undefined
   for (const w of directWords) {
     if (!isExceptionalEligible(w.discovery, w.dictionaryViability.overall)) continue
@@ -580,19 +614,27 @@ function planRefusals(
   const maxRefusals = Math.min(count >= 5 ? 2 : 1, Math.max(0, chosen.length - MIN_PRODUCERS))
   if (maxRefusals === 0) return refusals
 
+  // Only the meaning's genuinely central concepts can justify a refusal (§9).
+  const core = new Set(topConcepts(concepts, 2))
   chosen.forEach((language, i) => {
     if (refusals.size >= maxRefusals) return
-    const blind = blindConcept(language, concepts)
+    const blind = blindConcept(language, concepts, core)
     if (blind) refusals.set(i, { concept: blind, reason: refusalReason(language, blind) })
   })
   return refusals
 }
 
-/** The strongest concept this language is blind to that the meaning centres on, or null. */
-function blindConcept(language: Language, concepts: ConceptVector): Concept | null {
+/**
+ * The concept this language is blind to that the meaning is genuinely CENTRED on
+ * (Morutho fix §9). Restricted to the meaning's core so a language never refuses
+ * over a secondary emotion ("no shape for hope" when hope is a footnote) — the
+ * refusal must be about the actual target.
+ */
+function blindConcept(language: Language, concepts: ConceptVector, core: Set<Concept>): Concept | null {
   let best: Concept | null = null
   let bestValue = REFUSE_THRESHOLD
   for (const c of language.blindTo ?? []) {
+    if (!core.has(c)) continue
     const v = concepts[c] ?? 0
     if (v >= bestValue) {
       bestValue = v
@@ -602,11 +644,16 @@ function blindConcept(language: Language, concepts: ConceptVector): Concept | nu
   return best
 }
 
-/** An honest, in-character sentence explaining why a language declines to translate. */
+/**
+ * An honest, in-character sentence for a refusal (§9). References the ACTUAL
+ * central concept the language cannot hold, and frames the decline as a worldview
+ * mismatch rather than a failure.
+ */
 function refusalReason(language: Language, concept: Concept): string {
+  const c = IDEAS[concept].label.toLowerCase()
   return (
-    `${language.feel} ${language.character} keeps no shape for ${IDEAS[concept].label.toLowerCase()} — ` +
-    `it declines to coin a word rather than force one that would lie.`
+    `${language.character} does not lexicalize ${c} as a single word. ${language.feel} ` +
+    `Its worldview renders ${c} only obliquely, so it declines rather than force a word that would misname the meaning.`
   )
 }
 

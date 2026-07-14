@@ -42,7 +42,7 @@ export function WordCard({
           >
             {p.discovery.classification} {p.discovery.score}
           </span>
-          {showBrand ? (
+          {showBrand && (
             <span
               className={`brandsafe brandsafe-${p.brandSafety.band.toLowerCase()}`}
               title={
@@ -53,8 +53,6 @@ export function WordCard({
             >
               brand: {p.brandSafety.band}
             </span>
-          ) : (
-            <span className={`nat nat-${p.naturalness.toLowerCase()}`}>{p.naturalness}</span>
           )}
         </div>
         <div className="wcard-meta">
