@@ -652,6 +652,18 @@ describe('naturalness (Engine V3 — inevitable, not fabricated)', () => {
     expect(naturalnessBand(naturalness('Gruthuthoth'))).toBe('Fabricated')
   })
 
+  it('softly penalises same-class sharp-consonant clustering', () => {
+    // A wall of hisses / a knot of hard stops scores below its clean cousin…
+    expect(naturalness('Sysiasio')).toBeLessThan(naturalness('Sena'))
+    expect(naturalness('Grugukyx')).toBeLessThan(naturalness('Koranar'))
+    expect(naturalness('Sassos')).toBeLessThan(naturalness('Lasyvis'))
+    // …but coronal-/nasal-heavy words (r, n, l) are natural and stay untouched.
+    expect(naturalness('Koranar')).toBeGreaterThan(0.9)
+    expect(naturalness('Banana')).toBeGreaterThan(0.85)
+    // Two of a class is fine — only real clustering (3+) bites.
+    expect(naturalness('Asholis')).toBeGreaterThan(0.9)
+  })
+
   it('makes synthesis rank believability over originality', () => {
     // With naturalness as the primary signal, a default run should almost never
     // ship a fabricated-feeling word.

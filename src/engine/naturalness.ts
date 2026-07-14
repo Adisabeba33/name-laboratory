@@ -29,6 +29,17 @@ const FANTASY_ENDING = /(iel|yth|ath|aith|oth|eth|yx|ux|ax|ox|ix|aer|eol|wyn)$/
 /** Letters that read as exotic when they appear, worse when they pile up. */
 const RARE_LETTERS = new Set(['x', 'z', 'q'])
 
+/**
+ * Sharp consonant classes whose over-repetition reads as a tongue-twister. Only
+ * the *marked* classes are here — sibilants (s/z/x) and velars (k/g/q). Coronals
+ * (t/d/n/l/r) and nasals are the most common sounds in real speech, so a word
+ * leaning on them is natural, not awkward, and is deliberately left exempt.
+ */
+const SHARP_CLASS: Record<string, string> = {
+  s: 'sibilant', z: 'sibilant', x: 'sibilant',
+  k: 'velar', g: 'velar', q: 'velar',
+}
+
 function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n))
 }
@@ -63,9 +74,36 @@ export function naturalness(word: string): number {
     Math.max(0.3, 1 - rare * 0.35) *
     (thCount >= 2 ? 0.55 : 1) *
     lengthPenalty *
-    (longestVowelRun(w) >= 3 ? 0.75 : 1)
+    (longestVowelRun(w) >= 3 ? 0.75 : 1) *
+    sharpClusterPenalty(w)
 
   return clamp01(base * penalty)
+}
+
+/**
+ * Soft penalty for piling up same-class SHARP consonants — a wall of hisses
+ * ("Sysiasio") or a knot of hard stops ("Grugukyx"). Gentle and multiplicative:
+ * three of one class ≈ 0.86, four ≈ 0.72; a single sharp letter repeated three or
+ * more times shaves a touch more. Floored at 0.6 so it only *nudges* ranking (a
+ * soft signal), never erases an otherwise fine word. Two of a class is fine, so
+ * ordinary words ("Kodak", "Asholis") are untouched — only real clustering bites.
+ */
+function sharpClusterPenalty(w: string): number {
+  const classCounts: Record<string, number> = {}
+  const letterCounts: Record<string, number> = {}
+  for (const c of w) {
+    const cls = SHARP_CLASS[c]
+    if (!cls) continue
+    classCounts[cls] = (classCounts[cls] ?? 0) + 1
+    letterCounts[c] = (letterCounts[c] ?? 0) + 1
+  }
+  let factor = 1
+  for (const n of Object.values(classCounts)) {
+    if (n >= 3) factor *= Math.max(0.6, 1 - (n - 2) * 0.14)
+  }
+  const maxLetter = Math.max(0, ...Object.values(letterCounts))
+  if (maxLetter >= 3) factor *= 0.88
+  return factor
 }
 
 /** Map the 0–1 score to an honest band. */
