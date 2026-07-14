@@ -22,6 +22,7 @@ import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
 import { fetchUsage, hasCachedUsage } from './lib/usage'
 import { fetchSemanticGap, hasCachedGap, type SemanticGapResult } from './lib/semantic-search'
 import { SemanticGap } from './components/SemanticGap'
+import { buildReport } from './lib/report'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { ConceptDirections } from './components/ConceptDirections'
 import { ConfirmDialog } from './components/ConfirmDialog'
@@ -98,6 +99,7 @@ export default function App() {
   // Semantic Gap Search — "does a word already exist for this?" (LLM, discover mode).
   const [gap, setGap] = useState<SemanticGapResult | null>(null)
   const [gapLoading, setGapLoading] = useState(false)
+  const [reportCopied, setReportCopied] = useState(false)
   // Cost control: every LLM call must be confirmed. `llmAllowed` is the
   // "don't ask again this session" escape; `confirm` drives the dialog.
   const [llmAllowed, setLlmAllowed] = useState(false)
@@ -308,6 +310,41 @@ export default function App() {
     setOpenWord((prev) => (prev ? apply(prev) : prev))
   }
 
+  /**
+   * Build a plain-text report of the whole run and copy it to the clipboard (plus
+   * offer a .md download) — one shareable document instead of many screenshots.
+   */
+  async function copyReport() {
+    if (!results) return
+    const text = buildReport({
+      brief: brief.trim(),
+      results,
+      gap,
+      usedLLM,
+      version: __APP_VERSION__,
+      stamp: new Date().toISOString(),
+    })
+    try {
+      await navigator.clipboard.writeText(text)
+      setReportCopied(true)
+      window.setTimeout(() => setReportCopied(false), 2200)
+    } catch {
+      // Clipboard blocked — fall through to the download below.
+    }
+    // Also drop a file, so it can be saved/forwarded even where clipboard is denied.
+    try {
+      const blob = new Blob([text], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `word-lab-report.md`
+      a.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 4000)
+    } catch {
+      /* ignore */
+    }
+  }
+
   /** Navigate to the discovery workspace and scroll it into view. */
   function goDiscover() {
     setView('discover')
@@ -504,9 +541,14 @@ export default function App() {
                         {refining && <span className="refining"> · writing meanings…</span>}
                       </p>
                     </div>
-                    <button className="btn ghost sm" onClick={() => run(true)} disabled={analyzing}>
-                      Try another set
-                    </button>
+                    <div className="results-actions">
+                      <button className="btn ghost sm" onClick={copyReport} title="Copy the full run as text + download a .md file">
+                        {reportCopied ? 'Copied ✓' : 'Copy report'}
+                      </button>
+                      <button className="btn ghost sm" onClick={() => run(true)} disabled={analyzing}>
+                        Try another set
+                      </button>
+                    </div>
                   </div>
 
                   {results.families.map((fam) => (
