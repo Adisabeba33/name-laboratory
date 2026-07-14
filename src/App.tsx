@@ -30,6 +30,7 @@ import { Sidebar } from './components/Sidebar'
 import { BottomNav } from './components/BottomNav'
 import { Hero } from './components/Hero'
 import { StepFlow } from './components/StepFlow'
+import { EvolutionLoader } from './components/EvolutionLoader'
 import { DiscoverInput } from './components/DiscoverInput'
 import { LexiconRail } from './components/LexiconRail'
 import { WordCard } from './components/WordCard'
@@ -496,7 +497,7 @@ export default function App() {
                   </div>
 
                   <div className="workspace-center">
-                    <StepFlow active={stage} />
+                    {analyzing ? <EvolutionLoader /> : <StepFlow active={stage} />}
                   </div>
 
                   <div className="workspace-right">

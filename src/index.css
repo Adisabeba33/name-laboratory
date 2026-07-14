@@ -673,6 +673,54 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .mode b { display: block; font-size: 13px; color: var(--text); font-weight: 500; }
 .mode span { font-size: 11.5px; line-height: 1.35; color: var(--faint); }
 
+/* ── Evolution loader (V6) — the run narrates its own lexical evolution ── */
+.evoload-title {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+.evoload-orb {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  margin: 0 0 18px 2px;
+}
+.evoload-orb span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  opacity: 0;
+  animation: evo-pulse 1.8s ease-out infinite;
+}
+.evoload-orb span:nth-child(2) { animation-delay: 0.6s; }
+.evoload-orb span:nth-child(3) { animation-delay: 1.2s; }
+@keyframes evo-pulse {
+  0% { transform: scale(0.35); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.evoload-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.evoload-item { display: flex; gap: 12px; align-items: flex-start; transition: opacity 0.3s; }
+.evoload-item.todo { opacity: 0.4; }
+.evoload-dot {
+  margin-top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-3);
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.3s, border-color 0.3s;
+}
+.evoload-item.on .evoload-dot { border-color: var(--accent); background: var(--accent); animation: evo-blink 1s ease-in-out infinite; }
+.evoload-item.done .evoload-dot { border-color: var(--good); background: var(--good); }
+@keyframes evo-blink { 50% { opacity: 0.35; } }
+.evoload-name { display: block; font-size: 13px; color: var(--text); font-weight: 500; }
+.evoload-item.todo .evoload-name { color: var(--dim); font-weight: 400; }
+.evoload-detail { display: block; font-size: 11.5px; line-height: 1.35; color: var(--faint); }
+
 /* ── Step flow ──────────────────────────────────────────────────────── */
 .stepflow-title {
   font-size: 11px;
