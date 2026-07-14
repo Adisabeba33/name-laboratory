@@ -203,6 +203,10 @@ function wordBlock(w: WordPassport): string {
       `brand/domain/trademark/multilingual: not checked`,
   )
   b.push(
+    `- brand safety: ${w.brandSafety.band} (${w.brandSafety.score}/100)` +
+      (w.brandSafety.warnings.length ? ` — ${w.brandSafety.warnings.join(' ')}` : ''),
+  )
+  b.push(
     `- **discovery: ${w.discovery.classification} — ${w.discovery.score}/100**` +
       `  ·  dictionary viability: ${w.dictionaryViability.band} (${Math.round(w.dictionaryViability.overall * 100)})` +
       `  ·  collision-safety prior: ${Math.round(w.discovery.collisionSafetyPrior * 100)}`,

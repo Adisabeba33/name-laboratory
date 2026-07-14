@@ -359,6 +359,8 @@ export interface WordPassport {
   collision: Collision
   /** v0.36 P4 — layered collision analysis; never a bare "none" (honest by layer). */
   collisionReport: CollisionReport
+  /** v0.36 P5 — collision-aware brand-safety verdict (is it usable as a name?). */
+  brandSafety: BrandSafety
   /** Where the word's sound descends from — species + phonetic ancestry. */
   ancestry: Ancestry
   /** The word's own inherited genome / evolution profile. */
@@ -788,6 +790,31 @@ export interface GenerationRequest {
   speakability?: number
   /** Seed for deterministic generation (useful for tests and shareable results). */
   seed?: number
+  /**
+   * Brand Mode (v0.36 P5, deterministic half): score and gate for real-world name
+   * use — collision safety dominates, an existing/near word is rejected outright,
+   * and very short (easily-occupied) forms are capped. Distinct from meaning
+   * discovery, which optimises for naming the semantic gap.
+   */
+  brandMode?: boolean
+}
+
+/**
+ * A collision-aware brand-safety verdict (v0.36 P5) — is a coined word safe and
+ * usable as a real-world NAME? A structural read from the layered collision report
+ * plus distinctiveness, spellability, length and cross-language reach. Honest: the
+ * external collision layers are still unverified, so a strong verdict means "clears
+ * every check we CAN run offline", not "trademark-clear".
+ */
+export interface BrandSafety {
+  /** Qualitative verdict. */
+  band: 'Poor' | 'Fair' | 'Good' | 'Strong'
+  /** 0–100 structural score. */
+  score: number
+  /** What makes it brand-usable, in plain language. */
+  strengths: string[]
+  /** Concrete brand risks (collision, length, look-alikes). */
+  warnings: string[]
 }
 
 /**

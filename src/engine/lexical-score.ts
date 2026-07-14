@@ -1,6 +1,7 @@
 import type {
   AcousticProfile,
   Collision,
+  CollisionReport,
   DictionaryViability,
   LexicalClass,
   LexicalDiscoveryScore,
@@ -34,6 +35,23 @@ const WEIGHTS = {
   crossLanguage: 0.05,
 }
 
+/**
+ * Brand Mode weights (v0.36 P5): collision safety dominates and cross-language
+ * reach matters more, while concept fidelity, morphology and sound-symbolism
+ * matter less — a name must be FREE and sayable before it is meaningful. Sound
+ * congruence and morphology drop to zero (a brand is not inflected in a sentence).
+ */
+const BRAND_WEIGHTS = {
+  fidelity: 0.15,
+  viability: 0.15,
+  collision: 0.3,
+  speakability: 0.1,
+  memorability: 0.15,
+  morphology: 0,
+  congruence: 0,
+  crossLanguage: 0.15,
+}
+
 export interface DiscoveryInput {
   word: string
   genome: WordGenome
@@ -51,10 +69,16 @@ export interface DiscoveryInput {
   fidelityScore?: number
   /** The family's intended acoustic profile, for sound-meaning congruence. */
   acoustic: AcousticProfile
+  /** Brand Mode — collision-dominant weights + brand hard gates (v0.36 P5). */
+  brandMode?: boolean
+  /** The layered collision report, used by the brand hard gates. */
+  collisionReport?: CollisionReport
 }
 
 export function computeDiscovery(input: DiscoveryInput): LexicalDiscoveryScore {
   const { word, genome, collision, dictionaryViability: dv, pronunciation, fidelityBand, acoustic } = input
+  const brand = input.brandMode === true
+  const W = brand ? BRAND_WEIGHTS : WEIGHTS
 
   const fidelity =
     input.fidelityScore ??
@@ -69,27 +93,33 @@ export function computeDiscovery(input: DiscoveryInput): LexicalDiscoveryScore {
     : 0.7) * 100
 
   const components: ScoreComponent[] = [
-    { label: 'Concept fidelity', score: round(fidelity), weight: WEIGHTS.fidelity },
-    { label: 'Dictionary viability', score: round(dv.overall * 100), weight: WEIGHTS.viability },
-    { label: 'Collision safety', score: round(collisionSafetyPrior * 100), weight: WEIGHTS.collision },
-    { label: 'Speakability', score: round(speakability), weight: WEIGHTS.speakability },
-    { label: 'Memorability', score: round(memorability), weight: WEIGHTS.memorability },
-    { label: 'Morphological flexibility', score: round(morphology), weight: WEIGHTS.morphology },
-    { label: 'Semantic-phonetic congruence', score: round(congruence), weight: WEIGHTS.congruence },
-    { label: 'Cross-language stability', score: round(crossLanguage), weight: WEIGHTS.crossLanguage },
-  ]
+    { label: 'Concept fidelity', score: round(fidelity), weight: W.fidelity },
+    { label: 'Dictionary viability', score: round(dv.overall * 100), weight: W.viability },
+    { label: 'Collision safety', score: round(collisionSafetyPrior * 100), weight: W.collision },
+    { label: 'Speakability', score: round(speakability), weight: W.speakability },
+    { label: 'Memorability', score: round(memorability), weight: W.memorability },
+    { label: 'Morphological flexibility', score: round(morphology), weight: W.morphology },
+    { label: 'Semantic-phonetic congruence', score: round(congruence), weight: W.congruence },
+    { label: 'Cross-language stability', score: round(crossLanguage), weight: W.crossLanguage },
+  ].filter((c) => c.weight > 0)
 
   const score = round(components.reduce((sum, c) => sum + c.score * c.weight, 0))
 
   // Hard gates (spec §19): a drifted meaning or an exact known-word collision is
-  // rejected outright, no matter how the other components score.
-  const rejected = fidelityBand === 'weak' || collision.match === 'exact'
+  // rejected outright, no matter how the other components score. In Brand Mode any
+  // internal collision (exact OR near) is disqualifying — a name cannot be an
+  // existing word — and a very short, easily-occupied form is capped.
+  const brandInternalHit = brand && !!input.collisionReport && input.collisionReport.internalDictionary !== 'clear'
+  const rejected = fidelityBand === 'weak' || collision.match === 'exact' || brandInternalHit
+  const brandShortCap = brand && input.collisionReport?.shortWordRisk === 'high'
+  const brandPhoneticCap = brand && input.collisionReport?.phonetic === 'high'
+
   // NOTE: this per-word classification tops out at "Strong". "Exceptional" is not
   // a per-word threshold — survivor components saturate, so a straight cutoff would
   // crown far too many. It is awarded per RUN to the single strongest direct
   // candidate that clears an absolute bar (see the generator's promotion step),
   // which keeps the top tier genuinely rare (spec §11 + the TOP DISCOVERY idea).
-  const classification: LexicalClass = rejected
+  let classification: LexicalClass = rejected
     ? 'Rejected'
     : score >= 80
       ? 'Strong'
@@ -98,6 +128,11 @@ export function computeDiscovery(input: DiscoveryInput): LexicalDiscoveryScore {
         : score >= 60
           ? 'Experimental'
           : 'Weak'
+  // Brand caps: an easily-occupied short form or a look-alike can't top the list.
+  if (classification !== 'Rejected') {
+    if (brandShortCap && rank(classification) > rank('Experimental')) classification = 'Experimental'
+    else if (brandPhoneticCap && rank(classification) > rank('Viable')) classification = 'Viable'
+  }
 
   const penalties: string[] = []
   if (collision.match === 'exact') penalties.push('Collides exactly with a known word.')
@@ -106,9 +141,20 @@ export function computeDiscovery(input: DiscoveryInput): LexicalDiscoveryScore {
   if (fidelityBand === 'adjacent') penalties.push('Adjacent to the gap, not a direct answer.')
   if (fidelityBand === 'weak') penalties.push('Drifted off the confirmed meaning.')
   if (dv.overall < 0.6) penalties.push('Low dictionary viability.')
-  if (congruence < 55) penalties.push('Sound does not clearly express the meaning.')
+  if (!brand && congruence < 55) penalties.push('Sound does not clearly express the meaning.')
+  if (brandInternalHit) penalties.push('Brand: collides with an existing word — unusable as a name.')
+  if (brandShortCap) penalties.push('Brand: very short — the name/domain space is almost certainly occupied.')
+  if (brandPhoneticCap) penalties.push('Brand: sounds like an existing word — confusable.')
 
   return { score, classification, components, penalties, collisionSafetyPrior }
+}
+
+/** Order the tiers so brand caps can only ever lower a classification, never raise it. */
+const CLASS_RANK: Record<LexicalClass, number> = {
+  Rejected: 0, Weak: 1, Experimental: 2, Viable: 3, Strong: 4, Exceptional: 5,
+}
+function rank(c: LexicalClass): number {
+  return CLASS_RANK[c]
 }
 
 /**

@@ -25,6 +25,7 @@ import { offlineCollision, buildCollisionReport } from './collision'
 import { naturalness, naturalnessBand, EXCEPTIONAL_NATURALNESS } from './naturalness'
 import { computeFitness } from './fitness'
 import { computeDictionaryViability } from './dictionary-viability'
+import { computeBrandSafety } from './brand-safety'
 import { computeDiscovery, isExceptionalEligible, NEUTRAL_ACOUSTIC } from './lexical-score'
 import { computeParadigm } from './morphology'
 import { computeEtymology } from './etymology'
@@ -153,7 +154,7 @@ export function runLaboratory(request: GenerationRequest): LaboratoryResult {
     analysis,
     families,
     population: aggregatePopulation(families),
-    conclusion: buildConclusion(families, analysis),
+    conclusion: buildConclusion(families, analysis, request.brandMode),
   }
 }
 
@@ -181,7 +182,7 @@ export function discoverFromAnalysis(
     analysis,
     families,
     population: aggregatePopulation(families),
-    conclusion: buildConclusion(families, analysis),
+    conclusion: buildConclusion(families, analysis, request.brandMode),
   }
 }
 
@@ -370,6 +371,8 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
         fidelityBand: family.fidelity.band,
         fidelityScore: Math.min(100, base + inCore * 13),
         acoustic: family.acoustic,
+        brandMode: request.brandMode,
+        collisionReport: word.collisionReport,
       })
     }
   }
@@ -411,9 +414,11 @@ export function buildPassport(
   const evolution = computeWordEvolution(word, genome, language, generation, reference, prototype)
   const pronunciation = ratePronunciation(word, genome)
   const collision = offlineCollision(word)
+  const collisionReport = buildCollisionReport(word)
   const etymology = computeEtymology(word, language, IDEAS[lead].essence)
   // v0.36 — could it behave like a real lexical item, and how strong is it overall.
   const dictionaryViability = computeDictionaryViability(word, pronunciation, etymology.stages.length)
+  const brandSafety = computeBrandSafety({ word, collisionReport, dictionaryViability, genome, pronunciation })
   // The discovery score is finalised in the family post-pass with real fidelity;
   // here it is computed with a neutral (adjacent) context so a standalone or
   // evolved passport still carries a sensible score.
@@ -444,7 +449,8 @@ export function buildPassport(
     phonology,
     relations: [],
     collision,
-    collisionReport: buildCollisionReport(word),
+    collisionReport,
+    brandSafety,
     ancestry: buildAncestry(lead, language),
     evolution,
     emotionalDNA,
@@ -533,10 +539,20 @@ function computeFidelity(lens: LensDef, carried: Concept[], concepts: ConceptVec
  * strength: the engine would rather recommend another cycle than dress up an
  * adjacent word as a direct answer.
  */
-function buildConclusion(families: WordFamily[], analysis: MeaningAnalysis): string {
+function buildConclusion(families: WordFamily[], analysis: MeaningAnalysis, brandMode = false): string {
   const direct = families.filter((f) => f.direct).length
   const gap = (analysis.interpretation || '').trim().replace(/\s+/g, ' ')
   const gapLine = gap ? `Confirmed gap: ${gap}` : 'Confirmed gap identified.'
+  if (brandMode) {
+    const words = families.flatMap((f) => f.words)
+    const safe = words.filter((w) => w.brandSafety.band === 'Strong' || w.brandSafety.band === 'Good').length
+    return (
+      `${gapLine} — Brand Mode: scoring for real-world name use, so collision safety outweighs meaning. ` +
+      (safe > 0
+        ? `${safe} name${safe === 1 ? '' : 's'} clear every collision check we can run offline (external brand / domain / trademark still unverified).`
+        : `No name cleared the offline collision checks strongly — try another cycle. External checks remain unverified.`)
+    )
+  }
   if (direct === 0) {
     return `${gapLine} — No candidate passed every required gate as a direct answer; the laboratory recommends another evolutionary cycle. Adjacent discoveries are shown below.`
   }

@@ -1526,6 +1526,23 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .collide-def { font-size: 12.5px; color: var(--faint); font-style: italic; }
 .collide-domains { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
+/* v0.36 P5 — brand-safety chip + block. */
+.brandsafe {
+  font-size: 11px; padding: 2px 9px; border-radius: 999px;
+  border: 1px solid var(--border-2); color: var(--dim); font-variant-numeric: tabular-nums;
+}
+.brandsafe-strong { color: var(--good); border-color: rgba(100, 230, 166, 0.35); }
+.brandsafe-good { color: var(--accent-2); border-color: rgba(89, 166, 255, 0.3); }
+.brandsafe-fair { color: var(--star); border-color: rgba(255, 210, 122, 0.3); }
+.brandsafe-poor { color: var(--risk); border-color: rgba(244, 163, 139, 0.35); }
+.brandsafe-block { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.brandsafe-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.brandsafe-head h4 { margin: 0; }
+.brandsafe-list { margin: 4px 0; padding-left: 16px; display: flex; flex-direction: column; gap: 2px; }
+.brandsafe-list li { font-size: 12.5px; }
+.brandsafe-list.good li { color: var(--dim); }
+.brandsafe-list.risk li { color: var(--risk); }
+
 /* v0.36 P4 — layered collision report. */
 .collide-layers { display: flex; flex-direction: column; gap: 1px; background: var(--border); border-radius: var(--r-sm); overflow: hidden; margin-bottom: 12px; }
 .collide-layer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; background: var(--panel-2); font-size: 12.5px; }

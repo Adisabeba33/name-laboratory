@@ -24,6 +24,7 @@ export { naturalness, naturalnessBand, EXCEPTIONAL_NATURALNESS } from './natural
 export type { NaturalnessBand } from './naturalness'
 export { computeFitness, SURVIVOR_FLOOR } from './fitness'
 export { computeDictionaryViability } from './dictionary-viability'
+export { computeBrandSafety } from './brand-safety'
 export { computeDiscovery, NEUTRAL_ACOUSTIC } from './lexical-score'
 export { computeParadigm } from './morphology'
 export { computeEtymology } from './etymology'

@@ -11,11 +11,13 @@ export function WordCard({
   saved,
   onOpen,
   onToggleSave,
+  showBrand = false,
 }: {
   p: WordPassport
   saved: boolean
   onOpen: () => void
   onToggleSave: () => void
+  showBrand?: boolean
 }) {
   const oneLine = (p.shortMeaning || p.meaning).replace(/\s*\(.*$/, '').trim()
   return (
@@ -40,7 +42,20 @@ export function WordCard({
           >
             {p.discovery.classification} {p.discovery.score}
           </span>
-          <span className={`nat nat-${p.naturalness.toLowerCase()}`}>{p.naturalness}</span>
+          {showBrand ? (
+            <span
+              className={`brandsafe brandsafe-${p.brandSafety.band.toLowerCase()}`}
+              title={
+                p.brandSafety.warnings[0] ||
+                p.brandSafety.strengths[0] ||
+                'Collision-aware brand safety'
+              }
+            >
+              brand: {p.brandSafety.band}
+            </span>
+          ) : (
+            <span className={`nat nat-${p.naturalness.toLowerCase()}`}>{p.naturalness}</span>
+          )}
         </div>
         <div className="wcard-meta">
           {p.pronunciationGuide && <span className="wcard-say">{p.pronunciationGuide}</span>}

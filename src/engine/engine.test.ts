@@ -23,6 +23,7 @@ import {
   EXCEPTIONAL_NATURALNESS,
   computeDictionaryViability,
   buildCollisionReport,
+  computeDiscovery,
   acousticProfile,
   LANGUAGES,
   languageById,
@@ -738,6 +739,61 @@ describe('layered collision analysis (v0.36 Phase 4)', () => {
 
   it('is deterministic', () => {
     expect(buildCollisionReport('Miresen')).toEqual(buildCollisionReport('Miresen'))
+  })
+})
+
+describe('Brand Mode (v0.36 P5 — deterministic, collision-aware)', () => {
+  const REQ = { brief: 'a bold fintech startup', keywords: [], count: 6 as const }
+
+  it('gives every word a brand-safety verdict', () => {
+    const r = runLaboratory({ ...REQ, seed: 5, brandMode: true })
+    for (const w of r.families.flatMap((f) => f.words)) {
+      expect(['Poor', 'Fair', 'Good', 'Strong']).toContain(w.brandSafety.band)
+      expect(w.brandSafety.score).toBeGreaterThanOrEqual(0)
+      expect(w.brandSafety.score).toBeLessThanOrEqual(100)
+    }
+  })
+
+  it('re-weights the discovery score toward collision safety', () => {
+    const plain = runLaboratory({ ...REQ, seed: 5 }).families.flatMap((f) => f.words)[0]
+    const brand = runLaboratory({ ...REQ, seed: 5, brandMode: true }).families.flatMap((f) => f.words)[0]
+    const wt = (w: typeof plain, label: string) =>
+      w.discovery.components.find((c) => c.label.startsWith(label))?.weight ?? 0
+    // Collision safety weighs far more, concept fidelity far less, in Brand Mode.
+    expect(wt(brand, 'Collision')).toBeGreaterThan(wt(plain, 'Collision'))
+    expect(wt(brand, 'Concept')).toBeLessThan(wt(plain, 'Concept'))
+    // Sound-symbolism and morphology are dropped entirely for a name.
+    expect(wt(brand, 'Semantic-phonetic')).toBe(0)
+    expect(wt(brand, 'Morphological')).toBe(0)
+  })
+
+  it('reframes the conclusion for name use', () => {
+    const r = runLaboratory({ ...REQ, seed: 5, brandMode: true })
+    expect(r.conclusion).toContain('Brand Mode')
+  })
+
+  it('hard-rejects an existing-word collision as a brand', () => {
+    // "table" is an existing word — disqualifying for a brand no matter its sound.
+    const d = computeDiscovery({
+      word: 'table',
+      genome: computeGenome('table', ['order']),
+      collision: offlineCollision('table'),
+      collisionReport: buildCollisionReport('table'),
+      dictionaryViability: computeDictionaryViability('table', [{ language: 'English', stars: 5 }], 2),
+      pronunciation: [{ language: 'English', stars: 5 }],
+      fidelityBand: 'direct',
+      acoustic: { hardness: 0.5, depth: 0.5, clip: 0.5, openness: 0.5 },
+      brandMode: true,
+    })
+    expect(d.classification).toBe('Rejected')
+  })
+
+  it('is deterministic per seed', () => {
+    const a = runLaboratory({ ...REQ, seed: 5, brandMode: true })
+    const b = runLaboratory({ ...REQ, seed: 5, brandMode: true })
+    expect(a.families.flatMap((f) => f.words).map((w) => [w.brandSafety.band, w.discovery.score])).toEqual(
+      b.families.flatMap((f) => f.words).map((w) => [w.brandSafety.band, w.discovery.score]),
+    )
   })
 })
 

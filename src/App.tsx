@@ -205,7 +205,7 @@ export default function App() {
     setOpenWord(null)
     if (!reseed && !steer) setGap(null) // a fresh meaning restarts the vocabulary search
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
-    const request = { brief: trimmed || undefined, keywords, mode, count, speakability, seed }
+    const request = { brief: trimmed || undefined, keywords, mode, count, speakability, seed, brandMode: appMode === 'name' }
     // A steer re-interprets the SAME prompt with an added emphasis, without
     // changing what the user typed. Word synthesis still flows from the analysis.
     const analysisBrief = steer ? `${trimmed}\n\nSteer the reading: ${steer}.` : trimmed
@@ -401,6 +401,7 @@ export default function App() {
               saved={savedKeys.has(p.word.toLowerCase())}
               onOpen={() => setOpenWord(p)}
               onToggleSave={() => toggleSave(p)}
+              showBrand={appMode === 'name'}
             />
           ))}
         </div>

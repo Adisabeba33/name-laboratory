@@ -600,6 +600,21 @@ function GenomeTab({ p }: { p: WordPassport }) {
           <p className="tabsec-muted">
             Confidence: {p.collisionReport.confidence}. {p.collisionReport.summary}
           </p>
+          <div className="brandsafe-block">
+            <div className="brandsafe-head">
+              <h4>Brand safety</h4>
+              <span className={`brandsafe brandsafe-${p.brandSafety.band.toLowerCase()}`}>
+                {p.brandSafety.band} · {p.brandSafety.score}
+              </span>
+            </div>
+            {p.brandSafety.strengths.length > 0 && (
+              <ul className="brandsafe-list good">{p.brandSafety.strengths.map((s) => <li key={s}>{s}</li>)}</ul>
+            )}
+            {p.brandSafety.warnings.length > 0 && (
+              <ul className="brandsafe-list risk">{p.brandSafety.warnings.map((s) => <li key={s}>{s}</li>)}</ul>
+            )}
+            <p className="tabsec-muted">Collision-aware — "Strong" clears every check we can run offline, not a trademark clearance.</p>
+          </div>
         </div>
       </div>
     </section>
