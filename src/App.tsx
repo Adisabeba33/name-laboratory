@@ -155,6 +155,7 @@ export default function App() {
           word: w.word,
           language: f.character,
           hint: w.meaning.split(' (')[0],
+          lens: f.lens,
         })),
       )
       const map = await fetchBespokeMeanings(trimmed, items)
@@ -555,6 +556,9 @@ export default function App() {
                     <div className="langgroup" key={fam.id}>
                       <div className="langgroup-head">
                         <span className="langgroup-name">{fam.character}</span>
+                        <span className="langgroup-lens" title={fam.lens.question}>
+                          {fam.lens.role}
+                        </span>
                         <span className="langgroup-feel">{fam.description.split('.')[0]}.</span>
                       </div>
                       <div className="wgrid">

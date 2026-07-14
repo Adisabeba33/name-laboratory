@@ -4,6 +4,7 @@ import type {
   CreativeMode,
   GenerationRequest,
   LaboratoryResult,
+  LanguageLens,
   MeaningAnalysis,
   WordFamily,
   WordPassport,
@@ -58,6 +59,23 @@ const MODE_LANGUAGES: Record<CreativeMode, string[]> = {
 const WORDS_PER_LANGUAGE = 3
 
 /**
+ * Semantic viewpoints (anti-convergence). Each discovered language is assigned a
+ * DIFFERENT lens so the run reads as several civilizations looking at the same
+ * meaning from different sides — not one observation restated 18 times. These
+ * deliberately point away from the convergence trap ("what remains / the core").
+ */
+const LENSES: LanguageLens[] = [
+  { role: 'the event', question: 'What actually happened?' },
+  { role: 'the person', question: 'Who did you become?' },
+  { role: 'the feeling', question: 'What does it feel like from the inside?' },
+  { role: 'the turning point', question: 'The exact moment it changed?' },
+  { role: 'the cost', question: 'What did it take from you?' },
+  { role: 'the observer', question: 'What would someone else notice?' },
+  { role: 'what emerged', question: 'What is new that was not there before?' },
+  { role: 'the aftermath', question: 'What does ordinary life become now?' },
+]
+
+/**
  * The laboratory's front door — the full Meaning Engine pipeline.
  *
  *   Meaning Analysis → Hidden Concepts → Concept Network → Language Discovery
@@ -100,6 +118,9 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
 
   const concepts = analysis.concepts
   const leadConcepts = topConcepts(concepts, 8)
+  // A wide, distinct spread of angles so each language can lead with a DIFFERENT
+  // primary concept instead of all converging on the single strongest one.
+  const anglePool = topConcepts(concepts, Math.max(languageCount, 8))
 
   const seed =
     request.seed ??
@@ -114,10 +135,15 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
   const seenWords = new Set<string>()
 
   chosen.forEach((language, i) => {
+    // Anti-convergence: this language leads with its OWN distinct primary angle
+    // (round-robin over the spread, so families don't all pick the same concept),
+    // and takes a distinct semantic lens (the event / the person / the feeling…).
+    const primary = anglePool.length ? anglePool[i % anglePool.length] : leadConcepts[0]
+    const lens = LENSES[i % LENSES.length]
     // The concepts this language can carry, in brief-priority order. Each word
     // takes a different lead/support pair from this list, so every word gets its
-    // own shade of meaning while staying on the language's theme.
-    const langConcepts = pickLanguageConcepts(language, concepts, leadConcepts)
+    // own shade of meaning while staying on the language's distinct angle.
+    const langConcepts = pickLanguageConcepts(language, concepts, leadConcepts, primary)
     const vocab = speakNative(language, rng, WORDS_PER_LANGUAGE, request.speakability)
     const fresh = vocab.words.filter((w) => {
       const key = w.toLowerCase()
@@ -147,6 +173,7 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
       genome: languageGenome,
       ancestry: language.families,
       theme: IDEAS[langConcepts[0]].noun,
+      lens,
       words,
     })
   })
@@ -245,16 +272,20 @@ function pickLanguageConcepts(
   language: Language,
   concepts: ConceptVector,
   leadConcepts: Concept[],
+  primary: Concept,
 ): Concept[] {
   const ordered: Concept[] = []
   const add = (c: Concept | undefined) => {
     if (c && !ordered.includes(c)) ordered.push(c)
   }
 
-  // 1) brief concepts the language natively resonates with.
-  for (const c of leadConcepts) if (language.concepts.includes(c)) add(c)
-  // 2) the language's own concepts that the brief also touched.
+  // 0) the language's ASSIGNED distinct angle leads — this is what keeps families
+  //    from all converging on the single strongest brief concept.
+  add(primary)
+  // 1) the language's own concepts that the brief also touched (its native shade).
   for (const c of language.concepts) if ((concepts[c] ?? 0) > 0) add(c)
+  // 2) brief concepts the language natively resonates with.
+  for (const c of leadConcepts) if (language.concepts.includes(c)) add(c)
   // 3) remaining brief concepts, then the language's defaults.
   for (const c of leadConcepts) add(c)
   for (const c of language.concepts) add(c)

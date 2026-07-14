@@ -86,7 +86,7 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
   L.push('## Words')
   for (const fam of families) {
     L.push('')
-    L.push(`### ${fam.character} — ${fam.theme}`)
+    L.push(`### ${fam.character} — lens: ${fam.lens.role} (${fam.lens.question})`)
     for (const w of fam.words) L.push(wordBlock(w))
   }
 

@@ -387,8 +387,22 @@ export interface WordFamily {
   ancestry: LanguageFamily[]
   /** The idea this language was discovered around. */
   theme: string
+  /**
+   * The distinct semantic angle this language interprets the meaning from — its
+   * "civilization's" viewpoint (the event, the person, the feeling…). Assigned so
+   * that no two languages in a run share a lens: 18 viewpoints, not 18 synonyms.
+   */
+  lens: LanguageLens
   /** The native-speaker words that prove the language exists. */
   words: WordPassport[]
+}
+
+/** A language's assigned semantic viewpoint on the meaning (anti-convergence). */
+export interface LanguageLens {
+  /** Short role label, e.g. "the event", "the person", "what emerged". */
+  role: string
+  /** The question this viewpoint answers, e.g. "Who did you become?". */
+  question: string
 }
 
 /** The creative styles that bias which roots and endings the engine reaches for. */

@@ -191,6 +191,17 @@ describe('native synthesis (diverse speakers of one language)', () => {
     const words = generateWords({ ...MEDICINE_REQUEST, count: 8 }).map((w) => w.word.toLowerCase())
     expect(words.filter((w) => /^(lum|iris|nous|reg|leuk)/.test(w))).toEqual([])
   })
+
+  it('gives each language a DISTINCT semantic lens (anti-convergence)', () => {
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const f of families) {
+      expect(f.lens.role.length).toBeGreaterThan(0)
+      expect(f.lens.question.length).toBeGreaterThan(0)
+    }
+    // No two languages in the run share a lens — they are viewpoints, not accents.
+    const roles = families.map((f) => f.lens.role)
+    expect(new Set(roles).size).toBe(roles.length)
+  })
 })
 
 describe('speakability — words that stay sayable', () => {

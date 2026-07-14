@@ -14,6 +14,8 @@ export interface WordItem {
   word: string
   language: string
   hint: string
+  /** The language's semantic lens — "the event", "the person"… (anti-convergence). */
+  lens?: { role: string; question: string }
 }
 
 export interface WordMeaning {

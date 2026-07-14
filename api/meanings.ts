@@ -51,14 +51,16 @@ const SYSTEM = `You are the Lexicographer of Word Laboratory. A person is naming
 
 WRITE IT AS IF THE WORD ALREADY EXISTS — a word the language has quietly owned for years, not a fresh invention. The reader should think "wait… is this already a real word?" Define it the way an actual dictionary would: plainly, precisely, with no fantasy, mystical or magical framing. These are ordinary words a language was simply missing.
 
+Each word carries a "lens" — the distinct angle its language looks at the meaning from (e.g. the event, the person, the feeling, the turning point, the cost, the observer, what emerged, the aftermath). This is the most important instruction: DEFINE EACH WORD THROUGH ITS LENS, so the whole set reads as many viewpoints on the meaning, NOT one observation restated. A word lensed on "the event" defines what happened; on "the person" defines who you became; on "the feeling" defines the inner sensation; on "the cost" defines what was taken. Do NOT let every word drift back to "the core / the self / what remains" — that convergence is the failure to avoid.
+
 For every word return:
-- meaning: one sentence in English — a real, specific definition ("the moment when…", "the quiet ache of…"), the way a dictionary states it. Not a restatement of the idea, not decorative poetry.
+- meaning: one sentence in English — a real, specific definition ("the moment when…", "the quiet ache of…"), the way a dictionary states it, written FROM this word's lens. Not a restatement of the idea, not decorative poetry.
 - meaningRu: the same meaning in fluent, natural Russian a native speaker would actually feel (idiomatic, not word-for-word).
 - short: a 3–6 word English distillation ("Identity reborn through survival.").
 - pos: the word's natural grammatical role — usually "noun"; use "verb"/"adjective" only if it truly reads that way.
 
 Rules:
-- Make every word's meaning DISTINCT — each names a different facet of the idea.
+- Make every word's meaning genuinely DISTINCT — driven by its lens, each names a different facet of the idea. Two words should never be paraphrases of each other.
 - Stay faithful to the request's register: a concrete/sensory idea gets a grounded, sensory definition; an emotional one reaches for its deep core. Never inflate a plain image into philosophy.
 - Let the word's language character shade the tone, lightly — but the entry must always read as ordinary language, never fantasy.
 - Return one entry per word, echoing the word exactly.`
@@ -84,10 +86,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Compact, sanitised list for the model.
   const list = words
     .filter((w: unknown) => w && typeof (w as { word?: unknown }).word === 'string')
-    .map((w: { word: string; language?: string; hint?: string }) => ({
+    .map((w: { word: string; language?: string; hint?: string; lens?: { role?: string; question?: string } }) => ({
       word: String(w.word).slice(0, 40),
       language: String(w.language ?? '').slice(0, 40),
       hint: String(w.hint ?? '').slice(0, 160),
+      lens: w.lens
+        ? `${String(w.lens.role ?? '').slice(0, 40)} — ${String(w.lens.question ?? '').slice(0, 80)}`
+        : '',
     }))
 
   try {
@@ -125,7 +130,7 @@ interface WordEntry {
 async function writeEntries(
   client: Anthropic,
   brief: string,
-  list: Array<{ word: string; language: string; hint: string }>,
+  list: Array<{ word: string; language: string; hint: string; lens: string }>,
 ): Promise<WordEntry[]> {
   const response = await client.messages.create({
     model: MODEL,
