@@ -113,6 +113,7 @@ export function speakNative(
       !KNOWN_WORDS.has(key) &&
       awkwardClusters(word) < ctl.clusterLimit &&
       longestVowelRun(word) <= ctl.maxVowelRun &&
+      !reduplicated(word) &&
       hasVowel(word)
     ) {
       seen.add(key)
@@ -252,6 +253,15 @@ function attachEnding(word: string, ending: string, lang: Language, rng: Rng): s
 
 function hasVowel(word: string): boolean {
   return [...word].some(isVowel)
+}
+
+/**
+ * True if the word repeats a 2-letter chunk back-to-back (ro·ro, ri·ri, na·na).
+ * That immediate reduplication reads sing-song / childish ("Vororonoth"), so we
+ * reject it — distinct from the healthy internal variety diversity selection wants.
+ */
+function reduplicated(word: string): boolean {
+  return /(..)\1/.test(normalise(word))
 }
 
 /**

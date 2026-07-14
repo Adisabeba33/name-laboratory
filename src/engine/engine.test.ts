@@ -207,6 +207,16 @@ describe('speakability — words that stay sayable', () => {
     }
   })
 
+  it('avoids sing-song reduplication (ro-ro, ri-ri)', () => {
+    for (const id of LANGS) {
+      for (const seed of [7, 42, 99, 123]) {
+        for (const w of speakNative(languageById(id), new Rng(seed), 3).words) {
+          expect(/(..)\1/.test(w.toLowerCase())).toBe(false)
+        }
+      }
+    }
+  })
+
   it('lets words vary in size (not all clamped to one syllable count)', () => {
     const sizes = new Set<number>()
     for (const id of LANGS) {
@@ -382,6 +392,16 @@ describe('pronunciation & brand', () => {
     for (const w of ['Korvain', 'Morakai', 'Threnora', 'Ophelith']) {
       expect(translitRu(w)).toMatch(/^[а-яё]+$/)
     }
+  })
+
+  it('treats a standalone "y" as a vowel, not a dropped glide', () => {
+    // Regression: "Lynyvysal" used to collapse to "лнвсал" (all vowels lost).
+    expect(translitRu('Lynyvysal')).toBe('лынывысал')
+    expect(translitRu('Syvalis')).toBe('сывалис')
+    // Velar softening: к/г/х want "и", not "ы".
+    expect(translitRu('Kyra')).toBe('кира')
+    // Glide forms are unaffected (handled before the single-letter pass).
+    expect(translitRu('Seiral')).toBe('сейрал')
   })
 
   it('gives every generated word a Cyrillic form and a usage slot', () => {

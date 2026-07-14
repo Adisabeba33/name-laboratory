@@ -42,7 +42,7 @@ const DIGRAPHS: Array<[RegExp, string]> = [
 const SINGLE: Record<string, string> = {
   a: 'а', b: 'б', c: 'к', d: 'д', e: 'е', f: 'ф', g: 'г', h: 'х', i: 'и',
   j: 'дж', k: 'к', l: 'л', m: 'м', n: 'н', o: 'о', p: 'п', q: 'к', r: 'р',
-  s: 'с', t: 'т', u: 'у', v: 'в', w: 'в', x: 'кс', y: 'й', z: 'з',
+  s: 'с', t: 'т', u: 'у', v: 'в', w: 'в', x: 'кс', y: 'ы', z: 'з',
   ë: 'е', ï: 'и', ö: 'о', ü: 'у',
 }
 
@@ -53,6 +53,9 @@ export function translitRu(word: string): string {
   for (const [re, ru] of DIGRAPHS) w = w.replace(re, ru)
   let out = ''
   for (const ch of w) out += ch in SINGLE ? SINGLE[ch] : ch
+  // Standalone Latin 'y' is a vowel here (→ 'ы'); Russian spelling wants 'и'
+  // after ж/ш/ч/щ and the velars к/г/х (жи-ши, ки-ги-хи), so soften it there.
+  out = out.replace(/([жшчщкгх])ы/g, '$1и')
   // A trailing hard 'й' after a consonant reads better dropped (e.g. "-syn" не "-сйн").
   return out.replace(/([бвгджзклмнпрстфхцчшщ])й(?![аеёиоуыэюя])/g, '$1')
 }
