@@ -1,5 +1,5 @@
 import { ArrowIcon } from './icons'
-import { Placeholder } from './Placeholder'
+import heroArtifact from '../assets/hero-artifact.webp'
 
 /**
  * The opening statement of the institute.
@@ -51,12 +51,17 @@ export function Hero({
       </div>
 
       <div className="hero-art">
-        <Placeholder
-          width={700}
-          height={700}
-          title="Future Interactive Artifact"
-          note="a living crystal / language tree / semantic sphere"
-        />
+        <span className="hero-artifact-glow" aria-hidden />
+        <figure className="hero-artifact">
+          <img
+            src={heroArtifact}
+            width={700}
+            height={700}
+            alt="A luminous crystal held in an orbiting semantic field — the laboratory's living artifact of meaning."
+            loading="eager"
+            decoding="async"
+          />
+        </figure>
       </div>
     </section>
   )
