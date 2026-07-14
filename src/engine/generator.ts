@@ -6,6 +6,7 @@ import type {
   GenerationRequest,
   LaboratoryResult,
   LanguageLens,
+  LanguageRefusal,
   MeaningAnalysis,
   WordFamily,
   WordPassport,
@@ -158,6 +159,12 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
   // Step 2 — Language Discovery: languages whose philosophy fits the meaning.
   const chosen = selectLanguages(concepts, mode, languageCount, rng, analysis.theme)
 
+  // Step 2b — Refusals (V4): a language whose worldview cannot hold a strong strand
+  // of this meaning declines to translate it, rather than force a word that would
+  // lie. Kept rare and never at the expense of a usable run: at most a couple of
+  // languages refuse, and at least MIN_PRODUCERS always produce words.
+  const refusals = planRefusals(chosen, concepts, languageCount)
+
   // Step 3 — for each language, derive its genome and generate native words.
   const families: WordFamily[] = []
   const seenWords = new Set<string>()
@@ -168,13 +175,34 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
     // and takes a distinct semantic lens (the event / the person / the feeling…).
     const primary = anglePool.length ? anglePool[i % anglePool.length] : leadConcepts[0]
     const lens = LENSES[i % LENSES.length]
+    // V5 — this language's sound leans toward its own angle, anchored to the whole
+    // meaning, so a grief-angle language sounds different from a fire-angle one.
+    const acoustic = blendAcoustic(conceptAcoustic(primary), meaningAcoustic, 0.6)
+
+    // V4 — if this language refuses the meaning, record the refusal and coin nothing.
+    const refusal = refusals.get(i)
+    if (refusal) {
+      families.push({
+        id: `${language.id}-${i}`,
+        name: language.character,
+        character: language.character,
+        description: language.description,
+        nativeCharacteristics: language.nativeCharacteristics,
+        genome: computeLanguageGenome(language, []),
+        ancestry: language.families,
+        theme: IDEAS[refusal.concept].noun,
+        lens,
+        acoustic,
+        stats: { generated: 0, rejected: 0, survived: 0, recommended: 0, exceptional: 0 },
+        refusal,
+        words: [],
+      })
+      return
+    }
     // The concepts this language can carry, in brief-priority order. Each word
     // takes a different lead/support pair from this list, so every word gets its
     // own shade of meaning while staying on the language's distinct angle.
     const langConcepts = pickLanguageConcepts(language, concepts, leadConcepts, primary)
-    // V5 — this language's sound leans toward its own angle, anchored to the whole
-    // meaning, so a grief-angle language sounds different from a fire-angle one.
-    const acoustic = blendAcoustic(conceptAcoustic(primary), meaningAcoustic, 0.6)
     const vocab = speakNative(language, rng, WORDS_PER_LANGUAGE, request.speakability, acoustic)
     const fresh = vocab.words.filter((w) => {
       const key = w.toLowerCase()
@@ -325,6 +353,57 @@ function selectLanguages(
   }).sort((x, y) => y.score - x.score)
 
   return ranked.slice(0, Math.min(count, LANGUAGES.length)).map((r) => r.language)
+}
+
+/** Concept weight above which a meaning is "centred on" a concept (refusal gate). */
+const REFUSE_THRESHOLD = 0.55
+/** Never leave a run with fewer than this many producing languages. */
+const MIN_PRODUCERS = 3
+
+/**
+ * Decide which discovered languages refuse this meaning (V4). A language refuses
+ * when the meaning carries — strongly — a concept its worldview is blind to. Kept
+ * deliberately rare: capped at one or two per run, and never enough to drop the
+ * run below {@link MIN_PRODUCERS} producing languages. Deterministic (walks the
+ * chosen order), so the same meaning always refuses in the same places.
+ */
+function planRefusals(
+  chosen: Language[],
+  concepts: ConceptVector,
+  count: number,
+): Map<number, LanguageRefusal> {
+  const refusals = new Map<number, LanguageRefusal>()
+  const maxRefusals = Math.min(count >= 5 ? 2 : 1, Math.max(0, chosen.length - MIN_PRODUCERS))
+  if (maxRefusals === 0) return refusals
+
+  chosen.forEach((language, i) => {
+    if (refusals.size >= maxRefusals) return
+    const blind = blindConcept(language, concepts)
+    if (blind) refusals.set(i, { concept: blind, reason: refusalReason(language, blind) })
+  })
+  return refusals
+}
+
+/** The strongest concept this language is blind to that the meaning centres on, or null. */
+function blindConcept(language: Language, concepts: ConceptVector): Concept | null {
+  let best: Concept | null = null
+  let bestValue = REFUSE_THRESHOLD
+  for (const c of language.blindTo ?? []) {
+    const v = concepts[c] ?? 0
+    if (v >= bestValue) {
+      bestValue = v
+      best = c
+    }
+  }
+  return best
+}
+
+/** An honest, in-character sentence explaining why a language declines to translate. */
+function refusalReason(language: Language, concept: Concept): string {
+  return (
+    `${language.feel} ${language.character} keeps no shape for ${IDEAS[concept].label.toLowerCase()} — ` +
+    `it declines to coin a word rather than force one that would lie.`
+  )
 }
 
 /**

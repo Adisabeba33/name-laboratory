@@ -439,6 +439,54 @@ describe('semantic network (Engine V4 — navigable lexicon graph)', () => {
   })
 })
 
+describe('language refusals (Engine V4 — a worldview that cannot hold a meaning)', () => {
+  const GRIEF = 'the quiet grief of outgrowing a friendship with no falling-out'
+
+  it('lets a language decline a meaning its worldview cannot hold', () => {
+    const r = runLaboratory({ brief: GRIEF, keywords: [], count: 6, seed: 7 })
+    const refused = r.families.filter((f) => f.refusal)
+    expect(refused.length).toBeGreaterThan(0)
+    for (const f of refused) {
+      // A refusal coins nothing and explains itself.
+      expect(f.words).toEqual([])
+      expect(f.refusal!.reason.length).toBeGreaterThan(0)
+      // It refuses a concept it is genuinely blind to, and that the meaning centres on.
+      const lang = languageById(f.id.split('-')[0])
+      expect(lang.blindTo ?? []).toContain(f.refusal!.concept)
+      expect(r.analysis.concepts[f.refusal!.concept] ?? 0).toBeGreaterThanOrEqual(0.5)
+    }
+  })
+
+  it('never sacrifices a usable run — always keeps enough producers', () => {
+    for (const seed of [7, 42, 99]) {
+      const r = runLaboratory({ brief: GRIEF, keywords: [], count: 6, seed })
+      const producers = r.families.filter((f) => !f.refusal)
+      const refused = r.families.filter((f) => f.refusal)
+      expect(producers.length).toBeGreaterThanOrEqual(3)
+      expect(refused.length).toBeLessThanOrEqual(2)
+      // Words are still discovered despite the refusals.
+      expect(r.families.flatMap((f) => f.words).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('leaves runs with no worldview clash untouched (no forced refusals)', () => {
+    // A neutral, on-brand meaning should not trigger refusals.
+    const r = runLaboratory({
+      brief: 'a calm, trustworthy company that brings people together',
+      keywords: [],
+      count: 6,
+      seed: 7,
+    })
+    expect(r.families.every((f) => !f.refusal)).toBe(true)
+  })
+
+  it('is deterministic per seed', () => {
+    const a = runLaboratory({ brief: GRIEF, keywords: [], count: 6, seed: 7 })
+    const b = runLaboratory({ brief: GRIEF, keywords: [], count: 6, seed: 7 })
+    expect(a.families.map((f) => f.refusal ?? null)).toEqual(b.families.map((f) => f.refusal ?? null))
+  })
+})
+
 describe('speakability — words that stay sayable', () => {
   const LANGS = ['crystalline', 'liquid', 'ancient', 'noble', 'earthen', 'ashen']
 
@@ -840,7 +888,9 @@ describe('generateFamilies (discovering languages)', () => {
       expect(fam.nativeCharacteristics.length).toBeGreaterThan(2)
       expect(fam.genome.preferredEndings.length).toBe(3)
       expect(fam.ancestry.length).toBeGreaterThan(0)
-      expect(fam.words.length).toBeGreaterThanOrEqual(1)
+      // A producing language ships words; a refusing language (V4) coins none.
+      if (fam.refusal) expect(fam.words).toEqual([])
+      else expect(fam.words.length).toBeGreaterThanOrEqual(1)
     }
   })
 

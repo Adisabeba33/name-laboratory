@@ -869,6 +869,32 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 }
 .langgroup-feel { font-size: 12.5px; color: var(--faint); }
 
+/* V4 — a language that declines to translate the meaning. */
+.langgroup.refused {
+  border: 1px dashed var(--border-2);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  background: repeating-linear-gradient(-45deg, transparent, transparent 9px, rgba(126, 112, 232, 0.03) 9px, rgba(126, 112, 232, 0.03) 18px);
+}
+.langgroup-refuse-tag {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--risk);
+  border: 1px solid rgba(244, 163, 139, 0.35);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+.refusal-note {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--dim);
+  font-style: italic;
+  max-width: 60ch;
+}
+.results-refused { color: var(--risk); }
+
 .wgrid {
   display: grid;
   gap: 12px;

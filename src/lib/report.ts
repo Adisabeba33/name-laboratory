@@ -105,6 +105,11 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
   L.push('## Words')
   for (const fam of families) {
     L.push('')
+    if (fam.refusal) {
+      L.push(`### ${fam.character} — declines to translate`)
+      L.push(`_${fam.refusal.reason}_`)
+      continue
+    }
     L.push(`### ${fam.character} — lens: ${fam.lens.role} (${fam.lens.question})`)
     const a = fam.acoustic
     L.push(

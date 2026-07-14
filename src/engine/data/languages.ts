@@ -22,6 +22,12 @@ export interface Language {
   nativeCharacteristics: string[]
   /** Concepts this language naturally resonates with. */
   concepts: Concept[]
+  /**
+   * Concepts this language's worldview cannot hold. If a meaning centres on one of
+   * these, the language declines to coin a word for it rather than force one that
+   * would lie — the "sometimes a language refuses a translation" behaviour (V4).
+   */
+  blindTo?: Concept[]
   /** Phonetic ancestry — families the sound evolved from (flavour only). */
   families: LanguageFamily[]
 
@@ -74,6 +80,7 @@ export const LANGUAGES: Language[] = [
       'analytical emotional profile',
     ],
     concepts: ['science', 'precision', 'order', 'future', 'intelligence', 'light'],
+    blindTo: ['grief', 'longing', 'shadow'],
     families: ['greek', 'latin', 'proto-indo-european'],
     onsets: ['k', 't', 'kr', 'tr', 'qu', 'st', 'sk', 'kv'],
     medials: ['t', 'k', 'r', 'n', 's'],
@@ -107,6 +114,7 @@ export const LANGUAGES: Language[] = [
       'calm emotional profile',
     ],
     concepts: ['calm', 'harmony', 'healing', 'water', 'human', 'trust', 'unity'],
+    blindTo: ['destruction', 'shadow', 'power'],
     families: ['latin', 'celtic', 'finnish'],
     onsets: ['l', 'm', 'n', 's', 'v', 'r', 'sel', 'mel', 'lir', 'len', 'sil', 'nel'],
     medials: ['l', 'r', 'n', 'm', 'v', 's'],
@@ -140,6 +148,7 @@ export const LANGUAGES: Language[] = [
       'high warmth',
     ],
     concepts: ['nature', 'healing', 'creation', 'water', 'human', 'harmony'],
+    blindTo: ['destruction', 'shadow', 'loss'],
     families: ['finnish', 'celtic', 'latin'],
     onsets: ['v', 'f', 'l', 'm', 'n', 's', 'w', 'ver', 'lan', 'mir'],
     medials: ['l', 'n', 'r', 'm', 'v', 'w'],
@@ -173,6 +182,7 @@ export const LANGUAGES: Language[] = [
       'premium emotional profile',
     ],
     concepts: ['luxury', 'trust', 'elevation', 'light', 'order', 'time'],
+    blindTo: ['grief', 'loss', 'shadow'],
     families: ['latin', 'sanskrit', 'arabic'],
     onsets: ['v', 's', 'd', 'l', 'r', 'so', 'val', 'ser', 'dor', 'aur'],
     medials: ['r', 'l', 'n', 's', 'd', 'v'],
@@ -206,6 +216,7 @@ export const LANGUAGES: Language[] = [
       'mythic emotional profile',
     ],
     concepts: ['mystery', 'time', 'depth', 'knowledge', 'power', 'earth'],
+    blindTo: ['future', 'hope'],
     families: ['old-norse', 'greek', 'hebrew'],
     onsets: ['th', 'dr', 'br', 'gr', 'vor', 'thal', 'mor', 'kor', 'dra'],
     medials: ['r', 'th', 'n', 'l', 'd', 'g'],
@@ -239,6 +250,7 @@ export const LANGUAGES: Language[] = [
       'visionary emotional profile',
     ],
     concepts: ['sky', 'light', 'vision', 'mystery', 'freedom', 'creation'],
+    blindTo: ['grief', 'earth', 'destruction'],
     families: ['celtic', 'sanskrit', 'finnish'],
     onsets: ['ae', 'y', 'e', 's', 'sy', 'ly', 'el', 'li', 'ny', 'ne'],
     medials: ['l', 'r', 'n', 'th', 'y'],
@@ -272,6 +284,7 @@ export const LANGUAGES: Language[] = [
       'grounded emotional profile',
     ],
     concepts: ['earth', 'strength', 'power', 'nature', 'energy', 'movement'],
+    blindTo: ['transcendence', 'mystery', 'vision'],
     families: ['old-norse', 'celtic', 'finnish'],
     onsets: ['g', 'b', 'n', 'd', 'br', 'gr', 'dr', 'k', 'nor', 'bar', 'gan'],
     medials: ['r', 'n', 'd', 'g', 'l', 'k'],
@@ -305,6 +318,7 @@ export const LANGUAGES: Language[] = [
       'energetic emotional profile',
     ],
     concepts: ['fire', 'energy', 'light', 'creation', 'movement', 'vision'],
+    blindTo: ['grief', 'shadow', 'loss'],
     families: ['latin', 'sanskrit', 'arabic'],
     onsets: ['s', 'r', 'h', 'f', 'sol', 'ray', 'ser', 'ari', 'sar'],
     medials: ['r', 'l', 's', 'n', 'h'],
@@ -340,6 +354,7 @@ export const LANGUAGES: Language[] = [
       'sombre emotional profile',
     ],
     concepts: ['survival', 'loss', 'memory', 'destruction', 'resilience', 'shadow'],
+    blindTo: ['hope', 'light', 'future'],
     families: ['old-norse', 'hebrew', 'latin'],
     onsets: ['ash', 'vel', 'mor', 'sel', 'th', 'v', 's', 'n', 'ren', 'hal'],
     medials: ['sh', 'l', 'r', 'n', 'm', 'th', 'v'],
@@ -373,6 +388,7 @@ export const LANGUAGES: Language[] = [
       'hopeful emotional profile',
     ],
     concepts: ['rebirth', 'transcendence', 'fire', 'transformation', 'hope', 'energy'],
+    blindTo: ['grief', 'loss', 'shadow'],
     families: ['greek', 'sanskrit', 'arabic'],
     onsets: ['pyr', 'ray', 'sol', 'ser', 'ra', 'ari', 'vi', 'sy', 'ph'],
     medials: ['r', 'l', 'n', 's', 'y', 'v'],
@@ -406,6 +422,7 @@ export const LANGUAGES: Language[] = [
       'unyielding emotional profile',
     ],
     concepts: ['strength', 'depth', 'shadow', 'memory', 'destruction', 'identity', 'resilience'],
+    blindTo: ['hope', 'light', 'calm'],
     families: ['old-norse', 'greek', 'hebrew'],
     onsets: ['obs', 'dra', 'gron', 'kor', 'th', 'vor', 'br', 'dr', 'gr'],
     medials: ['r', 'th', 'd', 'g', 'n', 'k'],
@@ -439,6 +456,7 @@ export const LANGUAGES: Language[] = [
       'tender emotional profile',
     ],
     concepts: ['transformation', 'rebirth', 'creation', 'identity', 'longing', 'healing'],
+    blindTo: ['destruction', 'strength', 'power'],
     families: ['celtic', 'sanskrit', 'finnish'],
     onsets: ['chry', 'sel', 'ly', 'vy', 'ny', 'lae', 'mir', 'sy', 'li'],
     medials: ['l', 'r', 'n', 's', 'y', 'v', 'th'],

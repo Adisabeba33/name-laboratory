@@ -405,8 +405,25 @@ export interface WordFamily {
   acoustic: AcousticProfile
   /** This language's slice of the lexical-evolution funnel (V6): what it bred. */
   stats: EvolutionStats
+  /**
+   * Set when this language declined to translate the meaning (V4). When present,
+   * `words` is empty — the language refuses rather than force a word that would lie.
+   */
+  refusal?: LanguageRefusal
   /** The native-speaker words that prove the language exists. */
   words: WordPassport[]
+}
+
+/**
+ * A language declining to translate a meaning (Engine V4). Some worldviews cannot
+ * hold some feelings; rather than force a word that would lie, the language refuses
+ * and says why. Honest by design — a stated limit, not a failure.
+ */
+export interface LanguageRefusal {
+  /** The concept this language's worldview cannot hold. */
+  concept: Concept
+  /** An in-character, honest reason the language declines. */
+  reason: string
 }
 
 /** A language's assigned semantic viewpoint on the meaning (anti-convergence). */

@@ -545,8 +545,13 @@ export default function App() {
                     <div>
                       <h2>{allWords.length} words discovered</h2>
                       <p className="results-sub">
-                        across {results.families.length}{' '}
+                        across {results.families.filter((f) => !f.refusal).length}{' '}
                         {appMode === 'name' ? 'sound-worlds' : 'living languages'}
+                        {results.families.some((f) => f.refusal) && (
+                          <span className="results-refused">
+                            {' '}· {results.families.filter((f) => f.refusal).length} declined to translate
+                          </span>
+                        )}
                         {refining && <span className="refining"> · writing meanings…</span>}
                       </p>
                       {results.population.generated > 0 && (
@@ -575,28 +580,38 @@ export default function App() {
                     </div>
                   </div>
 
-                  {results.families.map((fam) => (
-                    <div className="langgroup" key={fam.id}>
-                      <div className="langgroup-head">
-                        <span className="langgroup-name">{fam.character}</span>
-                        <span className="langgroup-lens" title={fam.lens.question}>
-                          {fam.lens.role}
-                        </span>
-                        <span className="langgroup-feel">{fam.description.split('.')[0]}.</span>
+                  {results.families.map((fam) =>
+                    fam.refusal ? (
+                      <div className="langgroup refused" key={fam.id}>
+                        <div className="langgroup-head">
+                          <span className="langgroup-name">{fam.character}</span>
+                          <span className="langgroup-refuse-tag">declines to translate</span>
+                        </div>
+                        <p className="refusal-note">{fam.refusal.reason}</p>
                       </div>
-                      <div className="wgrid">
-                        {fam.words.map((p) => (
-                          <WordCard
-                            key={p.word}
-                            p={p}
-                            saved={savedKeys.has(p.word.toLowerCase())}
-                            onOpen={() => setOpenWord(p)}
-                            onToggleSave={() => toggleSave(p)}
-                          />
-                        ))}
+                    ) : (
+                      <div className="langgroup" key={fam.id}>
+                        <div className="langgroup-head">
+                          <span className="langgroup-name">{fam.character}</span>
+                          <span className="langgroup-lens" title={fam.lens.question}>
+                            {fam.lens.role}
+                          </span>
+                          <span className="langgroup-feel">{fam.description.split('.')[0]}.</span>
+                        </div>
+                        <div className="wgrid">
+                          {fam.words.map((p) => (
+                            <WordCard
+                              key={p.word}
+                              p={p}
+                              saved={savedKeys.has(p.word.toLowerCase())}
+                              onOpen={() => setOpenWord(p)}
+                              onToggleSave={() => toggleSave(p)}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </section>
               )}
 
