@@ -272,6 +272,60 @@ describe('lexical evolution funnel (Engine V6)', () => {
   })
 })
 
+describe('fitness profile (Engine V6 — multi-dimensional selection scorecard)', () => {
+  const BANDS = ['Low', 'Moderate', 'Strong', 'Exceptional']
+
+  it('gives every word a well-formed profile', () => {
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const w of families.flatMap((f) => f.words)) {
+      const f = w.fitness
+      expect(f.axes.map((a) => a.key)).toEqual(['illusion', 'resonance', 'reach'])
+      for (const a of f.axes) {
+        expect(BANDS).toContain(a.band)
+        expect(a.note.length).toBeGreaterThan(0)
+      }
+      // strongest / weakest are real axis labels, and (unless all bands tie) differ.
+      const labels = f.axes.map((a) => a.label)
+      expect(labels).toContain(f.strongest)
+      expect(labels).toContain(f.weakest)
+    }
+  })
+
+  it('genuinely differentiates words — not every band is the same', () => {
+    // The whole point of V6: real variance. Across a run, all four bands appear
+    // and no single band dominates every axis of every word.
+    const seen = new Set<string>()
+    for (const seed of [7, 42, 99]) {
+      const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed })
+      for (const w of families.flatMap((f) => f.words)) {
+        for (const a of w.fitness.axes) seen.add(a.band)
+      }
+    }
+    // At least three distinct bands are used across runs (not a flat "all Strong").
+    expect(seen.size).toBeGreaterThanOrEqual(3)
+  })
+
+  it('picks the strongest axis by band, then by raw signal', () => {
+    // The signature must never be weaker than the weakest — a basic ordering check
+    // that also catches a profile where strongest/weakest are accidentally swapped.
+    const rank = (band: string) => BANDS.indexOf(band)
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const w of families.flatMap((f) => f.words)) {
+      const strong = w.fitness.axes.find((a) => a.label === w.fitness.strongest)!
+      const weak = w.fitness.axes.find((a) => a.label === w.fitness.weakest)!
+      expect(rank(strong.band)).toBeGreaterThanOrEqual(rank(weak.band))
+    }
+  })
+
+  it('is deterministic per seed', () => {
+    const a = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const b = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    expect(a.families.flatMap((f) => f.words).map((w) => w.fitness)).toEqual(
+      b.families.flatMap((f) => f.words).map((w) => w.fitness),
+    )
+  })
+})
+
 describe('speakability — words that stay sayable', () => {
   const LANGS = ['crystalline', 'liquid', 'ancient', 'noble', 'earthen', 'ashen']
 

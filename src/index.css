@@ -920,6 +920,50 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .nat-plausible { color: var(--dim); }
 .nat-fabricated { color: var(--risk); border-color: rgba(244, 163, 139, 0.3); }
 
+/* V6 — the card's signature-strength chip (its strongest fitness axis). */
+.fitsig {
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px dashed var(--border-2);
+  color: var(--faint);
+}
+
+/* V6 — the Fitness Profile block on the Evolution tab. */
+.fitprofile {
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  margin-bottom: 22px;
+  background: var(--grad-soft);
+}
+.fitprofile-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.fitprofile-head h4 { margin: 0; font-size: 14px; }
+.fitprofile-sig { font-size: 12px; color: var(--faint); }
+.fitprofile-sig b { color: var(--text); font-weight: 600; }
+.fitrows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.fitrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fitname { font-size: 13px; color: var(--dim); }
+.fitband {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.fitband-exceptional { color: var(--good); border-color: rgba(100, 230, 166, 0.3); }
+.fitband-strong { color: var(--accent-2); border-color: rgba(89, 166, 255, 0.3); }
+.fitband-moderate { color: var(--dim); }
+.fitband-low { color: var(--risk); border-color: rgba(244, 163, 139, 0.3); }
+
 /* ── Semantic Gap Search ────────────────────────────────────────────── */
 .sg {
   border: 1px solid var(--border-2);

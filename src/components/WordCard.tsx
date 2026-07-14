@@ -36,6 +36,9 @@ export function WordCard({
           {p.partOfSpeech && <span className="wcard-pos">{p.partOfSpeech}</span>}
           <span className={`band band-${p.adoption.band.toLowerCase()}`}>{p.adoption.band}</span>
           <span className={`nat nat-${p.naturalness.toLowerCase()}`}>{p.naturalness}</span>
+          <span className="fitsig" title={`Strongest of ${p.fitness.axes.length} fitness dimensions`}>
+            {p.fitness.strongest}
+          </span>
         </div>
         <div className="wcard-meta">
           {p.pronunciationGuide && <span className="wcard-say">{p.pronunciationGuide}</span>}

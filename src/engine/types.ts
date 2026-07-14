@@ -310,6 +310,8 @@ export interface WordPassport {
   speakability: SpeakabilityBand
   /** How real the word feels — the Engine V3 "inevitable, not fabricated" band. */
   naturalness: NaturalnessBand
+  /** The Engine V6 multi-dimensional fitness scorecard (why it survived). */
+  fitness: FitnessProfile
   /** Offline collision verdict against the built-in word/brand list. */
   collision: Collision
   /** Where the word's sound descends from — species + phonetic ancestry. */
@@ -422,6 +424,48 @@ export interface AcousticProfile {
   clip: number
   /** closed, hard endings (0) ↔ open, airy, unfinished endings (1). */
   openness: number
+}
+
+/**
+ * A qualitative rung on a fitness axis (Engine V6). Bands, not fake percentages —
+ * the engine reports where a word lands, not an invented "97%".
+ */
+export type FitnessBand = 'Low' | 'Moderate' | 'Strong' | 'Exceptional'
+
+/**
+ * One measured dimension of a word's fitness — the honest "why it survived, and
+ * where it is strong or weak". Each axis is derived from a signal the engine
+ * already computes (sound structure, emotional DNA, cross-language pronounceability),
+ * banded against the real spread that dimension shows across bred words, so two
+ * survivors genuinely differ (Strong resonance but Moderate reach, say) instead of
+ * every word reading as a uniform 99.
+ */
+export interface FitnessAxis {
+  /** Stable key, e.g. "resonance". */
+  key: string
+  /** Human label, e.g. "Emotional resonance". */
+  label: string
+  /** The qualitative rung this word reaches on the axis. */
+  band: FitnessBand
+  /** One honest sentence on what the axis measures (and that it is structural). */
+  note: string
+}
+
+/**
+ * The Fitness Profile (Engine V6) — a word's multi-dimensional selection scorecard.
+ *
+ * Only dimensions that genuinely vary between survivors are banded per word;
+ * dimensions that saturate among survivors (memorability, phonetic stability — a
+ * word cannot survive selection without them) are stated once as a shared floor,
+ * not dressed up as per-word variance. So the profile differentiates honestly.
+ */
+export interface FitnessProfile {
+  /** The per-word, genuinely-varying axes (dictionary illusion, resonance, reach). */
+  axes: FitnessAxis[]
+  /** Label of the word's single strongest axis — its signature strength. */
+  strongest: string
+  /** Label of its weakest axis — the honest cost, so no word looks maxed-out. */
+  weakest: string
 }
 
 /** The creative styles that bias which roots and endings the engine reaches for. */

@@ -4,6 +4,7 @@ import {
   evolveWord,
   Rng,
   hashSeed,
+  SURVIVOR_FLOOR,
   type EmotionalAxis,
   type WordPassport,
   type WordEvolutionStep,
@@ -286,6 +287,24 @@ function EvolutionTab({ p, saved }: { p: WordPassport; saved: boolean }) {
   const e = p.evolution
   return (
     <section className="tabsec">
+      <div className="fitprofile">
+        <div className="fitprofile-head">
+          <h4>Fitness profile</h4>
+          <span className="fitprofile-sig">
+            signature: <b>{p.fitness.strongest}</b> · weakest: {p.fitness.weakest}
+          </span>
+        </div>
+        <div className="fitrows">
+          {p.fitness.axes.map((a) => (
+            <div className="fitrow" key={a.key} title={a.note}>
+              <span className="fitname">{a.label}</span>
+              <span className={`fitband fitband-${a.band.toLowerCase()}`}>{a.band}</span>
+            </div>
+          ))}
+        </div>
+        <p className="tabsec-muted">{SURVIVOR_FLOOR}</p>
+      </div>
+
       <p className="tabsec-lead">Reshape how the word sounds — the meaning stays verbatim. Free, no AI.</p>
       <div className="evolve-chips">
         {EVOLVE_DIRECTIONS.map((d) => (

@@ -21,6 +21,7 @@ import { computeGenome } from './genome'
 import { speakabilityBand } from './phonetics'
 import { offlineCollision } from './collision'
 import { naturalness, naturalnessBand, EXCEPTIONAL_NATURALNESS } from './naturalness'
+import { computeFitness } from './fitness'
 import { acousticProfile, blendAcoustic, conceptAcoustic } from './acoustics'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
@@ -263,6 +264,7 @@ export function buildPassport(
     pronunciationGuide: pronounce(word, language.stressPattern),
     speakability: speakabilityBand(word),
     naturalness: naturalnessBand(naturalness(word)),
+    fitness: computeFitness(word, emotionalDNA, pronunciation),
     collision: offlineCollision(word),
     ancestry: buildAncestry(lead, language),
     evolution,

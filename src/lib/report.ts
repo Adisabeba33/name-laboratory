@@ -131,6 +131,10 @@ function wordBlock(w: WordPassport): string {
       `  ·  speakability: ${w.speakability}  ·  naturalness: ${w.naturalness}`,
   )
   b.push(`- adoption: ${w.adoption.band} (${w.adoption.score}/100)  ·  collision: ${w.collision.match}`)
+  b.push(
+    `- fitness: ${w.fitness.axes.map((a) => `${a.label} ${a.band}`).join(' · ')}` +
+      `  (signature: ${w.fitness.strongest})`,
+  )
   b.push(`- meaning: ${w.meaning}`)
   if (w.shortMeaning) b.push(`- short: ${w.shortMeaning}`)
   if (w.usage.en.length || w.usage.ru.length) {
