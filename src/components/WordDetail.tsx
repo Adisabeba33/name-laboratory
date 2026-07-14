@@ -271,6 +271,29 @@ function MeaningTab({ p }: { p: WordPassport }) {
         <p className="tabsec-muted">{p.construction.note}</p>
       </div>
 
+      <div className="family">
+        <h4>Word family</h4>
+        <p className="tabsec-lead">The root bent into the roles it would take inside a real sentence.</p>
+        <div className="family-grid">
+          <div className="family-form">
+            <span className="family-role">noun</span>
+            <b className="family-word">{p.paradigm.root}</b>
+            <span className="family-gloss">{p.meaning.replace(/\s*\(.*$/, '').trim()}</span>
+          </div>
+          {p.paradigm.forms.map((f) => (
+            <div className="family-form" key={f.role}>
+              <span className="family-role">{f.role}</span>
+              <b className="family-word">{f.form}</b>
+              <span className="family-gloss">{f.gloss}</span>
+            </div>
+          ))}
+        </div>
+        <p className="tabsec-muted">
+          Invented morphology — the coined root inflected the way English derives words,
+          so each form is usable in a sentence. Not a grammar of the invented sound-world.
+        </p>
+      </div>
+
       <div className="origin-note">{p.ancestry.note}</div>
     </section>
   )

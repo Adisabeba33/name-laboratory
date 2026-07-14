@@ -312,6 +312,8 @@ export interface WordPassport {
   naturalness: NaturalnessBand
   /** The Engine V6 multi-dimensional fitness scorecard (why it survived). */
   fitness: FitnessProfile
+  /** The Engine V6 morphological family — the root bent into verb/adj/adv/agent. */
+  paradigm: WordParadigm
   /** Offline collision verdict against the built-in word/brand list. */
   collision: Collision
   /** Where the word's sound descends from — species + phonetic ancestry. */
@@ -466,6 +468,33 @@ export interface FitnessProfile {
   strongest: string
   /** Label of its weakest axis — the honest cost, so no word looks maxed-out. */
   weakest: string
+}
+
+/**
+ * One derived member of a word's morphological family (Engine V6) — the coined
+ * root bent into a grammatical role so it can be used across a real sentence.
+ */
+export interface WordForm {
+  /** Grammatical role, e.g. "verb", "adjective", "adverb", "agent noun". */
+  role: string
+  /** The derived word, capitalised. */
+  form: string
+  /** A short usage gloss, e.g. "to bring about rebirth". */
+  gloss: string
+}
+
+/**
+ * A word's morphological family (Engine V6) — its paradigm of derived forms.
+ *
+ * Honest by construction: these inflect the coined root with the HOST language's
+ * (English) derivational morphology so they are deployable in an EN sentence —
+ * NOT a claim about the invented sound-world's own grammar (the UI states this).
+ */
+export interface WordParadigm {
+  /** The base form (the noun) — the word itself, capitalised. */
+  root: string
+  /** The derived grammatical forms grown from the root. */
+  forms: WordForm[]
 }
 
 /** The creative styles that bias which roots and endings the engine reaches for. */

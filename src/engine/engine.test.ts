@@ -326,6 +326,48 @@ describe('fitness profile (Engine V6 — multi-dimensional selection scorecard)'
   })
 })
 
+describe('morphological word families (Engine V6)', () => {
+  const ROLES = ['verb', 'adjective', 'adverb', 'agent noun']
+
+  it('grows a full, native, pronounceable paradigm from each word', () => {
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const w of families.flatMap((f) => f.words)) {
+      const par = w.paradigm
+      expect(par.root).toBe(w.word)
+      expect(par.forms.map((f) => f.role)).toEqual(ROLES)
+      for (const form of par.forms) {
+        // Each derived form extends the root (shares its stem) and stays sayable.
+        expect(form.form.length).toBeGreaterThan(w.word.length - 2)
+        expect(form.gloss.length).toBeGreaterThan(0)
+        // No tripled letters crept in at the suffix seam.
+        expect(/(.)\1\1/.test(form.form.toLowerCase())).toBe(false)
+      }
+      // The four forms are distinct words.
+      const forms = par.forms.map((f) => f.form)
+      expect(new Set(forms).size).toBe(forms.length)
+    }
+  })
+
+  it('derives adverbs from adjectives the way English does', () => {
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const w of families.flatMap((f) => f.words)) {
+      const adj = w.paradigm.forms.find((f) => f.role === 'adjective')!.form.toLowerCase()
+      const adv = w.paradigm.forms.find((f) => f.role === 'adverb')!.form.toLowerCase()
+      // "-ic" adjectives take "-ally"; everything else takes "-ly".
+      if (adj.endsWith('ic')) expect(adv).toBe(adj + 'ally')
+      else if (!adj.endsWith('le')) expect(adv).toBe(adj + 'ly')
+    }
+  })
+
+  it('is deterministic per word', () => {
+    const a = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const b = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    expect(a.families.flatMap((f) => f.words).map((w) => w.paradigm)).toEqual(
+      b.families.flatMap((f) => f.words).map((w) => w.paradigm),
+    )
+  })
+})
+
 describe('speakability — words that stay sayable', () => {
   const LANGS = ['crystalline', 'liquid', 'ancient', 'noble', 'earthen', 'ashen']
 

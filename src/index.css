@@ -1240,6 +1240,23 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .build-idea b { color: var(--text); font-weight: 500; }
 .build-species { font-size: 13px; color: var(--dim); margin: 0; }
 
+/* V6 — the morphological word family (paradigm of derived forms). */
+.family { margin-top: 22px; }
+.family h4 { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+.family-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  margin: 10px 0;
+}
+.family-form { background: var(--panel-2); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.family-role { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); }
+.family-word { font-family: var(--serif); font-size: 18px; color: var(--text); font-weight: 500; }
+.family-gloss { font-size: 12px; color: var(--dim); }
+
 /* word genome / dna / adoption / pron / tags — shared data blocks */
 .wg { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1px; background: var(--border); border-radius: var(--r-sm); overflow: hidden; }
 .wg-cell { background: var(--panel-2); padding: 12px 13px; display: flex; flex-direction: column; gap: 3px; }

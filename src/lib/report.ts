@@ -135,6 +135,10 @@ function wordBlock(w: WordPassport): string {
     `- fitness: ${w.fitness.axes.map((a) => `${a.label} ${a.band}`).join(' · ')}` +
       `  (signature: ${w.fitness.strongest})`,
   )
+  b.push(
+    `- family: ${w.paradigm.root} (noun) · ` +
+      w.paradigm.forms.map((f) => `${f.form} (${f.role})`).join(' · '),
+  )
   b.push(`- meaning: ${w.meaning}`)
   if (w.shortMeaning) b.push(`- short: ${w.shortMeaning}`)
   if (w.usage.en.length || w.usage.ru.length) {
