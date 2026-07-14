@@ -24,13 +24,15 @@ const SCHEMA = {
   },
 }
 
-const SYSTEM = `You are the Meaning Analyst of Word Laboratory. Given one invented word, its meaning, and the idea it names, write natural example sentences that show the word living inside real speech.
+const SYSTEM = `You are the Lexicographer of Word Laboratory. Given one word, its meaning, and the idea it names, write natural example sentences that show the word living inside real speech.
+
+Use the word AS IF IT WERE COMPLETELY ORDINARY — an established word the speaker reaches for without thinking, dropped into an everyday situation. The sentences should make the reader forget it was ever invented. No grand, poetic or fantastical showcase lines — just ordinary people saying ordinary things, with this one word doing quiet, natural work.
 
 Return:
-- usageEn: EXACTLY 2 natural English sentences that USE the word (keep the given spelling) and teach how it functions — real, human sentences, never awkward "She felt X" templates.
-- usageRu: EXACTLY 2 natural Russian sentences that USE the word. Use the given Cyrillic spelling verbatim, lower-case, declined naturally into the sentence.
+- usageEn: EXACTLY 2 natural English sentences that USE the word (keep the given spelling) and teach how it functions — real, human, conversational, never awkward "She felt X" templates.
+- usageRu: EXACTLY 2 natural Russian sentences that USE the word. Use the given Cyrillic spelling verbatim, lower-case, declined naturally into the sentence like any everyday word.
 
-The sentences must sound like something a real person would actually say.`
+The sentences must sound like something a real person would actually say in passing.`
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
