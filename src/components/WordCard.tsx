@@ -34,11 +34,13 @@ export function WordCard({
         <div className="wcard-top">
           <span className="wcard-word">{p.word}</span>
           {p.partOfSpeech && <span className="wcard-pos">{p.partOfSpeech}</span>}
-          <span className={`band band-${p.adoption.band.toLowerCase()}`}>{p.adoption.band}</span>
-          <span className={`nat nat-${p.naturalness.toLowerCase()}`}>{p.naturalness}</span>
-          <span className="fitsig" title={`Strongest of ${p.fitness.axes.length} fitness dimensions`}>
-            {p.fitness.strongest}
+          <span
+            className={`disc disc-${p.discovery.classification.toLowerCase()}`}
+            title={`Lexical Discovery Score ${p.discovery.score}/100 — computed from weighted components, not enthusiasm`}
+          >
+            {p.discovery.classification} {p.discovery.score}
           </span>
+          <span className={`nat nat-${p.naturalness.toLowerCase()}`}>{p.naturalness}</span>
         </div>
         <div className="wcard-meta">
           {p.pronunciationGuide && <span className="wcard-say">{p.pronunciationGuide}</span>}

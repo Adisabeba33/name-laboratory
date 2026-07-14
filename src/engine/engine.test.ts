@@ -21,6 +21,7 @@ import {
   naturalness,
   naturalnessBand,
   EXCEPTIONAL_NATURALNESS,
+  computeDictionaryViability,
   acousticProfile,
   LANGUAGES,
   languageById,
@@ -548,6 +549,72 @@ describe('selection quality (Engine v0.36 — direct vs adjacent, dynamic lenses
       b.families.map((f) => [f.semanticRole, f.direct, f.fidelity.band]),
     )
     expect(a.conclusion).toBe(b.conclusion)
+  })
+})
+
+describe('Lexical Discovery Score & Dictionary Viability (v0.36 Phase 2)', () => {
+  const CLASSES = ['Exceptional', 'Strong', 'Viable', 'Experimental', 'Weak', 'Rejected']
+
+  it('gives every word a well-formed discovery score and viability', () => {
+    const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const w of r.families.flatMap((f) => f.words)) {
+      expect(w.discovery.score).toBeGreaterThanOrEqual(0)
+      expect(w.discovery.score).toBeLessThanOrEqual(100)
+      expect(CLASSES).toContain(w.discovery.classification)
+      // Components are weighted and sum to ~1.
+      const wsum = w.discovery.components.reduce((s, c) => s + c.weight, 0)
+      expect(wsum).toBeCloseTo(1, 5)
+      expect(w.dictionaryViability.overall).toBeGreaterThanOrEqual(0)
+      expect(w.dictionaryViability.overall).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('keeps "Exceptional" genuinely rare — at most one per run', () => {
+    for (const seed of [7, 42, 99, 3]) {
+      const r = runLaboratory({ brief: 'the quiet grief of outgrowing a friendship', keywords: [], count: 6, seed })
+      const exc = r.families.flatMap((f) => f.words).filter((w) => w.discovery.classification === 'Exceptional')
+      expect(exc.length).toBeLessThanOrEqual(1)
+      // An exceptional word is always a direct answer, never adjacent.
+      for (const w of exc) {
+        const fam = r.families.find((f) => f.words.includes(w))!
+        expect(fam.direct).toBe(true)
+      }
+    }
+  })
+
+  it('does not label the whole run exceptional (realistic distribution)', () => {
+    const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const words = r.families.flatMap((f) => f.words)
+    const exc = words.filter((w) => w.discovery.classification === 'Exceptional').length
+    expect(exc).toBeLessThan(words.length) // never all-exceptional
+    // More than one distinct class appears across the run.
+    expect(new Set(words.map((w) => w.discovery.classification)).size).toBeGreaterThanOrEqual(2)
+  })
+
+  it('gives shorter forms a lower collision-safety prior', () => {
+    const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const words = r.families.flatMap((f) => f.words)
+    const short = words.filter((w) => w.word.length <= 4)
+    const long = words.filter((w) => w.word.length >= 8)
+    if (short.length && long.length) {
+      const avg = (xs: typeof words) => xs.reduce((s, w) => s + w.discovery.collisionSafetyPrior, 0) / xs.length
+      expect(avg(short)).toBeLessThan(avg(long))
+    }
+  })
+
+  it('rates a clean word more viable than a clustered one', () => {
+    const stars = [{ language: 'English', stars: 4 }]
+    const clean = computeDictionaryViability('Miresen', stars, 3)
+    const clustered = computeDictionaryViability('Grugukyx', stars, 3)
+    expect(clean.overall).toBeGreaterThan(clustered.overall)
+  })
+
+  it('is deterministic per seed', () => {
+    const a = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const b = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    expect(a.families.flatMap((f) => f.words).map((w) => w.discovery.score)).toEqual(
+      b.families.flatMap((f) => f.words).map((w) => w.discovery.score),
+    )
   })
 })
 

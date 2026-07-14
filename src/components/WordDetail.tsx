@@ -445,8 +445,38 @@ function GenomeTab({ p }: { p: WordPassport }) {
       setChecking(false)
     }
   }
+  const d = p.discovery
+  const dv = p.dictionaryViability
   return (
     <section className="tabsec">
+      <div className="disc-block">
+        <div className="disc-head">
+          <div>
+            <span className={`disc disc-${d.classification.toLowerCase()}`}>{d.classification}</span>
+            <span className="disc-score">{d.score}<span className="disc-of">/100</span></span>
+          </div>
+          <span className="disc-label">Lexical Discovery Score</span>
+        </div>
+        <div className="disc-components">
+          {d.components.map((c) => (
+            <div className="disc-row" key={c.label}>
+              <span className="disc-name">{c.label}</span>
+              <span className="disc-bar"><i style={{ width: `${c.score}%` }} /></span>
+              <span className="disc-val">{c.score}</span>
+              <span className="disc-wt">×{Math.round(c.weight * 100)}%</span>
+            </div>
+          ))}
+        </div>
+        {d.penalties.length > 0 && (
+          <ul className="disc-penalties">{d.penalties.map((x) => <li key={x}>{x}</li>)}</ul>
+        )}
+        <p className="tabsec-muted">
+          Computed from explicit weighted components — not enthusiasm. Dictionary viability:{' '}
+          <b>{dv.band}</b> ({Math.round(dv.overall * 100)}/100) · adoption friction: {dv.adoptionFriction}.
+          Collision safety is a structural prior, not a verified external check.
+        </p>
+      </div>
+
       <div className="tabgrid">
         <div className="tabcard">
           <h4>Word Genome</h4>

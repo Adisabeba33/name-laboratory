@@ -312,6 +312,10 @@ export interface WordPassport {
   naturalness: NaturalnessBand
   /** The Engine V6 multi-dimensional fitness scorecard (why it survived). */
   fitness: FitnessProfile
+  /** v0.36 — could it realistically behave like a lexical item in living language. */
+  dictionaryViability: DictionaryViability
+  /** v0.36 — the final weighted Lexical Discovery Score + realistic tier. */
+  discovery: LexicalDiscoveryScore
   /** The Engine V6 morphological family — the root bent into verb/adj/adv/agent. */
   paradigm: WordParadigm
   /** The imagined etymology — a reconstructed root chain (honest: not historical). */
@@ -599,6 +603,73 @@ export interface Etymology {
   stages: EtymologyStage[]
   /** One honest line framing the lineage as imagined, not historical. */
   summary: string
+}
+
+/**
+ * Dictionary Viability (Engine v0.36 Phase 2) — could this realistically behave
+ * like a lexical item in a living language, distinct from being merely pretty or
+ * novel? A transparent structural heuristic (like Speech Adoption): each dimension
+ * is derived from real sound structure, the band is the product, the numbers are
+ * explained. NOT an LLM judgement and not a claim of real usage.
+ */
+export interface DictionaryViability {
+  /** 0–1 overall viability. */
+  overall: number
+  /** Qualitative verdict on the overall. */
+  band: 'Low' | 'Moderate' | 'Strong' | 'Exceptional'
+  /** Reads like a plausible word, not a fantasy name / product / username (0–1). */
+  lexicalAppearance: number
+  /** Can be spelled reasonably after hearing (grapheme regularity, 0–1). */
+  spokenRecoverability: number
+  /** Can be pronounced reasonably after seeing (0–1). */
+  visualRecoverability: number
+  /** Accepts natural derivations without looking forced (0–1). */
+  morphologyFit: number
+  /** Could plausibly appear across registers — speech, writing, poetry (0–1). */
+  registerFlexibility: number
+  /** Would a user believe it already exists (= naturalness, 0–1). */
+  dictionaryIllusion: number
+  /** Looks evolved rather than assembled instantly (0–1). */
+  historicalPlausibility: number
+  /** How much explanation/repetition before it becomes usable. */
+  adoptionFriction: 'low' | 'moderate' | 'high'
+}
+
+/** A realistic quality tier for a discovered word (v0.36 — not everything is a 99). */
+export type LexicalClass =
+  | 'Exceptional'
+  | 'Strong'
+  | 'Viable'
+  | 'Experimental'
+  | 'Weak'
+  | 'Rejected'
+
+/** One weighted component of the Lexical Discovery Score, each 0–100. */
+export interface ScoreComponent {
+  label: string
+  score: number
+  /** Relative weight (0–1), summing to 1 across components. */
+  weight: number
+}
+
+/**
+ * The Lexical Discovery Score (v0.36 Phase 2) — the single final score for a
+ * direct candidate, computed from explicit weighted components (never "LLM
+ * enthusiasm"). Beauty is deliberately NOT a major component; concept fidelity and
+ * dictionary viability dominate, and a short-word collision-safety prior pulls
+ * risky forms down, so the distribution is realistic (few 90+).
+ */
+export interface LexicalDiscoveryScore {
+  /** 0–100 weighted total. */
+  score: number
+  /** Realistic tier derived from the score + hard gates. */
+  classification: LexicalClass
+  /** The weighted components, for transparency. */
+  components: ScoreComponent[]
+  /** Plain-language explanations of the major penalties. */
+  penalties: string[]
+  /** The structural collision-safety prior used (0–1; low for short forms). */
+  collisionSafetyPrior: number
 }
 
 /** The creative styles that bias which roots and endings the engine reaches for. */

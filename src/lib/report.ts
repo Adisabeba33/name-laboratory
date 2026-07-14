@@ -41,6 +41,18 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
     L.push('')
   }
 
+  // ── Top discovery (v0.36) ───────────────────────────────────────────
+  const directWords = families.filter((f) => f.direct).flatMap((f) => f.words)
+  const top = [...directWords].sort((a, b) => b.discovery.score - a.discovery.score)[0]
+  if (top) {
+    L.push('## Top discovery')
+    L.push('')
+    L.push(`**${top.word}** — ${top.discovery.classification}, ${top.discovery.score}/100`)
+    if (top.shortMeaning || top.meaning) L.push(`\n${top.shortMeaning || top.meaning}`)
+    if (top.discovery.penalties.length) L.push(`\n_Risks: ${top.discovery.penalties.join(' ')}_`)
+    L.push('')
+  }
+
   // ── Lexical evolution (Engine V6) ───────────────────────────────────
   // The honest funnel: the engine bred a population, most forms failed, a few
   // survived, fewer were shipped. Every count is real work, not decoration.
@@ -158,6 +170,20 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
     }
   }
 
+  // ── Rejected highlights (v0.36) — transparent, educational ───────────
+  const rejects = words
+    .filter((w) => w.discovery.classification === 'Rejected' || w.discovery.classification === 'Weak')
+    .sort((a, b) => a.discovery.score - b.discovery.score)
+    .slice(0, 6)
+  if (rejects.length) {
+    L.push('')
+    L.push('## Rejected highlights')
+    for (const w of rejects) {
+      L.push('')
+      L.push(`- **${w.word}** (${w.discovery.classification}, ${w.discovery.score}/100) — ${w.discovery.penalties.join(' ') || 'below the viability bar.'}`)
+    }
+  }
+
   return L.join('\n')
 }
 
@@ -170,6 +196,12 @@ function wordBlock(w: WordPassport): string {
       `  ·  speakability: ${w.speakability}  ·  naturalness: ${w.naturalness}`,
   )
   b.push(`- adoption: ${w.adoption.band} (${w.adoption.score}/100)  ·  collision: ${w.collision.match}`)
+  b.push(
+    `- **discovery: ${w.discovery.classification} — ${w.discovery.score}/100**` +
+      `  ·  dictionary viability: ${w.dictionaryViability.band} (${Math.round(w.dictionaryViability.overall * 100)})` +
+      `  ·  collision-safety prior: ${Math.round(w.discovery.collisionSafetyPrior * 100)}`,
+  )
+  if (w.discovery.penalties.length) b.push(`  - penalties: ${w.discovery.penalties.join(' ')}`)
   b.push(
     `- fitness: ${w.fitness.axes.map((a) => `${a.label} ${a.band}`).join(' · ')}` +
       `  (signature: ${w.fitness.strongest})`,

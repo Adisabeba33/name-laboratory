@@ -24,6 +24,8 @@ import { speakabilityBand } from './phonetics'
 import { offlineCollision } from './collision'
 import { naturalness, naturalnessBand, EXCEPTIONAL_NATURALNESS } from './naturalness'
 import { computeFitness } from './fitness'
+import { computeDictionaryViability } from './dictionary-viability'
+import { computeDiscovery, isExceptionalEligible, NEUTRAL_ACOUSTIC } from './lexical-score'
 import { computeParadigm } from './morphology'
 import { computeEtymology } from './etymology'
 import { computeSemanticNetwork } from './network'
@@ -345,11 +347,40 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
   // V4 — now that every word exists, wire the semantic network between them so the
   // lexicon is a navigable graph (each word links to its most-related peers).
   const network = computeSemanticNetwork(families)
+  const coreSet = new Set(topConcepts(concepts, 6))
   for (const family of families) {
     for (const word of family.words) {
       word.relations = network.get(word.word.toLowerCase()) ?? []
+      // v0.36 — finalise the Lexical Discovery Score now that the family's concept
+      // fidelity (direct/adjacent/weak) and intended acoustic profile are known.
+      // Per-word fidelity (band base + a bonus for each of THIS word's concepts
+      // that hits the gap's core) spreads two words in one family apart.
+      const base = family.fidelity.band === 'direct' ? 70 : family.fidelity.band === 'adjacent' ? 45 : 22
+      const wordConcepts = [word.origin.lead, word.origin.support].filter(Boolean) as Concept[]
+      const inCore = wordConcepts.filter((c) => coreSet.has(c)).length
+      word.discovery = computeDiscovery({
+        word: word.word,
+        genome: word.genome,
+        collision: word.collision,
+        dictionaryViability: word.dictionaryViability,
+        pronunciation: word.pronunciation,
+        fidelityBand: family.fidelity.band,
+        fidelityScore: Math.min(100, base + inCore * 13),
+        acoustic: family.acoustic,
+      })
     }
   }
+
+  // v0.36 — award "Exceptional" to at most ONE word per run: the strongest DIRECT
+  // candidate that also clears the absolute bar. Many runs clear it for no one, and
+  // that honest zero is a strength, not a bug (spec §11, §17).
+  const directWords = families.filter((f) => f.direct).flatMap((f) => f.words)
+  let top: WordPassport | undefined
+  for (const w of directWords) {
+    if (!isExceptionalEligible(w.discovery, w.dictionaryViability.overall)) continue
+    if (!top || w.discovery.score > top.discovery.score) top = w
+  }
+  if (top) top.discovery = { ...top.discovery, classification: 'Exceptional' }
 
   return families
 }
@@ -376,6 +407,17 @@ export function buildPassport(
   const emotionalDNA = computeEmotionalDNA(genome, concepts, language)
   const evolution = computeWordEvolution(word, genome, language, generation, reference, prototype)
   const pronunciation = ratePronunciation(word, genome)
+  const collision = offlineCollision(word)
+  const etymology = computeEtymology(word, language, IDEAS[lead].essence)
+  // v0.36 — could it behave like a real lexical item, and how strong is it overall.
+  const dictionaryViability = computeDictionaryViability(word, pronunciation, etymology.stages.length)
+  // The discovery score is finalised in the family post-pass with real fidelity;
+  // here it is computed with a neutral (adjacent) context so a standalone or
+  // evolved passport still carries a sensible score.
+  const discovery = computeDiscovery({
+    word, genome, collision, dictionaryViability, pronunciation,
+    fidelityBand: 'adjacent', acoustic: NEUTRAL_ACOUSTIC,
+  })
 
   return {
     word,
@@ -389,10 +431,12 @@ export function buildPassport(
     speakability: speakabilityBand(word),
     naturalness: naturalnessBand(naturalness(word)),
     fitness: computeFitness(word, emotionalDNA, pronunciation),
+    dictionaryViability,
+    discovery,
     paradigm: computeParadigm(word, IDEAS[lead].label.toLowerCase()),
-    etymology: computeEtymology(word, language, IDEAS[lead].essence),
+    etymology,
     relations: [],
-    collision: offlineCollision(word),
+    collision,
     ancestry: buildAncestry(lead, language),
     evolution,
     emotionalDNA,
