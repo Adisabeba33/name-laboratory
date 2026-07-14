@@ -562,28 +562,44 @@ function GenomeTab({ p }: { p: WordPassport }) {
           <p className="fit-line"><span className="k bad">Poor fit:</span> {p.brandFit.poorFit.join(', ')}</p>
         </div>
         <div className="tabcard">
-          <h4>Availability</h4>
-          <div className={`collide-offline match-${p.collision.match}`}>{p.collision.note}</div>
-          {collision ? (
-            <div className="collide-live">
-              <div className="collide-line">
-                <span className="collide-key">Dictionary</span>
-                <span>{collision.dictionary.isWord ? 'Already an English word' : 'Not in the English dictionary'}</span>
-              </div>
-              {collision.dictionary.definition && <div className="collide-def">“{collision.dictionary.definition}”</div>}
-              <div className="collide-domains">
-                {collision.domains.map((d) => (
-                  <span key={d.tld} className={`dom dom-${d.status}`}>.{d.tld} · {d.status}</span>
-                ))}
-              </div>
+          <h4>Collision status: {collision ? 'Partly checked' : p.collisionReport.status}</h4>
+          <div className="collide-layers">
+            <CollisionLayer label="Internal dictionary" value={p.collisionReport.internalDictionary} />
+            <CollisionLayer label="Phonetic (sounds-like)" value={p.collisionReport.phonetic} />
+            <CollisionLayer label="Short-word prior" value={p.collisionReport.shortWordRisk} />
+            <CollisionLayer
+              label="Proper names"
+              value={collision ? 'not_checked' : p.collisionReport.properName}
+            />
+            <CollisionLayer
+              label="Dictionary (live)"
+              value={collision ? (collision.dictionary.isWord ? 'exact' : 'clear') : 'not_checked'}
+            />
+            <CollisionLayer label="Brand / company" value="not_checked" />
+            <CollisionLayer
+              label="Domains"
+              value={collision ? (collision.domains.some((d) => d.status === 'taken') ? 'taken' : 'some free') : 'not_checked'}
+            />
+            <CollisionLayer label="Trademark" value="not_checked" />
+            <CollisionLayer label="Other languages" value="not_checked" />
+          </div>
+          {collision?.dictionary.definition && <div className="collide-def">“{collision.dictionary.definition}”</div>}
+          {collision && (
+            <div className="collide-domains">
+              {collision.domains.map((d) => (
+                <span key={d.tld} className={`dom dom-${d.status}`}>.{d.tld} · {d.status}</span>
+              ))}
             </div>
-          ) : (
+          )}
+          {!collision && (
             <button type="button" className="btn ghost sm" disabled={checking} onClick={check}>
-              {checking ? 'Checking…' : 'Check dictionary & domains (live)'}
+              {checking ? 'Checking…' : 'Run live dictionary & domain check'}
             </button>
           )}
           {failed && !collision && <p className="tabsec-muted">Live check unavailable right now — try again shortly.</p>}
-          <p className="tabsec-muted">Covers the English dictionary and domain registration only — not trademarks or other languages.</p>
+          <p className="tabsec-muted">
+            Confidence: {p.collisionReport.confidence}. {p.collisionReport.summary}
+          </p>
         </div>
       </div>
     </section>
@@ -658,6 +674,19 @@ function NotesTab({ p, brief }: { p: WordPassport; brief: string }) {
 }
 
 /* ── helpers ───────────────────────────────────────────────────────────── */
+
+/** One row of the layered collision report — a check and its honest status. */
+function CollisionLayer({ label, value }: { label: string; value: string }) {
+  const checked = value !== 'not_checked'
+  const risky = ['exact', 'near', 'high', 'taken'].includes(value)
+  const tone = !checked ? 'unchecked' : risky ? 'risk' : 'ok'
+  return (
+    <div className={`collide-layer collide-${tone}`}>
+      <span className="collide-key">{label}</span>
+      <span className="collide-status">{checked ? value.replace('_', ' ') : 'not checked'}</span>
+    </div>
+  )
+}
 
 function pct(n: number): string {
   return `${Math.round(n * 100)}%`

@@ -1524,7 +1524,16 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .collide-line { display: flex; gap: 10px; font-size: 13px; color: var(--dim); }
 .collide-key { color: var(--faint); }
 .collide-def { font-size: 12.5px; color: var(--faint); font-style: italic; }
-.collide-domains { display: flex; flex-wrap: wrap; gap: 6px; }
+.collide-domains { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* v0.36 P4 — layered collision report. */
+.collide-layers { display: flex; flex-direction: column; gap: 1px; background: var(--border); border-radius: var(--r-sm); overflow: hidden; margin-bottom: 12px; }
+.collide-layer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; background: var(--panel-2); font-size: 12.5px; }
+.collide-layer .collide-key { color: var(--dim); }
+.collide-status { font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.collide-unchecked .collide-status { color: var(--faint); font-style: italic; }
+.collide-ok .collide-status { color: var(--good); }
+.collide-risk .collide-status { color: var(--risk); }
 .dom { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--dim); }
 .dom-available { color: var(--good); border-color: rgba(100, 230, 166, 0.3); }
 .dom-taken { color: var(--risk); border-color: rgba(244, 163, 139, 0.3); }

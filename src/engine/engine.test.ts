@@ -22,6 +22,7 @@ import {
   naturalnessBand,
   EXCEPTIONAL_NATURALNESS,
   computeDictionaryViability,
+  buildCollisionReport,
   acousticProfile,
   LANGUAGES,
   languageById,
@@ -696,6 +697,47 @@ describe('validation & typed relations (v0.36 Phase 3)', () => {
         w.relations.map((x) => x.relationClass).join(','),
       ])
     expect(shape(a)).toEqual(shape(b))
+  })
+})
+
+describe('layered collision analysis (v0.36 Phase 4)', () => {
+  it('never reports a bare "none" — externals are honestly "not checked"', () => {
+    const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const w of r.families.flatMap((f) => f.words)) {
+      const c = w.collisionReport
+      // Overall status is a verdict about what WAS checked, never a bare pass.
+      expect(['Unverified', 'Internal collision']).toContain(c.status)
+      // Every external layer is explicitly not checked (no silent pass).
+      expect(c.brand).toBe('not_checked')
+      expect(c.domain).toBe('not_checked')
+      expect(c.trademark).toBe('not_checked')
+      expect(c.multilingual).toBe('not_checked')
+      expect(c.properName).toBe('not_checked')
+      expect(c.confidence).toBe('low')
+      expect(c.summary.toLowerCase()).toContain('not checked')
+    }
+  })
+
+  it('gives short forms a high occupancy prior (spec §14)', () => {
+    expect(buildCollisionReport('Vion').shortWordRisk).toBe('high')
+    expect(buildCollisionReport('Arel').shortWordRisk).toBe('high')
+    expect(buildCollisionReport('Miresen').shortWordRisk).toBe('low')
+  })
+
+  it('flags an existing common word as an internal collision', () => {
+    const c = buildCollisionReport('table')
+    // "table" is in / adjacent to the built-in list — either way it is an internal hit.
+    expect(['exact', 'near']).toContain(c.internalDictionary)
+    expect(c.status).toBe('Internal collision')
+  })
+
+  it('catches a same-sound different-spelling word phonetically', () => {
+    // "Kwik" sounds like "quick" — a phonetic neighbour even if spelled apart.
+    expect(buildCollisionReport('Kwik').phonetic).not.toBe('low')
+  })
+
+  it('is deterministic', () => {
+    expect(buildCollisionReport('Miresen')).toEqual(buildCollisionReport('Miresen'))
   })
 })
 

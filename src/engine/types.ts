@@ -198,6 +198,37 @@ export interface Collision {
   note: string
 }
 
+/**
+ * Layered collision analysis (Engine v0.36 Phase 4).
+ *
+ * A single "collision: none" is not credible — it hides which checks actually ran.
+ * This separates the layers so the honest ones (internal list, phonetic neighbour,
+ * short-word occupancy prior) are computed and the external ones (proper names,
+ * brands, domains, trademarks, other languages) are reported as **not checked**
+ * rather than silently passed. The overall status stays "Unverified" until real
+ * external checks run — the engine never claims a word is clear.
+ */
+export interface CollisionReport {
+  /** Built-in common-word / known-name list — offline and real. */
+  internalDictionary: 'clear' | 'near' | 'exact'
+  /** Sounds like an existing word despite a different spelling (offline prior). */
+  phonetic: 'low' | 'moderate' | 'high'
+  /** Short forms are far likelier to be occupied — an occupancy prior (spec §14). */
+  shortWordRisk: 'low' | 'moderate' | 'high'
+  /** External layers, honestly not performed without live services. */
+  properName: 'not_checked'
+  brand: 'not_checked'
+  domain: 'not_checked'
+  trademark: 'not_checked'
+  multilingual: 'not_checked'
+  /** Overall verdict — never a bare "none"/"clear" while externals are unchecked. */
+  status: 'Unverified' | 'Internal collision'
+  /** Confidence in the overall picture (low until external checks run). */
+  confidence: 'low'
+  /** One honest sentence: what was and wasn't checked. */
+  summary: string
+}
+
 /** Whether a word is a strong or weak fit for a given industry. */
 export interface BrandFit {
   excellentFor: string[]
@@ -326,6 +357,8 @@ export interface WordPassport {
   relations: WordRelation[]
   /** Offline collision verdict against the built-in word/brand list. */
   collision: Collision
+  /** v0.36 P4 — layered collision analysis; never a bare "none" (honest by layer). */
+  collisionReport: CollisionReport
   /** Where the word's sound descends from — species + phonetic ancestry. */
   ancestry: Ancestry
   /** The word's own inherited genome / evolution profile. */

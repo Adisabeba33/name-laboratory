@@ -21,7 +21,7 @@ import { Rng, hashSeed } from './rng'
 import { speakNative } from './synth'
 import { computeGenome } from './genome'
 import { speakabilityBand } from './phonetics'
-import { offlineCollision } from './collision'
+import { offlineCollision, buildCollisionReport } from './collision'
 import { naturalness, naturalnessBand, EXCEPTIONAL_NATURALNESS } from './naturalness'
 import { computeFitness } from './fitness'
 import { computeDictionaryViability } from './dictionary-viability'
@@ -444,6 +444,7 @@ export function buildPassport(
     phonology,
     relations: [],
     collision,
+    collisionReport: buildCollisionReport(word),
     ancestry: buildAncestry(lead, language),
     evolution,
     emotionalDNA,

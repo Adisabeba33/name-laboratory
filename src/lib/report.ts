@@ -195,7 +195,13 @@ function wordBlock(w: WordPassport): string {
     `- say: ${w.pronunciationGuide}  ·  ${w.partOfSpeech}` +
       `  ·  speakability: ${w.speakability}  ·  naturalness: ${w.naturalness}`,
   )
-  b.push(`- adoption: ${w.adoption.band} (${w.adoption.score}/100)  ·  collision: ${w.collision.match}`)
+  b.push(`- adoption: ${w.adoption.band} (${w.adoption.score}/100)`)
+  const cr = w.collisionReport
+  b.push(
+    `- collision: **${cr.status}** (confidence ${cr.confidence}) — internal ${cr.internalDictionary} · ` +
+      `phonetic ${cr.phonetic} · short-word ${cr.shortWordRisk} · ` +
+      `brand/domain/trademark/multilingual: not checked`,
+  )
   b.push(
     `- **discovery: ${w.discovery.classification} — ${w.discovery.score}/100**` +
       `  ·  dictionary viability: ${w.dictionaryViability.band} (${Math.round(w.dictionaryViability.overall * 100)})` +
