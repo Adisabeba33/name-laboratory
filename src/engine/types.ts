@@ -314,6 +314,8 @@ export interface WordPassport {
   fitness: FitnessProfile
   /** The Engine V6 morphological family — the root bent into verb/adj/adv/agent. */
   paradigm: WordParadigm
+  /** The imagined etymology — a reconstructed root chain (honest: not historical). */
+  etymology: Etymology
   /** Offline collision verdict against the built-in word/brand list. */
   collision: Collision
   /** Where the word's sound descends from — species + phonetic ancestry. */
@@ -495,6 +497,30 @@ export interface WordParadigm {
   root: string
   /** The derived grammatical forms grown from the root. */
   forms: WordForm[]
+}
+
+/** One stage in a word's imagined lineage (Engine V4/V6) — a form and the change into it. */
+export interface EtymologyStage {
+  /** The word form at this stage, capitalised. */
+  form: string
+  /** A short era label, e.g. "imagined root", "older form", "today". */
+  era: string
+  /** What changed to produce this form from the previous one (empty for the root). */
+  note: string
+}
+
+/**
+ * A word's imagined etymology (Engine V4/V6) — a reconstructed root chain.
+ *
+ * Honest by construction: an *imagined* lineage of the word's own sound, produced
+ * by running the language's sound-laws backward — never a claim of descent from a
+ * real language (invariant #6). The summary states this plainly.
+ */
+export interface Etymology {
+  /** Oldest → today. */
+  stages: EtymologyStage[]
+  /** One honest line framing the lineage as imagined, not historical. */
+  summary: string
 }
 
 /** The creative styles that bias which roots and endings the engine reaches for. */

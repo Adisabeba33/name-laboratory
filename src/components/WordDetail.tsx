@@ -271,6 +271,31 @@ function MeaningTab({ p }: { p: WordPassport }) {
         <p className="tabsec-muted">{p.construction.note}</p>
       </div>
 
+      <div className="etym">
+        <h4>Imagined lineage</h4>
+        <div className="etym-chain">
+          {p.etymology.stages.map((s, i) => (
+            <span className="etym-stage" key={i}>
+              {i > 0 && <span className="etym-arrow" aria-hidden>→</span>}
+              <span className="etym-form">
+                <b>{s.form}</b>
+                <span className="etym-era">{s.era}</span>
+              </span>
+            </span>
+          ))}
+        </div>
+        <ul className="etym-notes">
+          {p.etymology.stages
+            .filter((s) => s.note)
+            .map((s, i) => (
+              <li key={i}>
+                <b>{s.form}</b> — {s.note}
+              </li>
+            ))}
+        </ul>
+        <p className="tabsec-muted">{p.etymology.summary}</p>
+      </div>
+
       <div className="family">
         <h4>Word family</h4>
         <p className="tabsec-lead">The root bent into the roles it would take inside a real sentence.</p>

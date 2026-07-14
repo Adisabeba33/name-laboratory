@@ -23,6 +23,7 @@ import { offlineCollision } from './collision'
 import { naturalness, naturalnessBand, EXCEPTIONAL_NATURALNESS } from './naturalness'
 import { computeFitness } from './fitness'
 import { computeParadigm } from './morphology'
+import { computeEtymology } from './etymology'
 import { acousticProfile, blendAcoustic, conceptAcoustic } from './acoustics'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
@@ -267,6 +268,7 @@ export function buildPassport(
     naturalness: naturalnessBand(naturalness(word)),
     fitness: computeFitness(word, emotionalDNA, pronunciation),
     paradigm: computeParadigm(word, IDEAS[lead].label.toLowerCase()),
+    etymology: computeEtymology(word, language, IDEAS[lead].essence),
     collision: offlineCollision(word),
     ancestry: buildAncestry(lead, language),
     evolution,

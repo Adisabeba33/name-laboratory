@@ -139,6 +139,7 @@ function wordBlock(w: WordPassport): string {
     `- family: ${w.paradigm.root} (noun) · ` +
       w.paradigm.forms.map((f) => `${f.form} (${f.role})`).join(' · '),
   )
+  b.push(`- lineage: ${w.etymology.stages.map((s) => s.form).join(' → ')}  (imagined, not historical)`)
   b.push(`- meaning: ${w.meaning}`)
   if (w.shortMeaning) b.push(`- short: ${w.shortMeaning}`)
   if (w.usage.en.length || w.usage.ru.length) {

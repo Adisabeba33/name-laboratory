@@ -27,6 +27,7 @@ describe('buildReport', () => {
     expect(text).toContain('## Words')
     expect(text).toContain('fitness:')
     expect(text).toContain('family:')
+    expect(text).toContain('lineage:')
     expect(text).toContain('v9.9.9')
     // Every discovered word appears in the report.
     for (const w of results.families.flatMap((f) => f.words)) {

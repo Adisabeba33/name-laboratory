@@ -368,6 +368,39 @@ describe('morphological word families (Engine V6)', () => {
   })
 })
 
+describe('imagined etymology (Engine V4/V6 — reconstructed root chain)', () => {
+  it('builds a lineage that ends exactly at the modern word', () => {
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const w of families.flatMap((f) => f.words)) {
+      const s = w.etymology.stages
+      expect(s.length).toBeGreaterThanOrEqual(2)
+      // The final stage is the word itself, labelled "today".
+      expect(s[s.length - 1].form).toBe(w.word)
+      expect(s[s.length - 1].era).toBe('today')
+      // The root has no incoming change; every later stage explains its change.
+      expect(s[0].note).toBe('')
+      for (const stage of s.slice(1)) expect(stage.note.length).toBeGreaterThan(0)
+      // Forms shorten or stay as you walk back in time (endings/vowels peeled off).
+      expect(s[0].form.length).toBeLessThanOrEqual(w.word.length)
+    }
+  })
+
+  it('frames itself honestly as imagined, not historical', () => {
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 4, seed: 7 })
+    for (const w of families.flatMap((f) => f.words)) {
+      expect(w.etymology.summary.toLowerCase()).toContain('not a real historical')
+    }
+  })
+
+  it('is deterministic per word', () => {
+    const a = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const b = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    expect(a.families.flatMap((f) => f.words).map((w) => w.etymology)).toEqual(
+      b.families.flatMap((f) => f.words).map((w) => w.etymology),
+    )
+  })
+})
+
 describe('speakability — words that stay sayable', () => {
   const LANGS = ['crystalline', 'liquid', 'ancient', 'noble', 'earthen', 'ashen']
 
