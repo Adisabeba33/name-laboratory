@@ -97,6 +97,12 @@ export function WordDetail({
                 {p.adoption.band} · speech adoption
               </span>
               <span className={`speak speak-${p.speakability.toLowerCase()}`}>{p.speakability}</span>
+              <span
+                className={`nat nat-${p.naturalness.toLowerCase()}`}
+                title="How real the word feels — could it already exist in a living human language?"
+              >
+                {p.naturalness}
+              </span>
               <span className="wd-origin-species">{p.construction.species}</span>
             </div>
           </header>

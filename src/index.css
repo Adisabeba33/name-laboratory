@@ -845,6 +845,19 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .speak-speakable { color: var(--good); }
 .speak-ornate { color: var(--accent); }
 
+/* Naturalness band (Engine V3) — reuses the pill shape. */
+.nat {
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  color: var(--dim);
+}
+.nat-inevitable { color: var(--good); border-color: rgba(100, 230, 166, 0.3); }
+.nat-believable { color: var(--accent-2); border-color: rgba(89, 166, 255, 0.3); }
+.nat-plausible { color: var(--dim); }
+.nat-fabricated { color: var(--risk); border-color: rgba(244, 163, 139, 0.3); }
+
 /* ── Word detail (full page) ────────────────────────────────────────── */
 .worddetail { animation: rise 0.5s var(--ease) both; }
 .wd-back {
