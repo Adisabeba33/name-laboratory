@@ -1628,6 +1628,31 @@ textarea:focus {
   border-color: color-mix(in srgb, #b08328 45%, var(--border));
 }
 
+/* --- Naturalness (Engine V3) band --- */
+.nat {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+}
+.nat-inevitable {
+  color: #2f9e69;
+  border-color: color-mix(in srgb, #2f9e69 50%, var(--border));
+}
+.nat-believable {
+  color: #3f8ecc;
+  border-color: color-mix(in srgb, #3f8ecc 45%, var(--border));
+}
+.nat-plausible {
+  color: var(--text-muted, var(--text-faint));
+}
+.nat-fabricated {
+  color: #b0552f;
+  border-color: color-mix(in srgb, #b0552f 45%, var(--border));
+}
+
 /* --- Availability (collision) check --- */
 .collide-offline {
   font-size: 13px;

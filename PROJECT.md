@@ -90,6 +90,10 @@ configured, **bespoke per-word meanings and usage sentences swap in progressivel
   readily the word enters everyday speech. Synthesis is biased toward speakable
   shapes by default; a "Speakable ↔ Ornate" slider (`speakability` on the request)
   lets the user allow more elaborate words.
+- **Naturalness band** — the Engine V3 signal (Fabricated / Plausible / Believable /
+  Inevitable): could this word already exist in a living human language? It is the
+  **primary** selection signal — believability beats originality — so words feel
+  discovered, not manufactured.
 - **Word Genome / Emotional DNA / Personality / Brand Fit / origin explanation.**
 
 ---
@@ -237,6 +241,7 @@ Prompt → Interpretation → Hidden layers → Semantic tensions → Concept di
 | **21** | **Two modes** — Discover a meaning vs Name something (company/store/brand/newborn); naming uses its own analyst prompt and result framing | ✅ done |
 | — | **"How this word was made"** — honest per-word construction breakdown (syllables, ideas fused, species, sound influences); no fake morpheme etymology | ✅ done |
 | — | **Speakability bias** — synthesis leans toward everyday-sayable words by default; a "Speakable ↔ Ornate" dial (`speakability` on the request) + a per-word Speakability band, so long "incantation" shapes are avoided or flagged | ✅ done |
+| **V3** | **Engine V3 — inevitable, not fabricated.** Naturalness (`naturalness.ts`) becomes the PRIMARY selection signal: real-word structure + endings, multiplicative penalties for fantasy markers (x/z, triple `th`, decorative `-iel/-ath/-yx`, over-length). Originality/diversity runs LAST, only across the most-natural shortlist. Per-word Naturalness band on the passport. Phase 1 (scoring + selection) done; language-inventory tempering + LLM-side calibration to follow. | 🟡 in progress |
 | **8** | External checks — dictionary / brand / domain / trademark / cross-language negatives. Shipped: offline collision flag (bundled word/brand list) on every passport + a live per-word check (`api/collision.ts`, key-free: English dictionary via dictionaryapi.dev + domain RDAP). Trademark, social handles & cross-language meaning still to do. | 🟡 in progress |
 | A | **Accounts + database** — profiles, cross-device lexicon sync, request history | ⏳ later (see §7a) |
 | M | **Monetisation** — free daily limit + paid tier (premium model / higher limits) | ⏳ later (see §7a) |

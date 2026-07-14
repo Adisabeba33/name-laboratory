@@ -18,6 +18,7 @@ import { speakNative } from './synth'
 import { computeGenome } from './genome'
 import { speakabilityBand } from './phonetics'
 import { offlineCollision } from './collision'
+import { naturalness, naturalnessBand } from './naturalness'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
 import { ratePronunciation } from './pronunciation'
@@ -186,6 +187,7 @@ export function buildPassport(
     usage: { en: [], ru: [] },
     pronunciationGuide: pronounce(word, language.stressPattern),
     speakability: speakabilityBand(word),
+    naturalness: naturalnessBand(naturalness(word)),
     collision: offlineCollision(word),
     ancestry: buildAncestry(lead, language),
     evolution,

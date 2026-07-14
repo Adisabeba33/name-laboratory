@@ -18,6 +18,8 @@ import {
   matchBrands,
   speakNative,
   offlineCollision,
+  naturalness,
+  naturalnessBand,
   LANGUAGES,
   languageById,
   MODES,
@@ -226,10 +228,10 @@ describe('speakability — words that stay sayable', () => {
         }
       }
     }
-    // At least two distinct syllable counts appear (e.g. 2- and 4-syllable words),
-    // proving the run is no longer flattened to a single length.
+    // At least two distinct syllable counts appear, proving the run is not
+    // flattened to a single length. (Engine V3 leans shorter/natural, so we no
+    // longer require a 4-syllable word — only genuine size variety.)
     expect(sizes.size).toBeGreaterThanOrEqual(2)
-    expect([...sizes].some((n) => n >= 4)).toBe(true)
   })
 
   it('a strictly-speakable dial beats an ornate one on average', () => {
@@ -290,6 +292,46 @@ describe('offline collision check', () => {
   it('ships an offline collision verdict on every passport', () => {
     for (const w of generateWords({ ...MEDICINE_REQUEST, count: 5 })) {
       expect(['exact', 'near', 'none']).toContain(w.collision.match)
+    }
+  })
+})
+
+describe('naturalness (Engine V3 — inevitable, not fabricated)', () => {
+  const REAL = ['Sena', 'Uber', 'Kodak', 'Spotify', 'Valen', 'Rasa', 'Liranir']
+  const FANTASY = ['Gruthuthoth', 'Vorulalux', 'Xekakix', 'Nyrariath', 'Ishithaliel', 'Voruknoath']
+
+  it('scores real-feeling words far above fantasy shapes', () => {
+    const minReal = Math.min(...REAL.map(naturalness))
+    const maxFantasy = Math.max(...FANTASY.map(naturalness))
+    expect(minReal).toBeGreaterThan(maxFantasy)
+    expect(minReal).toBeGreaterThan(0.7)
+    expect(maxFantasy).toBeLessThan(0.5)
+  })
+
+  it('maps scores to honest bands', () => {
+    expect(naturalnessBand(naturalness('Uber'))).toBe('Inevitable')
+    expect(naturalnessBand(naturalness('Gruthuthoth'))).toBe('Fabricated')
+  })
+
+  it('makes synthesis rank believability over originality', () => {
+    // With naturalness as the primary signal, a default run should almost never
+    // ship a fabricated-feeling word.
+    let fabricated = 0
+    let total = 0
+    for (const id of ['crystalline', 'liquid', 'ancient', 'noble', 'ashen', 'obsidian']) {
+      for (const seed of [7, 42, 99]) {
+        for (const w of speakNative(languageById(id), new Rng(seed), 3).words) {
+          total++
+          if (naturalnessBand(naturalness(w)) === 'Fabricated') fabricated++
+        }
+      }
+    }
+    expect(fabricated / total).toBeLessThan(0.15)
+  })
+
+  it('gives every passport a naturalness band', () => {
+    for (const w of generateWords({ ...MEDICINE_REQUEST, count: 5 })) {
+      expect(['Fabricated', 'Plausible', 'Believable', 'Inevitable']).toContain(w.naturalness)
     }
   })
 })

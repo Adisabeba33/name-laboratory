@@ -12,6 +12,9 @@
  * eventually expose the genome as adjustable sliders.
  */
 
+import type { NaturalnessBand } from './naturalness'
+export type { NaturalnessBand }
+
 /**
  * The families of human language the linguistic engine draws inspiration from.
  * The engine never copies existing words — it borrows roots, phonetic patterns
@@ -305,6 +308,8 @@ export interface WordPassport {
   pronunciationGuide: string
   /** How readily the word enters everyday speech — a qualitative band. */
   speakability: SpeakabilityBand
+  /** How real the word feels — the Engine V3 "inevitable, not fabricated" band. */
+  naturalness: NaturalnessBand
   /** Offline collision verdict against the built-in word/brand list. */
   collision: Collision
   /** Where the word's sound descends from — species + phonetic ancestry. */

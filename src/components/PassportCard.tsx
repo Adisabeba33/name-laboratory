@@ -121,6 +121,12 @@ export function PassportCard({
         >
           {p.speakability}
         </span>
+        <span
+          className={`nat nat-${p.naturalness.toLowerCase()}`}
+          title="How real the word feels — could it already exist in a living human language? (a qualitative band, not a score)"
+        >
+          {p.naturalness}
+        </span>
       </div>
       <div className="meaning-block">
         <span className="meaning-label">Meaning</span>

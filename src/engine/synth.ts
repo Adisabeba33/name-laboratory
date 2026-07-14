@@ -10,6 +10,7 @@ import {
   pronounceability,
 } from './phonetics'
 import { editDistance } from './genome'
+import { naturalness } from './naturalness'
 
 /**
  * Native-speaker word synthesis.
@@ -125,22 +126,28 @@ export function speakNative(
 }
 
 /**
- * Choose `count` words that are both speakable and mutually different. Words that
- * clear the pronounceability floor are preferred (most speakable first, so ties
- * resolve toward sayable), and diversity is maximised *within* that set. Only if
- * too few clear the floor do we fall back to the wider pool — the run always
- * returns words, but never reaches for a spell-shape while a speakable one exists.
+ * Choose `count` words that feel *inevitable* and are mutually different.
+ *
+ * Engine V3 flips the objective: NATURALNESS is the primary signal (believability
+ * beats originality), the speakability floor is a secondary gate, and diversity —
+ * the old originality driver — runs LAST, only across the most-natural shortlist,
+ * so spreading for variety never reaches down into fabricated / fantasy shapes.
+ * Falls back gracefully so a run always returns words.
  */
 function selectSpeakable(pool: string[], count: number, floor: number): string[] {
   if (pool.length <= count) return pool
   const scored = pool
-    .map((w) => ({ w, s: pronounceability(w) }))
-    .sort((a, b) => b.s - a.s)
-  const speakable = scored.filter((x) => x.s >= floor).map((x) => x.w)
-  if (speakable.length >= count) return selectDiverse(speakable, count)
-  // Not enough cleared the floor — top up from the most-speakable remainder.
-  const ordered = scored.map((x) => x.w)
-  return selectDiverse(ordered, count)
+    .map((w) => ({ w, nat: naturalness(w), say: pronounceability(w) }))
+    .sort((a, b) => b.nat - a.nat)
+
+  // Prefer words that clear the speakability floor AND don't read as fabricated.
+  const natural = scored.filter((x) => x.say >= floor && x.nat >= 0.5)
+  const usable = natural.length >= count ? natural : scored.filter((x) => x.say >= floor)
+  const ranked = usable.length >= count ? usable : scored
+
+  // Diversity (originality) is the LAST step — among the top-natural shortlist only.
+  const shortlist = ranked.slice(0, Math.max(count, count * 3)).map((x) => x.w)
+  return selectDiverse(shortlist, count)
 }
 
 /**
