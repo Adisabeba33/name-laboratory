@@ -28,6 +28,7 @@ import { computeDictionaryViability } from './dictionary-viability'
 import { computeDiscovery, isExceptionalEligible, NEUTRAL_ACOUSTIC } from './lexical-score'
 import { computeParadigm } from './morphology'
 import { computeEtymology } from './etymology'
+import { computePhonology } from './phonology'
 import { computeSemanticNetwork } from './network'
 import { acousticProfile, blendAcoustic, conceptAcoustic } from './acoustics'
 import { computeEmotionalDNA } from './emotional'
@@ -351,6 +352,8 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
   for (const family of families) {
     for (const word of family.words) {
       word.relations = network.get(word.word.toLowerCase()) ?? []
+      // v0.36 P3 — validate the sound against the family's intended acoustic profile.
+      word.phonology = computePhonology(word.word, word.genome, family.acoustic)
       // v0.36 — finalise the Lexical Discovery Score now that the family's concept
       // fidelity (direct/adjacent/weak) and intended acoustic profile are known.
       // Per-word fidelity (band base + a bonus for each of THIS word's concepts
@@ -418,6 +421,9 @@ export function buildPassport(
     word, genome, collision, dictionaryViability, pronunciation,
     fidelityBand: 'adjacent', acoustic: NEUTRAL_ACOUSTIC,
   })
+  // Phonology is finalised in the post-pass against the family's real acoustic
+  // profile; a neutral intended profile here keeps standalone passports sensible.
+  const phonology = computePhonology(word, genome, NEUTRAL_ACOUSTIC)
 
   return {
     word,
@@ -435,6 +441,7 @@ export function buildPassport(
     discovery,
     paradigm: computeParadigm(word, IDEAS[lead].label.toLowerCase()),
     etymology,
+    phonology,
     relations: [],
     collision,
     ancestry: buildAncestry(lead, language),

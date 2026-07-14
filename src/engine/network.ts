@@ -78,6 +78,7 @@ export function computeSemanticNetwork(families: WordFamily[]): Map<string, Word
         word: b.word,
         language: b.language,
         kind: rel.kind,
+        relationClass: relationClassOf(rel.kind),
         note: rel.note,
       })),
     )
@@ -89,6 +90,16 @@ interface Scored {
   kind: string
   note: string
   strength: number
+}
+
+/**
+ * Which layer a relation lives on (v0.36 P3). A shared idea/echo is SEMANTIC; a
+ * shared sound-world or language is PHONETIC. Kept explicit so the UI never
+ * presents "kindred sound" as if it were meaning-relatedness.
+ */
+function relationClassOf(kind: string): 'semantic' | 'phonetic' | 'morphological' {
+  if (kind === 'kindred idea' || kind === 'echo') return 'semantic'
+  return 'phonetic'
 }
 
 /**

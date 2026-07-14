@@ -206,14 +206,26 @@ function wordBlock(w: WordPassport): string {
     `- fitness: ${w.fitness.axes.map((a) => `${a.label} ${a.band}`).join(' · ')}` +
       `  (signature: ${w.fitness.strongest})`,
   )
-  b.push(
-    `- family: ${w.paradigm.root} (noun) · ` +
-      w.paradigm.forms.map((f) => `${f.form} (${f.role})`).join(' · '),
-  )
-  b.push(`- lineage: ${w.etymology.stages.map((s) => s.form).join(' → ')}  (imagined, not historical)`)
-  if (w.relations.length) {
-    b.push(`- related: ${w.relations.map((r) => `${r.word} (${r.kind})`).join(' · ')}`)
+  const family = w.paradigm.forms.length
+    ? `${w.paradigm.root} (noun) · ` + w.paradigm.forms.map((f) => `${f.form} (${f.role})`).join(' · ')
+    : `${w.paradigm.root} (noun-only — no natural derivations)`
+  b.push(`- family: ${family}`)
+  if (w.paradigm.rejected.length) {
+    b.push(`  - rejected: ${w.paradigm.rejected.map((r) => `${r.form} (${r.reason})`).join(' · ')}`)
   }
+  if (w.etymology.plausible) {
+    b.push(
+      `- lineage (constructed): ` +
+        w.etymology.stages.map((s) => (s.reason ? `${s.form} [${s.reason}]` : s.form)).join(' → '),
+    )
+  }
+  b.push(
+    `- phonology: ${w.phonology.band} congruence (${Math.round(w.phonology.congruence * 100)}) — ${w.phonology.explanation}`,
+  )
+  const semantic = w.relations.filter((r) => r.relationClass === 'semantic')
+  const phonetic = w.relations.filter((r) => r.relationClass === 'phonetic')
+  if (semantic.length) b.push(`- related (semantic): ${semantic.map((r) => `${r.word} (${r.kind})`).join(' · ')}`)
+  if (phonetic.length) b.push(`- related (phonetic): ${phonetic.map((r) => `${r.word} (${r.kind})`).join(' · ')}`)
   b.push(`- meaning: ${w.meaning}`)
   if (w.shortMeaning) b.push(`- short: ${w.shortMeaning}`)
   if (w.usage.en.length || w.usage.ru.length) {

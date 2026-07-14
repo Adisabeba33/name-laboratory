@@ -330,20 +330,18 @@ describe('fitness profile (Engine V6 — multi-dimensional selection scorecard)'
 describe('morphological word families (Engine V6)', () => {
   const ROLES = ['verb', 'adjective', 'adverb', 'agent noun']
 
-  it('grows a full, native, pronounceable paradigm from each word', () => {
+  it('grows a native, pronounceable paradigm — validated forms only (v0.36 P3)', () => {
     const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
     for (const w of families.flatMap((f) => f.words)) {
       const par = w.paradigm
       expect(par.root).toBe(w.word)
-      expect(par.forms.map((f) => f.role)).toEqual(ROLES)
+      // Forms are now a validated SUBSET of the four roles (a word may be noun-only).
       for (const form of par.forms) {
-        // Each derived form extends the root (shares its stem) and stays sayable.
+        expect(ROLES).toContain(form.role)
         expect(form.form.length).toBeGreaterThan(w.word.length - 2)
         expect(form.gloss.length).toBeGreaterThan(0)
-        // No tripled letters crept in at the suffix seam.
         expect(/(.)\1\1/.test(form.form.toLowerCase())).toBe(false)
       }
-      // The four forms are distinct words.
       const forms = par.forms.map((f) => f.form)
       expect(new Set(forms).size).toBe(forms.length)
     }
@@ -352,8 +350,12 @@ describe('morphological word families (Engine V6)', () => {
   it('derives adverbs from adjectives the way English does', () => {
     const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
     for (const w of families.flatMap((f) => f.words)) {
-      const adj = w.paradigm.forms.find((f) => f.role === 'adjective')!.form.toLowerCase()
-      const adv = w.paradigm.forms.find((f) => f.role === 'adverb')!.form.toLowerCase()
+      // Only when BOTH the adjective and the adverb survived validation.
+      const adjForm = w.paradigm.forms.find((f) => f.role === 'adjective')
+      const advForm = w.paradigm.forms.find((f) => f.role === 'adverb')
+      if (!adjForm || !advForm) continue
+      const adj = adjForm.form.toLowerCase()
+      const adv = advForm.form.toLowerCase()
       // "-ic" adjectives take "-ally"; everything else takes "-ly".
       if (adj.endsWith('ic')) expect(adv).toBe(adj + 'ally')
       else if (!adj.endsWith('le')) expect(adv).toBe(adj + 'ly')
@@ -615,6 +617,85 @@ describe('Lexical Discovery Score & Dictionary Viability (v0.36 Phase 2)', () =>
     expect(a.families.flatMap((f) => f.words).map((w) => w.discovery.score)).toEqual(
       b.families.flatMap((f) => f.words).map((w) => w.discovery.score),
     )
+  })
+})
+
+describe('validation & typed relations (v0.36 Phase 3)', () => {
+  const ROLES = ['verb', 'adjective', 'adverb', 'agent noun']
+
+  it('only ships morphological forms that pass validation, rejecting the rest with reasons', () => {
+    const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const w of r.families.flatMap((f) => f.words)) {
+      // Accepted forms are genuinely natural…
+      for (const f of w.paradigm.forms) {
+        expect(ROLES).toContain(f.role)
+        expect(naturalness(f.form)).toBeGreaterThanOrEqual(0.58)
+      }
+      // …and rejected forms carry an explanation.
+      for (const rej of w.paradigm.rejected) {
+        expect(ROLES).toContain(rej.role)
+        expect(rej.reason.length).toBeGreaterThan(0)
+      }
+      // Accepted + rejected together are a subset of the four candidate roles.
+      const roles = [...w.paradigm.forms, ...w.paradigm.rejected].map((f) => f.role)
+      expect(new Set(roles).size).toBe(roles.length)
+      expect(roles.length).toBeLessThanOrEqual(4)
+    }
+  })
+
+  it('labels lineage constructed and marks a real chain plausible', () => {
+    for (const w of runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 }).families.flatMap((f) => f.words)) {
+      expect(w.etymology.lineageType).toBe('constructed')
+      expect(w.etymology.plausible).toBe(w.etymology.stages.length >= 2)
+      // Every non-root stage explains what KIND of change produced it.
+      for (const s of w.etymology.stages.slice(1)) expect(s.reason.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('types every relation and never calls a shared sound "semantic"', () => {
+    for (const w of runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 }).families.flatMap((f) => f.words)) {
+      for (const rel of w.relations) {
+        expect(['semantic', 'phonetic', 'morphological']).toContain(rel.relationClass)
+        // "kindred sound" / "sibling" must never be filed under semantic.
+        if (rel.kind === 'kindred sound' || rel.kind === 'sibling') {
+          expect(rel.relationClass).toBe('phonetic')
+        }
+        if (rel.relationClass === 'semantic') {
+          expect(['kindred idea', 'echo']).toContain(rel.kind)
+        }
+      }
+    }
+  })
+
+  it('validates each word\'s sound against its meaning\'s intended profile', () => {
+    const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const fam of r.families) {
+      for (const w of fam.words) {
+        const p = w.phonology
+        expect(p.congruence).toBeGreaterThanOrEqual(0)
+        expect(p.congruence).toBeLessThanOrEqual(1)
+        expect(['Contradicts', 'Weak', 'Fair', 'High']).toContain(p.band)
+        expect(p.explanation.length).toBeGreaterThan(0)
+        // The intended profile is the family's actual acoustic profile.
+        expect(p.intended).toEqual(fam.acoustic)
+      }
+    }
+    // Congruence genuinely varies across a run (the sound layer differentiates).
+    const bands = new Set(r.families.flatMap((f) => f.words).map((w) => w.phonology.band))
+    expect(bands.size).toBeGreaterThanOrEqual(2)
+  })
+
+  it('is deterministic per seed', () => {
+    const a = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const b = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const shape = (r: typeof a) =>
+      r.families.flatMap((f) => f.words).map((w) => [
+        w.paradigm.forms.length,
+        w.paradigm.rejected.length,
+        w.phonology.band,
+        w.relations.map((x) => x.relationClass).join(','),
+      ])
+    expect(shape(a)).toEqual(shape(b))
   })
 })
 

@@ -31,6 +31,8 @@ interface Edge {
   newer: string
   /** What happened, older → newer. */
   note: string
+  /** The KIND of change (a linguistic category), for honest labelling. */
+  reason: string
 }
 
 export function computeEtymology(word: string, lang: Language, anchor: string): Etymology {
@@ -41,32 +43,37 @@ export function computeEtymology(word: string, lang: Language, anchor: string): 
   // Undo the most-recent change first, walking back in time.
   const accrete = undoEnding(cur, lang)
   if (accrete) {
-    edges.unshift({ older: accrete.older, newer: cur, note: accrete.note })
+    edges.unshift({ older: accrete.older, newer: cur, note: accrete.note, reason: 'suffix accretion / analogy' })
     cur = accrete.older
   }
   const raise = undoVowel(cur)
   if (raise) {
-    edges.unshift({ older: raise.older, newer: cur, note: raise.note })
+    edges.unshift({ older: raise.older, newer: cur, note: raise.note, reason: 'phonetic reduction / vowel shift' })
     cur = raise.older
   }
   const harden = undoLenition(cur)
   if (harden) {
-    edges.unshift({ older: harden.older, newer: cur, note: harden.note })
+    edges.unshift({ older: harden.older, newer: cur, note: harden.note, reason: 'consonant hardening (fortition)' })
     cur = harden.older
   }
 
   const stages: EtymologyStage[] = []
   const oldest = edges.length ? edges[0].older : modern
-  stages.push({ form: cap(oldest), era: 'imagined root', note: '' })
+  stages.push({ form: cap(oldest), era: 'imagined root', note: '', reason: '' })
   edges.forEach((e, i) => {
     stages.push({
       form: cap(e.newer),
       era: i === edges.length - 1 ? 'today' : 'older form',
       note: e.note,
+      reason: e.reason,
     })
   })
 
   return {
+    lineageType: 'constructed',
+    // Plausible only when a real multi-stage chain was reconstructed — otherwise the
+    // UI omits it rather than show a decorative single form.
+    plausible: stages.length >= 2,
     stages,
     summary:
       `An imagined lineage for a word that carries ${anchor} — how its sound could ` +

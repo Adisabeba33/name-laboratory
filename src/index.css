@@ -1426,6 +1426,43 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .etym-notes { margin: 0 0 10px; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; }
 .etym-notes li { font-size: 12.5px; color: var(--dim); }
 .etym-notes li b { color: var(--text); font-weight: 500; }
+.etym-reason { color: var(--faint); font-style: italic; }
+.etym-tag {
+  font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--faint); border: 1px solid var(--border-2); border-radius: 999px;
+  padding: 1px 7px; margin-left: 8px; vertical-align: middle;
+}
+
+/* v0.36 P3 — rejected morphological forms. */
+.family-rejected { margin: 4px 0 10px; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; }
+.family-rejected li { font-size: 12.5px; color: var(--faint); }
+.family-rejected s { color: var(--risk); }
+
+/* v0.36 P3 — sound ↔ meaning congruence. */
+.phon {
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  margin-bottom: 22px;
+}
+.phon-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.phon-head h4 { margin: 0; font-size: 14px; }
+.phon-band {
+  font-size: 11px; padding: 2px 9px; border-radius: 999px;
+  border: 1px solid var(--border-2); color: var(--dim); font-variant-numeric: tabular-nums;
+}
+.phon-high { color: var(--good); border-color: rgba(100, 230, 166, 0.3); }
+.phon-fair { color: var(--accent-2); border-color: rgba(89, 166, 255, 0.3); }
+.phon-weak { color: var(--star); border-color: rgba(255, 210, 122, 0.3); }
+.phon-contradicts { color: var(--risk); border-color: rgba(244, 163, 139, 0.35); }
+.phon-explain { font-size: 13px; color: var(--dim); margin: 0 0 12px; line-height: 1.5; }
+.phon-axes { display: flex; flex-direction: column; gap: 9px; margin-bottom: 8px; }
+.phon-axis { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 12px; }
+.phon-name { font-size: 11px; color: var(--faint); text-transform: capitalize; }
+.phon-track { position: relative; height: 6px; background: var(--panel-3); border-radius: 999px; }
+.phon-want, .phon-got { position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); }
+.phon-want { border: 1.5px solid var(--faint); background: transparent; }
+.phon-got { background: var(--accent); }
 
 /* V6 — the morphological word family (paradigm of derived forms). */
 .family { margin-top: 22px; }

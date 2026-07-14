@@ -320,6 +320,8 @@ export interface WordPassport {
   paradigm: WordParadigm
   /** The imagined etymology — a reconstructed root chain (honest: not historical). */
   etymology: Etymology
+  /** v0.36 P3 — whether the word's sound actually expresses its meaning. */
+  phonology: Phonology
   /** Semantically-related words in the same run — the navigable lexicon graph (V4). */
   relations: WordRelation[]
   /** Offline collision verdict against the built-in word/brand list. */
@@ -551,18 +553,31 @@ export interface WordForm {
   gloss: string
 }
 
+/** A derived form the engine generated but rejected as forced/unnatural (v0.36 P3). */
+export interface RejectedForm {
+  role: string
+  form: string
+  /** Why it was rejected, e.g. "no stable verb form — awkward at the seam". */
+  reason: string
+}
+
 /**
- * A word's morphological family (Engine V6) — its paradigm of derived forms.
+ * A word's morphological family (Engine V6, validated in v0.36 Phase 3).
  *
  * Honest by construction: these inflect the coined root with the HOST language's
  * (English) derivational morphology so they are deployable in an EN sentence —
  * NOT a claim about the invented sound-world's own grammar (the UI states this).
+ * v0.36: forms are no longer emitted mechanically — each derivation is validated
+ * and a forced one is REJECTED (a word may stay noun-only), so the family shows
+ * only forms that actually sound natural.
  */
 export interface WordParadigm {
   /** The base form (the noun) — the word itself, capitalised. */
   root: string
-  /** The derived grammatical forms grown from the root. */
+  /** The derived forms that passed validation (may be empty → noun-only). */
   forms: WordForm[]
+  /** Forms the engine generated but rejected as unnatural, with reasons. */
+  rejected: RejectedForm[]
 }
 
 /**
@@ -577,8 +592,33 @@ export interface WordRelation {
   language: string
   /** The relation kind, e.g. "kindred idea", "echo", "kindred sound", "sibling". */
   kind: string
+  /**
+   * Which layer the link lives on (v0.36 P3): a shared MEANING, a shared SOUND, or
+   * a shared FORM. Presented separately so "kindred sound" is never dressed up as
+   * semantic relatedness.
+   */
+  relationClass: 'semantic' | 'phonetic' | 'morphological'
   /** One short reason for the link. */
   note: string
+}
+
+/**
+ * Semantic Phonology validation (v0.36 Phase 3) — does the word's sound actually
+ * express its meaning's intended acoustic profile? A modeled judgement (stated as
+ * such, not a universal law): the intended profile the word was shaped toward, the
+ * observed profile of the final form, a congruence score, and a plain explanation.
+ */
+export interface Phonology {
+  /** The meaning's intended acoustic profile (what the word was shaped toward). */
+  intended: AcousticProfile
+  /** The observed acoustic profile of the final form. */
+  observed: AcousticProfile
+  /** 0–1 congruence between intended and observed. */
+  congruence: number
+  /** Qualitative verdict. */
+  band: 'Contradicts' | 'Weak' | 'Fair' | 'High'
+  /** One honest sentence on how (or whether) the sound mirrors the meaning. */
+  explanation: string
 }
 
 /** One stage in a word's imagined lineage (Engine V4/V6) — a form and the change into it. */
@@ -589,16 +629,24 @@ export interface EtymologyStage {
   era: string
   /** What changed to produce this form from the previous one (empty for the root). */
   note: string
+  /** The KIND of change (v0.36 P3), e.g. "phonetic reduction", "suffix accretion". */
+  reason: string
 }
 
 /**
- * A word's imagined etymology (Engine V4/V6) — a reconstructed root chain.
+ * A word's imagined etymology (Engine V4/V6, validated in v0.36 Phase 3).
  *
  * Honest by construction: an *imagined* lineage of the word's own sound, produced
  * by running the language's sound-laws backward — never a claim of descent from a
- * real language (invariant #6). The summary states this plainly.
+ * real language (invariant #6). Each stage now states the KIND of change; the
+ * lineage is `plausible` only when at least one real change was reconstructed, so
+ * the UI can omit a decorative single-form "lineage".
  */
 export interface Etymology {
+  /** Always "constructed" — never a claim of real descent. */
+  lineageType: 'constructed'
+  /** True when a real multi-stage chain was reconstructed (else omit in the UI). */
+  plausible: boolean
   /** Oldest → today. */
   stages: EtymologyStage[]
   /** One honest line framing the lineage as imagined, not historical. */

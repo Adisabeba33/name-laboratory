@@ -1,6 +1,7 @@
-import type { WordForm, WordParadigm } from './types'
+import type { RejectedForm, WordForm, WordParadigm } from './types'
 import { Rng, hashSeed } from './rng'
-import { isVowel, normalise } from './phonetics'
+import { awkwardClusters, isVowel, normalise, pronounceability } from './phonetics'
+import { naturalness } from './naturalness'
 
 /**
  * Engine V6 — morphological word families.
@@ -31,18 +32,35 @@ export function computeParadigm(word: string, anchor: string): WordParadigm {
   const rng = new Rng(hashSeed(`morph:${word.toLowerCase()}`))
   const stem = rootStem(word)
 
-  const verb = attachSuffix(stem, pick(VERB_SUFFIXES, rng))
   const adjective = attachSuffix(stem, pick(ADJ_SUFFIXES, rng))
-  const adverb = adverbOf(adjective)
-  const agent = attachSuffix(stem, pick(AGENT_SUFFIXES, rng))
-
-  const forms: WordForm[] = [
-    { role: 'verb', form: cap(verb), gloss: `to bring about ${anchor}` },
+  const candidates: WordForm[] = [
+    { role: 'verb', form: cap(attachSuffix(stem, pick(VERB_SUFFIXES, rng))), gloss: `to bring about ${anchor}` },
     { role: 'adjective', form: cap(adjective), gloss: `having the quality of ${anchor}` },
-    { role: 'adverb', form: cap(adverb), gloss: `in a ${anchor} way` },
-    { role: 'agent noun', form: cap(agent), gloss: `one who embodies ${anchor}` },
+    { role: 'adverb', form: cap(adverbOf(adjective)), gloss: `in a ${anchor} way` },
+    { role: 'agent noun', form: cap(attachSuffix(stem, pick(AGENT_SUFFIXES, rng))), gloss: `one who embodies ${anchor}` },
   ]
-  return { root: cap(word), forms }
+
+  // v0.36 P3 — validate each derivation; keep only forms that sound natural, and
+  // record the rest as honestly rejected (a word may stay noun-only).
+  const forms: WordForm[] = []
+  const rejected: RejectedForm[] = []
+  for (const c of candidates) {
+    const reason = rejectionReason(c.form)
+    if (reason) rejected.push({ role: c.role, form: c.form, reason: `no natural ${c.role} — ${reason}` })
+    else forms.push(c)
+  }
+  return { root: cap(word), forms, rejected }
+}
+
+/** Why a derived form reads as forced, or null if it is natural enough to keep. */
+function rejectionReason(form: string): string | null {
+  const w = normalise(form)
+  if (w.length > 13) return 'the form runs too long to be usable'
+  if (awkwardClusters(w) >= 1) return 'an awkward consonant cluster at the seam'
+  if (/(.)\1\1/.test(w)) return 'a run of repeated letters'
+  if (pronounceability(w) < 0.5) return 'it is hard to pronounce'
+  if (naturalness(form) < 0.58) return 'it sounds artificial'
+  return null
 }
 
 /**

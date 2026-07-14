@@ -108,23 +108,30 @@ export function WordDetail({
               </span>
               <span className="wd-origin-species">{p.construction.species}</span>
             </div>
-            {onOpenRelated && p.relations.length > 0 && (
-              <div className="wd-related">
-                <span className="wd-related-label">Related</span>
-                {p.relations.map((r) => (
-                  <button
-                    type="button"
-                    key={r.word}
-                    className="rel-chip"
-                    title={`${r.kind} — ${r.note} · ${r.language}`}
-                    onClick={() => onOpenRelated(r.word)}
-                  >
-                    {r.word}
-                    <span className="rel-kind">{r.kind}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            {onOpenRelated &&
+              (['semantic', 'phonetic'] as const).map((cls) => {
+                const rels = p.relations.filter((r) => r.relationClass === cls)
+                if (rels.length === 0) return null
+                return (
+                  <div className="wd-related" key={cls}>
+                    <span className="wd-related-label">
+                      {cls === 'semantic' ? 'Related in meaning' : 'Related in sound'}
+                    </span>
+                    {rels.map((r) => (
+                      <button
+                        type="button"
+                        key={r.word}
+                        className="rel-chip"
+                        title={`${r.kind} — ${r.note} · ${r.language}`}
+                        onClick={() => onOpenRelated(r.word)}
+                      >
+                        {r.word}
+                        <span className="rel-kind">{r.kind}</span>
+                      </button>
+                    ))}
+                  </div>
+                )
+              })}
           </header>
 
           <nav className="wd-tabs" role="tablist">
@@ -290,51 +297,68 @@ function MeaningTab({ p }: { p: WordPassport }) {
         <p className="tabsec-muted">{p.construction.note}</p>
       </div>
 
-      <div className="etym">
-        <h4>Imagined lineage</h4>
-        <div className="etym-chain">
-          {p.etymology.stages.map((s, i) => (
-            <span className="etym-stage" key={i}>
-              {i > 0 && <span className="etym-arrow" aria-hidden>→</span>}
-              <span className="etym-form">
-                <b>{s.form}</b>
-                <span className="etym-era">{s.era}</span>
+      {p.etymology.plausible && (
+        <div className="etym">
+          <h4>Imagined lineage <span className="etym-tag">constructed</span></h4>
+          <div className="etym-chain">
+            {p.etymology.stages.map((s, i) => (
+              <span className="etym-stage" key={i}>
+                {i > 0 && <span className="etym-arrow" aria-hidden>→</span>}
+                <span className="etym-form">
+                  <b>{s.form}</b>
+                  <span className="etym-era">{s.era}</span>
+                </span>
               </span>
-            </span>
-          ))}
-        </div>
-        <ul className="etym-notes">
-          {p.etymology.stages
-            .filter((s) => s.note)
-            .map((s, i) => (
-              <li key={i}>
-                <b>{s.form}</b> — {s.note}
-              </li>
             ))}
-        </ul>
-        <p className="tabsec-muted">{p.etymology.summary}</p>
-      </div>
+          </div>
+          <ul className="etym-notes">
+            {p.etymology.stages
+              .filter((s) => s.note)
+              .map((s, i) => (
+                <li key={i}>
+                  <b>{s.form}</b> — {s.note} {s.reason && <span className="etym-reason">· {s.reason}</span>}
+                </li>
+              ))}
+          </ul>
+          <p className="tabsec-muted">{p.etymology.summary}</p>
+        </div>
+      )}
 
       <div className="family">
         <h4>Word family</h4>
-        <p className="tabsec-lead">The root bent into the roles it would take inside a real sentence.</p>
-        <div className="family-grid">
-          <div className="family-form">
-            <span className="family-role">noun</span>
-            <b className="family-word">{p.paradigm.root}</b>
-            <span className="family-gloss">{p.meaning.replace(/\s*\(.*$/, '').trim()}</span>
-          </div>
-          {p.paradigm.forms.map((f) => (
-            <div className="family-form" key={f.role}>
-              <span className="family-role">{f.role}</span>
-              <b className="family-word">{f.form}</b>
-              <span className="family-gloss">{f.gloss}</span>
+        {p.paradigm.forms.length > 0 ? (
+          <>
+            <p className="tabsec-lead">The root bent into the roles that sound natural. Forced forms are rejected, not shown as real.</p>
+            <div className="family-grid">
+              <div className="family-form">
+                <span className="family-role">noun</span>
+                <b className="family-word">{p.paradigm.root}</b>
+                <span className="family-gloss">{p.meaning.replace(/\s*\(.*$/, '').trim()}</span>
+              </div>
+              {p.paradigm.forms.map((f) => (
+                <div className="family-form" key={f.role}>
+                  <span className="family-role">{f.role}</span>
+                  <b className="family-word">{f.form}</b>
+                  <span className="family-gloss">{f.gloss}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        ) : (
+          <p className="tabsec-lead">This word stays <b>noun-only</b> — no derivation sounded natural enough to recommend.</p>
+        )}
+        {p.paradigm.rejected.length > 0 && (
+          <ul className="family-rejected">
+            {p.paradigm.rejected.map((r) => (
+              <li key={r.role}>
+                <s>{r.form}</s> — {r.reason}
+              </li>
+            ))}
+          </ul>
+        )}
         <p className="tabsec-muted">
-          Invented morphology — the coined root inflected the way English derives words,
-          so each form is usable in a sentence. Not a grammar of the invented sound-world.
+          Invented morphology — the coined root inflected the way English derives words. Not a
+          grammar of the invented sound-world.
         </p>
       </div>
 
@@ -370,6 +394,30 @@ function EvolutionTab({ p, saved }: { p: WordPassport; saved: boolean }) {
           ))}
         </div>
         <p className="tabsec-muted">{SURVIVOR_FLOOR}</p>
+      </div>
+
+      <div className="phon">
+        <div className="phon-head">
+          <h4>Sound ↔ meaning</h4>
+          <span className={`phon-band phon-${p.phonology.band.toLowerCase()}`}>
+            {p.phonology.band} · {Math.round(p.phonology.congruence * 100)}
+          </span>
+        </div>
+        <p className="phon-explain">{p.phonology.explanation}</p>
+        <div className="phon-axes">
+          {(['hardness', 'depth', 'clip', 'openness'] as const).map((k) => (
+            <div className="phon-axis" key={k}>
+              <span className="phon-name">{k}</span>
+              <span className="phon-track">
+                <i className="phon-want" style={{ left: `${p.phonology.intended[k] * 100}%` }} title="intended" />
+                <i className="phon-got" style={{ left: `${p.phonology.observed[k] * 100}%` }} title="observed" />
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="tabsec-muted">
+          Intended (○) vs observed (●). A modeled judgement of sound symbolism, not a universal law.
+        </p>
       </div>
 
       <p className="tabsec-lead">Reshape how the word sounds — the meaning stays verbatim. Free, no AI.</p>
