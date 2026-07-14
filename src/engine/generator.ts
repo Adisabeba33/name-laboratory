@@ -24,6 +24,7 @@ import { naturalness, naturalnessBand, EXCEPTIONAL_NATURALNESS } from './natural
 import { computeFitness } from './fitness'
 import { computeParadigm } from './morphology'
 import { computeEtymology } from './etymology'
+import { computeSemanticNetwork } from './network'
 import { acousticProfile, blendAcoustic, conceptAcoustic } from './acoustics'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
@@ -229,6 +230,15 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
     })
   })
 
+  // V4 — now that every word exists, wire the semantic network between them so the
+  // lexicon is a navigable graph (each word links to its most-related peers).
+  const network = computeSemanticNetwork(families)
+  for (const family of families) {
+    for (const word of family.words) {
+      word.relations = network.get(word.word.toLowerCase()) ?? []
+    }
+  }
+
   return families
 }
 
@@ -269,6 +279,7 @@ export function buildPassport(
     fitness: computeFitness(word, emotionalDNA, pronunciation),
     paradigm: computeParadigm(word, IDEAS[lead].label.toLowerCase()),
     etymology: computeEtymology(word, language, IDEAS[lead].essence),
+    relations: [],
     collision: offlineCollision(word),
     ancestry: buildAncestry(lead, language),
     evolution,

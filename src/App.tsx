@@ -402,6 +402,13 @@ export default function App() {
               onToggleSave={() => toggleSave(openWord)}
               onBack={() => setOpenWord(null)}
               onRequestUsage={usedLLM ? () => requestUsage(openWord, openWord.family.name) : undefined}
+              onOpenRelated={(word) => {
+                const match = results?.families.flatMap((f) => f.words).find((w) => w.word === word)
+                if (match) {
+                  setOpenWord(match)
+                  document.querySelector('.worddetail')?.scrollTo?.({ top: 0 })
+                }
+              }}
             />
           ) : (
             <div className="discover">

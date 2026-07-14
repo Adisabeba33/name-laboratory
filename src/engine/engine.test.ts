@@ -401,6 +401,44 @@ describe('imagined etymology (Engine V4/V6 — reconstructed root chain)', () =>
   })
 })
 
+describe('semantic network (Engine V4 — navigable lexicon graph)', () => {
+  it('links every word to real peers in the same run', () => {
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const words = families.flatMap((f) => f.words)
+    const present = new Set(words.map((w) => w.word))
+    for (const w of words) {
+      // Every word is connected (the graph strands no one).
+      expect(w.relations.length).toBeGreaterThanOrEqual(2)
+      for (const r of w.relations) {
+        // Edges point at real words in the run — never at itself.
+        expect(present.has(r.word)).toBe(true)
+        expect(r.word).not.toBe(w.word)
+        expect(r.kind.length).toBeGreaterThan(0)
+      }
+      // A word does not list the same neighbour twice.
+      const targets = w.relations.map((r) => r.word)
+      expect(new Set(targets).size).toBe(targets.length)
+    }
+  })
+
+  it('prefers a diverse map — not three identical edge kinds', () => {
+    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    // Across the run, several distinct relation kinds are actually used.
+    const kinds = new Set(
+      families.flatMap((f) => f.words).flatMap((w) => w.relations.map((r) => r.kind)),
+    )
+    expect(kinds.size).toBeGreaterThanOrEqual(2)
+  })
+
+  it('is deterministic per seed', () => {
+    const a = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    const b = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    expect(a.families.flatMap((f) => f.words).map((w) => w.relations)).toEqual(
+      b.families.flatMap((f) => f.words).map((w) => w.relations),
+    )
+  })
+})
+
 describe('speakability — words that stay sayable', () => {
   const LANGS = ['crystalline', 'liquid', 'ancient', 'noble', 'earthen', 'ashen']
 

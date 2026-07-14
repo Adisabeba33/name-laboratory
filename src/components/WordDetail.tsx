@@ -37,6 +37,7 @@ export function WordDetail({
   onToggleSave,
   onBack,
   onRequestUsage,
+  onOpenRelated,
 }: {
   p: WordPassport
   brief: string
@@ -44,6 +45,7 @@ export function WordDetail({
   onToggleSave: () => void
   onBack: () => void
   onRequestUsage?: () => Promise<void>
+  onOpenRelated?: (word: string) => void
 }) {
   const [tab, setTab] = useState<Tab>('Usage')
   const hasUsage = p.usage.en.length > 0 || p.usage.ru.length > 0
@@ -106,6 +108,23 @@ export function WordDetail({
               </span>
               <span className="wd-origin-species">{p.construction.species}</span>
             </div>
+            {onOpenRelated && p.relations.length > 0 && (
+              <div className="wd-related">
+                <span className="wd-related-label">Related</span>
+                {p.relations.map((r) => (
+                  <button
+                    type="button"
+                    key={r.word}
+                    className="rel-chip"
+                    title={`${r.kind} — ${r.note} · ${r.language}`}
+                    onClick={() => onOpenRelated(r.word)}
+                  >
+                    {r.word}
+                    <span className="rel-kind">{r.kind}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </header>
 
           <nav className="wd-tabs" role="tablist">

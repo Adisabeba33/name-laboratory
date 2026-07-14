@@ -316,6 +316,8 @@ export interface WordPassport {
   paradigm: WordParadigm
   /** The imagined etymology — a reconstructed root chain (honest: not historical). */
   etymology: Etymology
+  /** Semantically-related words in the same run — the navigable lexicon graph (V4). */
+  relations: WordRelation[]
   /** Offline collision verdict against the built-in word/brand list. */
   collision: Collision
   /** Where the word's sound descends from — species + phonetic ancestry. */
@@ -497,6 +499,22 @@ export interface WordParadigm {
   root: string
   /** The derived grammatical forms grown from the root. */
   forms: WordForm[]
+}
+
+/**
+ * A semantic link from one word to another in the same run (Engine V4). The edge
+ * is a real fact about the run — a shared idea, an echoed concept, a kindred
+ * sound, or a shared language — so the lexicon can be navigated as a graph.
+ */
+export interface WordRelation {
+  /** The related word (display form). */
+  word: string
+  /** The related word's language character, for context. */
+  language: string
+  /** The relation kind, e.g. "kindred idea", "echo", "kindred sound", "sibling". */
+  kind: string
+  /** One short reason for the link. */
+  note: string
 }
 
 /** One stage in a word's imagined lineage (Engine V4/V6) — a form and the change into it. */

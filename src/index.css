@@ -1194,6 +1194,37 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
   color: var(--dim);
 }
 
+/* V4 — the semantic-network navigation strip under the word header. */
+.wd-related { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.wd-related-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.rel-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2);
+  background: var(--panel-2);
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: 15px;
+  cursor: pointer;
+  transition: border-color 0.16s, background 0.16s;
+}
+.rel-chip:hover { border-color: var(--accent); background: var(--grad-soft); }
+.rel-chip .rel-kind {
+  font-family: var(--sans);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
 .wd-tabs {
   display: flex;
   gap: 4px;
