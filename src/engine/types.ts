@@ -395,6 +395,8 @@ export interface WordFamily {
   lens: LanguageLens
   /** The meaning's acoustic profile this language's words were shaped by (V5). */
   acoustic: AcousticProfile
+  /** This language's slice of the lexical-evolution funnel (V6): what it bred. */
+  stats: EvolutionStats
   /** The native-speaker words that prove the language exists. */
   words: WordPassport[]
 }
@@ -540,8 +542,39 @@ export interface MeaningAnalysis {
   concepts: ConceptVector
 }
 
+/**
+ * The Lexical Evolution funnel (Engine V6) — an HONEST census of the population
+ * the engine actually bred for a run.
+ *
+ * The framing shifts from "we generated N words" to "we explored a population of
+ * candidate forms; most failed; only a few survived". Every number here is a real
+ * count of real work, never a decorative figure:
+ *
+ *   generated   — candidate forms synthesised and evaluated against the gates.
+ *   rejected    — forms that failed a phonotactic / naturalness gate, collided
+ *                 with a real word, or duplicated a survivor already found.
+ *   survived    — distinct viable forms that cleared every gate (the gene pool).
+ *   recommended — survivors selected and shipped as full passports.
+ *   exceptional — the rare standouts among the shipped: near-perfect naturalness,
+ *                 colliding with no known word, and compact enough to say in one
+ *                 breath (three independent bars, so it stays a genuine few).
+ *
+ * Invariant: generated ≥ survived ≥ recommended ≥ exceptional, and
+ * rejected = generated − survived. If the engine explored 300 forms it reports
+ * 300 — never an inflated "3,000" (honesty invariant: no fake precision).
+ */
+export interface EvolutionStats {
+  generated: number
+  rejected: number
+  survived: number
+  recommended: number
+  exceptional: number
+}
+
 /** The laboratory's full output: what it understood, and what it discovered. */
 export interface LaboratoryResult {
   analysis: MeaningAnalysis
   families: WordFamily[]
+  /** The run-level lexical-evolution census, summed across all languages (V6). */
+  population: EvolutionStats
 }

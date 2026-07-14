@@ -541,6 +541,21 @@ export default function App() {
                         {appMode === 'name' ? 'sound-worlds' : 'living languages'}
                         {refining && <span className="refining"> · writing meanings…</span>}
                       </p>
+                      {results.population.generated > 0 && (
+                        <p className="evofunnel" title="The engine bred a population of candidate forms and let selection pressure decide which survived. Every count is real.">
+                          <span><b>{results.population.generated.toLocaleString('en-US')}</b> bred</span>
+                          <span className="evosep">→</span>
+                          <span><b>{results.population.survived.toLocaleString('en-US')}</b> survived</span>
+                          <span className="evosep">→</span>
+                          <span><b>{results.population.recommended}</b> shipped</span>
+                          {results.population.exceptional > 0 && (
+                            <>
+                              <span className="evosep">→</span>
+                              <span className="evoexc"><b>{results.population.exceptional}</b> exceptional</span>
+                            </>
+                          )}
+                        </p>
+                      )}
                     </div>
                     <div className="results-actions">
                       <button className="btn ghost sm" onClick={copyReport} title="Copy the full run as text + download a .md file">

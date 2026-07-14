@@ -75,3 +75,14 @@ export function naturalnessBand(score: number): NaturalnessBand {
   if (score >= 0.5) return 'Plausible'
   return 'Fabricated'
 }
+
+/**
+ * The naturalness a word must reach to even be *considered* for the "exceptional"
+ * standout tier (Engine V6). This sits high inside the Inevitable band (0.8+): a
+ * word at 0.95 reads as indistinguishable from real vocabulary. The exceptional
+ * tier requires more than this alone (see {@link engine} — it also demands the word
+ * collides with nothing and stays compact), so it names only the rare few, never
+ * "every word is a 99". Kept as an explicit, documented cut so the honesty is
+ * auditable rather than an arbitrary hair-trigger near the metric's ceiling.
+ */
+export const EXCEPTIONAL_NATURALNESS = 0.95

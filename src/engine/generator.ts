@@ -2,6 +2,7 @@ import type {
   Concept,
   ConceptVector,
   CreativeMode,
+  EvolutionStats,
   GenerationRequest,
   LaboratoryResult,
   LanguageLens,
@@ -19,7 +20,7 @@ import { speakNative } from './synth'
 import { computeGenome } from './genome'
 import { speakabilityBand } from './phonetics'
 import { offlineCollision } from './collision'
-import { naturalness, naturalnessBand } from './naturalness'
+import { naturalness, naturalnessBand, EXCEPTIONAL_NATURALNESS } from './naturalness'
 import { acousticProfile, blendAcoustic, conceptAcoustic } from './acoustics'
 import { computeEmotionalDNA } from './emotional'
 import { computeLanguageGenome, computeWordEvolution } from './language'
@@ -88,7 +89,8 @@ const LENSES: LanguageLens[] = [
  */
 export function runLaboratory(request: GenerationRequest): LaboratoryResult {
   const analysis = analyzeMeaning(request.keywords, request.brief)
-  return { analysis, families: discoverFamilies(request, analysis) }
+  const families = discoverFamilies(request, analysis)
+  return { analysis, families, population: aggregatePopulation(families) }
 }
 
 /** Discover just the languages (the UI uses {@link runLaboratory}). */
@@ -110,7 +112,26 @@ export function discoverFromAnalysis(
   // changing the analysis the UI shows — the interpretation stays stable while
   // the words sharpen toward the selected angle.
   const forDiscovery = focus ? { ...analysis, concepts: focus } : analysis
-  return { analysis, families: discoverFamilies(request, forDiscovery) }
+  const families = discoverFamilies(request, forDiscovery)
+  return { analysis, families, population: aggregatePopulation(families) }
+}
+
+/**
+ * Sum the per-language census slices into the run-level lexical-evolution funnel.
+ * Every field is additive, so the totals stay honest: the run explored exactly the
+ * forms the languages explored, rejected exactly the ones they rejected, and so on.
+ */
+function aggregatePopulation(families: WordFamily[]): EvolutionStats {
+  return families.reduce<EvolutionStats>(
+    (acc, f) => ({
+      generated: acc.generated + f.stats.generated,
+      rejected: acc.rejected + f.stats.rejected,
+      survived: acc.survived + f.stats.survived,
+      recommended: acc.recommended + f.stats.recommended,
+      exceptional: acc.exceptional + f.stats.exceptional,
+    }),
+    { generated: 0, rejected: 0, survived: 0, recommended: 0, exceptional: 0 },
+  )
 }
 
 function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis): WordFamily[] {
@@ -170,6 +191,25 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
       return buildPassport(w, language, i, lead, support, concepts, idx + 1, reference, vocab.prototype)
     })
 
+    // V6 — close this language's funnel: the shipped words are the "recommended"
+    // survivors; the rare standouts are "exceptional". A standout must clear THREE
+    // independent bars at once — near-perfect naturalness, colliding with no known
+    // word, and compact enough to say in one breath — so it names the genuine few,
+    // never "every word is a 99". The census's generated/rejected/survived came
+    // straight from synthesis.
+    const stats: EvolutionStats = {
+      generated: vocab.census.generated,
+      rejected: vocab.census.rejected,
+      survived: vocab.census.survived,
+      recommended: words.length,
+      exceptional: words.filter(
+        (w) =>
+          naturalness(w.word) >= EXCEPTIONAL_NATURALNESS &&
+          w.collision.match === 'none' &&
+          w.genome.syllables <= 3,
+      ).length,
+    }
+
     families.push({
       id: `${language.id}-${i}`,
       name: language.character,
@@ -181,6 +221,7 @@ function discoverFamilies(request: GenerationRequest, analysis: MeaningAnalysis)
       theme: IDEAS[langConcepts[0]].noun,
       lens,
       acoustic,
+      stats,
       words,
     })
   })

@@ -36,10 +36,33 @@ export interface NativeVocabulary {
   words: string[]
   /** The language's canonical minimal specimen (for evolution distance). */
   prototype: string
+  /** The honest evolution census for this language (Engine V6). */
+  census: PopulationCensus
 }
 
-/** How many candidates to pool per requested word before selecting for diversity. */
-const POOL_FACTOR = 6
+/**
+ * The per-language slice of the lexical-evolution funnel (Engine V6). These are
+ * real counts of the population this language bred, not decorative figures:
+ * `generated` forms were synthesised and gate-tested, `rejected` failed a gate or
+ * duplicated a survivor, `survived` distinct viable forms cleared every gate.
+ * Selection into shipped words happens downstream (the generator adds
+ * recommended / exceptional). Invariant: rejected = generated − survived.
+ */
+export interface PopulationCensus {
+  generated: number
+  rejected: number
+  survived: number
+}
+
+/**
+ * Engine V6 — how many candidate forms to breed and evaluate per language before
+ * selecting the survivors. The engine genuinely synthesises this many words and
+ * puts each through the phonotactic / naturalness gates, so the reported funnel
+ * ("explored N, most failed, few survived") reflects real work. A wider search
+ * also yields better survivors, so this is not busy-work: more candidates → a
+ * stronger gene pool to select the shipped words from.
+ */
+const EVOLUTION_BUDGET = 300
 
 /**
  * Default bias toward everyday speech. 0 = ornate words allowed (elaborate,
@@ -110,9 +133,12 @@ export function speakNative(
   const pool: string[] = []
   const seen = new Set<string>()
 
-  const target = count * POOL_FACTOR
-  let guard = 0
-  while (pool.length < target && guard++ < target * 16) {
+  // Engine V6 — breed a fixed population, gate every candidate, keep the survivors.
+  // Unlike the old "stop as soon as the pool is full" loop, this explores a full
+  // budget so the funnel counts are honest AND the survivor pool is deep enough
+  // that selection has real choices (a wider search finds inevitabler words).
+  const generated = EVOLUTION_BUDGET
+  for (let i = 0; i < generated; i++) {
     const word = smoothVowels(tidy(generateWord(lang, rng, ctl.maxSyllables, profile)), ctl)
     const key = word.toLowerCase()
     if (
@@ -131,7 +157,12 @@ export function speakNative(
     }
   }
 
-  return { words: selectSpeakable(pool, count, ctl.floor), prototype }
+  const survived = pool.length
+  return {
+    words: selectSpeakable(pool, count, ctl.floor),
+    prototype,
+    census: { generated, rejected: generated - survived, survived },
+  }
 }
 
 /**

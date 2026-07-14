@@ -784,6 +784,21 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .results-sub { color: var(--faint); font-size: 13px; margin: 4px 0 0; }
 .refining { color: var(--accent); }
 
+/* V6 — the lexical-evolution funnel: bred → survived → shipped → exceptional. */
+.evofunnel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.evofunnel b { color: var(--text); font-weight: 600; }
+.evofunnel .evosep { color: var(--border-3); }
+.evofunnel .evoexc b { color: var(--accent); }
+
 .langgroup { margin-bottom: 30px; }
 .langgroup-head {
   display: flex;

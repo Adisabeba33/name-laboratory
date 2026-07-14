@@ -20,7 +20,7 @@ export interface ReportInput {
 }
 
 export function buildReport({ brief, results, gap, usedLLM, version, stamp }: ReportInput): string {
-  const { analysis, families } = results
+  const { analysis, families, population } = results
   const L: string[] = []
   const words = families.flatMap((f) => f.words)
 
@@ -31,6 +31,25 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
   if (version) L.push(`- **Build:** v${version}`)
   if (stamp) L.push(`- **Generated:** ${stamp}`)
   L.push(`- **Discovered:** ${words.length} words across ${families.length} languages`)
+  L.push('')
+
+  // ── Lexical evolution (Engine V6) ───────────────────────────────────
+  // The honest funnel: the engine bred a population, most forms failed, a few
+  // survived, fewer were shipped. Every count is real work, not decoration.
+  L.push('## Lexical evolution')
+  L.push('')
+  const p = population
+  L.push(
+    `Explored **${fmt(p.generated)}** candidate forms · ` +
+      `rejected **${fmt(p.rejected)}** (unpronounceable, colliding, or redundant) · ` +
+      `**${fmt(p.survived)}** survived the gates · ` +
+      `**${fmt(p.recommended)}** recommended · ` +
+      `**${fmt(p.exceptional)}** exceptional (near-perfect, collision-free, compact).`,
+  )
+  if (p.generated > 0) {
+    const rejectPct = Math.round((p.rejected / p.generated) * 100)
+    L.push(`\n_Selection pressure: ${rejectPct}% of everything the engine tried did not survive._`)
+  }
   L.push('')
 
   // ── Interpretation ──────────────────────────────────────────────────
@@ -92,6 +111,11 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
       `_acoustic: hardness ${a.hardness.toFixed(2)} · depth ${a.depth.toFixed(2)} · ` +
         `clip ${a.clip.toFixed(2)} · openness ${a.openness.toFixed(2)}_`,
     )
+    const s = fam.stats
+    L.push(
+      `_evolution: bred ${fmt(s.generated)} · survived ${fmt(s.survived)} · ` +
+        `shipped ${fmt(s.recommended)} · exceptional ${fmt(s.exceptional)}_`,
+    )
     for (const w of fam.words) L.push(wordBlock(w))
   }
 
@@ -123,4 +147,9 @@ function wordBlock(w: WordPassport): string {
 
 function pct(n: number): string {
   return `${Math.round(n * 100)}%`
+}
+
+/** Group digits with thin separators so a large population reads at a glance. */
+function fmt(n: number): string {
+  return n.toLocaleString('en-US')
 }

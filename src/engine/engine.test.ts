@@ -20,6 +20,7 @@ import {
   offlineCollision,
   naturalness,
   naturalnessBand,
+  EXCEPTIONAL_NATURALNESS,
   acousticProfile,
   LANGUAGES,
   languageById,
@@ -203,6 +204,71 @@ describe('native synthesis (diverse speakers of one language)', () => {
     // No two languages in the run share a lens — they are viewpoints, not accents.
     const roles = families.map((f) => f.lens.role)
     expect(new Set(roles).size).toBe(roles.length)
+  })
+})
+
+describe('lexical evolution funnel (Engine V6)', () => {
+  it('reports an honest per-language census (rejected = generated − survived)', () => {
+    const vocab = speakNative(languageById('crystalline'), new Rng(123), 3)
+    const c = vocab.census
+    expect(c.generated).toBeGreaterThan(0)
+    expect(c.survived).toBeGreaterThan(0)
+    expect(c.survived).toBeLessThanOrEqual(c.generated)
+    // The funnel is arithmetically exact — no drift, no rounding.
+    expect(c.rejected).toBe(c.generated - c.survived)
+    // Real selection pressure: with a full breeding budget, most forms are dupes
+    // or fail a gate, so a meaningful fraction is rejected.
+    expect(c.rejected).toBeGreaterThan(0)
+  })
+
+  it('is deterministic per seed', () => {
+    const a = speakNative(languageById('liquid'), new Rng(55), 3).census
+    const b = speakNative(languageById('liquid'), new Rng(55), 3).census
+    expect(a).toEqual(b)
+  })
+
+  it('aggregates the run population and preserves the funnel invariant', () => {
+    const { families, population } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    // The run total is the exact sum of the language slices.
+    const sum = families.reduce(
+      (acc, f) => ({
+        generated: acc.generated + f.stats.generated,
+        rejected: acc.rejected + f.stats.rejected,
+        survived: acc.survived + f.stats.survived,
+        recommended: acc.recommended + f.stats.recommended,
+        exceptional: acc.exceptional + f.stats.exceptional,
+      }),
+      { generated: 0, rejected: 0, survived: 0, recommended: 0, exceptional: 0 },
+    )
+    expect(population).toEqual(sum)
+    // generated ≥ survived ≥ recommended ≥ exceptional at the run level.
+    expect(population.generated).toBeGreaterThanOrEqual(population.survived)
+    expect(population.survived).toBeGreaterThanOrEqual(population.recommended)
+    expect(population.recommended).toBeGreaterThanOrEqual(population.exceptional)
+    expect(population.rejected).toBe(population.generated - population.survived)
+    // "recommended" is exactly the number of words actually shipped.
+    const shipped = families.flatMap((f) => f.words).length
+    expect(population.recommended).toBe(shipped)
+    // The engine genuinely explored a large population, not a handful.
+    expect(population.generated).toBeGreaterThan(population.recommended * 10)
+  })
+
+  it('reserves "exceptional" for rare multi-signal standouts, never all shipped', () => {
+    const { families, population } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
+    for (const f of families) {
+      // The stored count must equal the words that clear ALL three standout bars.
+      const standouts = f.words.filter(
+        (w) =>
+          naturalness(w.word) >= EXCEPTIONAL_NATURALNESS &&
+          w.collision.match === 'none' &&
+          w.genome.syllables <= 3,
+      ).length
+      expect(f.stats.exceptional).toBe(standouts)
+      expect(f.stats.exceptional).toBeLessThanOrEqual(f.stats.recommended)
+    }
+    // The whole run must not label every shipped word exceptional — that is the
+    // "stop pretending every word is a 99" invariant the standout tier enforces.
+    expect(population.exceptional).toBeLessThan(population.recommended)
   })
 })
 
