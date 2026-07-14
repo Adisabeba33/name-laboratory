@@ -46,7 +46,7 @@ export const DEFAULT_SPEAKABILITY = 0.7
 interface SpeakControls {
   /** Minimum {@link pronounceability} a word must clear to be shipped by default. */
   floor: number
-  /** Hard cap on syllables (long words read as spells). */
+  /** Generous backstop on syllables (stops an ending stacking into a monster). */
   maxSyllables: number
   /** Longest run of adjacent vowels allowed (vowel walls are unsayable). */
   maxVowelRun: number
@@ -64,10 +64,15 @@ function speakControls(speakability: number): SpeakControls {
   const strict = s >= 0.5
   return {
     floor: 0.3 + s * 0.42, // s=1 → 0.72, s=0.7 → ~0.59, s=0 → 0.30
-    maxSyllables: s >= 0.66 ? 3 : 4,
+    // Syllable count is NOT a quality lever — a 2-, 3- or 4-syllable word can all
+    // be lovely and sayable. So this is only a generous backstop against a
+    // signature ending stacking into a 6-syllable monster; real beauty is the
+    // pronounceability floor + vowel-run + cluster gates below. Words keep their
+    // language's natural 2–4 syllable spread, so a run mixes short and long.
+    maxSyllables: strict ? 5 : 6,
     maxVowelRun: strict ? 2 : 3,
     clusterLimit: strict ? 0.5 : 1,
-    maxLen: strict ? 9 : 10,
+    maxLen: strict ? 11 : 13,
     strict,
   }
 }
@@ -76,8 +81,10 @@ function speakControls(speakability: number): SpeakControls {
  * Speak `count` distinct native words of a language.
  *
  * `speakability` (0–1, default {@link DEFAULT_SPEAKABILITY}) biases the whole run
- * toward everyday speech: it sets a pronounceability floor, caps syllables and
- * vowel runs, and tidies vowel walls. Diversity selection then runs *inside* the
+ * toward everyday speech via *quality*, not length: it sets a pronounceability
+ * floor, limits vowel runs, and tidies vowel walls. Word length is deliberately
+ * left free — a run mixes 2-, 3- and 4-syllable words, and beauty (not a blunt
+ * syllable cap) decides what survives. Diversity selection then runs *inside* the
  * speakable set, so words stay mutually different without the "incantation" shapes
  * that pure max-diversity selection used to reward. If too few words clear the
  * floor, it relaxes gracefully so a run always yields something.

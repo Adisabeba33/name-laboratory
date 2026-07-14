@@ -159,7 +159,7 @@ describe('native synthesis (diverse speakers of one language)', () => {
     for (const w of vocab.words) {
       expect(awkwardClusters(w)).toBeLessThan(1)
       expect(KNOWN_WORDS.has(w.toLowerCase())).toBe(false)
-      expect(w.length).toBeLessThanOrEqual(10)
+      expect(w.length).toBeLessThanOrEqual(11)
     }
   })
 
@@ -194,18 +194,32 @@ describe('native synthesis (diverse speakers of one language)', () => {
 describe('speakability — words that stay sayable', () => {
   const LANGS = ['crystalline', 'liquid', 'ancient', 'noble', 'earthen', 'ashen']
 
-  it('keeps default words clear of vowel walls and spell-length', () => {
+  it('keeps default words sayable without capping their length', () => {
     for (const id of LANGS) {
       for (const seed of [7, 42, 99]) {
         const vocab = speakNative(languageById(id), new Rng(seed), 3)
         for (const w of vocab.words) {
           expect(longestVowelRun(w)).toBeLessThanOrEqual(2)
-          expect(countSyllables(w)).toBeLessThanOrEqual(3)
-          expect(w.length).toBeLessThanOrEqual(9)
+          expect(w.length).toBeLessThanOrEqual(11)
           expect(pronounceability(w)).toBeGreaterThanOrEqual(0.5)
         }
       }
     }
+  })
+
+  it('lets words vary in size (not all clamped to one syllable count)', () => {
+    const sizes = new Set<number>()
+    for (const id of LANGS) {
+      for (const seed of [7, 42, 99, 123]) {
+        for (const w of speakNative(languageById(id), new Rng(seed), 3).words) {
+          sizes.add(countSyllables(w))
+        }
+      }
+    }
+    // At least two distinct syllable counts appear (e.g. 2- and 4-syllable words),
+    // proving the run is no longer flattened to a single length.
+    expect(sizes.size).toBeGreaterThanOrEqual(2)
+    expect([...sizes].some((n) => n >= 4)).toBe(true)
   })
 
   it('a strictly-speakable dial beats an ornate one on average', () => {
@@ -232,11 +246,12 @@ describe('speakability — words that stay sayable', () => {
   })
 
   it('maps words to honest bands and ships one on every passport', () => {
-    expect(speakabilityBand('Moma')).toBe('Speakable')
-    expect(speakabilityBand('Senis')).toBe('Speakable')
-    // Long, many-syllable "incantation" shapes are flagged, not passed as sayable.
-    expect(speakabilityBand('Kororoalux')).not.toBe('Speakable')
-    expect(speakabilityBand('Kororoalongar')).toBe('Ornate') // length ≥ 11
+    expect(speakabilityBand('Moma')).toBe('Speakable') // 2 syllables
+    expect(speakabilityBand('Sodaron')).toBe('Speakable') // 3 syllables, still easy
+    // A smooth 4-syllable word is fine — length alone no longer demotes it.
+    expect(speakabilityBand('Elunavere')).not.toBe('Ornate')
+    // Genuinely monstrous shapes are still flagged.
+    expect(speakabilityBand('Kororoalongar')).toBe('Ornate') // length ≥ 13
     const words = generateWords({ ...MEDICINE_REQUEST, count: 5 })
     for (const w of words) {
       expect(['Speakable', 'Balanced', 'Ornate']).toContain(w.speakability)

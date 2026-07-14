@@ -156,8 +156,11 @@ export function speakabilityBand(word: string): 'Speakable' | 'Balanced' | 'Orna
   const p = pronounceability(word)
   const syllables = countSyllables(word)
   const length = normalise(word).replace(/[^a-zë-ü]/gi, '').length
-  if (p >= 0.62 && syllables <= 3 && length <= 8) return 'Speakable'
-  if (p < 0.45 || syllables >= 5 || length >= 11) return 'Ornate'
+  // Length is not penalised on its own — a smooth 4-syllable word is Speakable.
+  // Only genuinely hard-to-say shapes (low pronounceability, or a true monster)
+  // fall to Balanced/Ornate.
+  if (p >= 0.6 && syllables <= 4 && length <= 11) return 'Speakable'
+  if (p < 0.45 || syllables >= 6 || length >= 13) return 'Ornate'
   return 'Balanced'
 }
 
