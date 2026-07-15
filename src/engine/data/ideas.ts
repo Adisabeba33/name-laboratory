@@ -71,6 +71,11 @@ export const IDEAS: Record<Concept, Idea> = {
   courage: { label: 'Courage', labelRu: 'Мужество', def: 'the choice to go forward while still afraid', defRu: 'выбор идти вперёд, всё ещё боясь', noun: 'quiet courage', active: 'moving forward through fear', essence: 'brave in spite of fear' },
   grief: { label: 'Grief', labelRu: 'Скорбь', def: 'love with nowhere left to go', defRu: 'любовь, которой больше некуда идти', noun: 'carried grief', active: 'loving what can no longer be held', essence: 'love after loss' },
   hope: { label: 'Hope', labelRu: 'Надежда', def: 'a light kept alive against the odds', defRu: 'свет, что хранят вопреки всему', noun: 'stubborn hope', active: 'believing in what is not yet visible', essence: 'faith in what may come' },
+  recognition: { label: 'Recognition', labelRu: 'Узнавание', def: 'the sudden click of seeing that two things were the same all along', defRu: 'внезапное узнавание того, что две вещи были одним и тем же', noun: 'the moment of recognition', active: 'seeing at last that two things are one', essence: 'the click of seeing clearly' },
+  understanding: { label: 'Understanding', labelRu: 'Понимание', def: 'the moment a meaning finally comes into focus', defRu: 'миг, когда смысл наконец проясняется', noun: 'shared understanding', active: 'grasping what was there but unseen', essence: 'sense made at last' },
+  communication: { label: 'Communication', labelRu: 'Общение', def: 'meaning carried between people through words and names', defRu: 'смысл, что передаётся между людьми через слова и имена', noun: 'the bridge of words', active: 'carrying meaning across the gap between minds', essence: 'meaning passed between people' },
+  connection: { label: 'Connection', labelRu: 'Связь', def: 'the quiet bond of being understood by another', defRu: 'тихая связь того, что тебя понимает другой', noun: 'the bond between two', active: 'meeting another in shared meaning', essence: 'understood by another' },
+  absurdity: { label: 'Absurdity', labelRu: 'Абсурд', def: 'the quiet comedy of a situation no one else finds funny', defRu: 'тихая комедия положения, которое больше никто не находит смешным', noun: 'the private absurd', active: 'seeing the comedy others miss', essence: 'the comic seen alone' },
 }
 
 /**

@@ -41,4 +41,15 @@ export const PATTERNS: Pattern[] = [
   { any: ['growth', 'grow', 'bloom', 'flourish', 'evolve', 'becoming more'], concepts: { creation: 0.5, transformation: 0.5, nature: 0.4 } },
   { any: ['wisdom', 'wise', 'learned', 'understanding earned'], concepts: { knowledge: 0.7, time: 0.3 } },
   { any: ['peace', 'stillness', 'serenity', 'quiet mind', 'at rest'], concepts: { calm: 0.9, harmony: 0.4 } },
+  // Cognitive / relational / communicative structures (Morutho fix §7) — these
+  // recover recognition / understanding / communication / connection so a prompt
+  // about "the same experience under different names" no longer falls to creation.
+  // NOTE: `any` entries are matched as plain substrings, so no regex alternation.
+  { any: ['realiz', 'realis', 'recogni', 'dawns on', 'it hits you', 'all along', 'meant the same', 'been the same', 'same thing all along'], concepts: { recognition: 1, understanding: 0.6 } },
+  { any: ['different names', 'different words', 'under different', 'same experience', 'same thing', 'been calling', 'talking about the same', 'two words for', 'one experience'], concepts: { communication: 0.9, recognition: 0.8, connection: 0.5 } },
+  { any: ['two people', 'between two', 'each other', 'one another', 'both of us', 'both of them', 'we both', 'they both', 'strangers'], concepts: { connection: 0.9, human: 0.4 } },
+  { any: ['understand', 'understanding', 'make sense', 'made sense', 'comprehend', 'it clicked', 'finally understood', 'finally saw', 'grasp'], concepts: { understanding: 1 } },
+  { any: ['shared experience', 'shared meaning', 'in common', 'relate to', 'related to', 'mutual', 'shareable', 'others have felt'], concepts: { connection: 0.8, understanding: 0.5 } },
+  { any: ['inexpressible', 'unspeakable', 'no word for', 'becomes speakable', 'put into words', 'no name for'], concepts: { communication: 0.8, understanding: 0.5 } },
+  { any: ['absurd', 'ridiculous', 'ironic', 'irony', 'the comedy of', 'private amusement', 'private joke', 'no one else finds', 'while everyone else'], concepts: { absurdity: 1, understanding: 0.3 } },
 ]

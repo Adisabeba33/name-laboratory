@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, it, expect } from 'vitest'
 import {
   runLaboratory,
@@ -31,6 +32,7 @@ import {
   LANGUAGES,
   languageById,
   MODES,
+  IDEAS,
 } from './index'
 import { KNOWN_WORDS } from './data/known-words'
 import {
@@ -888,6 +890,63 @@ describe('target-type alignment — regression suite (Morutho ranking fix §11)'
     for (const f of r.families.filter((f) => f.direct)) {
       expect(f.targetMatch).toBeGreaterThanOrEqual(0.6)
     }
+  })
+
+  it('TEST A2 — the concept vector NAMES the prompt, not the "creation" fallback', () => {
+    // The reported failure: the winner was about "bringing something new into being"
+    // because the vocabulary had no concepts for recognition / communication.
+    const a = analyzeMeaning(
+      [],
+      'A word for the realization that two people have been talking about the same experience for years under different names.',
+    )
+    const top = Object.entries(a.concepts).sort((x, y) => y[1] - x[1]).map(([c]) => c)
+    expect(top[0]).not.toBe('creation')
+    // Recognition / communication / understanding / connection dominate.
+    expect(['recognition', 'communication', 'understanding', 'connection']).toContain(top[0])
+    // The winning direct word actually MEANS recognition/communication, not creation.
+    const r = runLaboratory({
+      brief: 'A word for the realization that two people have been talking about the same experience for years under different names.',
+      keywords: [],
+      count: 6,
+      seed: 7,
+    })
+    const directMeanings = r.families.filter((f) => f.direct).flatMap((f) => f.words).map((w) => w.meaning.toLowerCase())
+    expect(directMeanings.some((m) => /recogni|same|meaning|words|names|understand/.test(m))).toBe(true)
+    expect(directMeanings.every((m) => !m.includes('bringing something new into being'))).toBe(true)
+  })
+
+  it('TEST C — a language/cognition prompt is not dominated by identity/grief/survival', () => {
+    const a = analyzeMeaning(
+      [],
+      'the irreversible moment when a previously inexpressible concept becomes speakable and permanently changes what humans can think',
+    )
+    const top2 = Object.entries(a.concepts).sort((x, y) => y[1] - x[1]).slice(0, 2).map(([c]) => c)
+    expect(top2).not.toContain('identity')
+    expect(top2).not.toContain('grief')
+    expect(top2).not.toContain('survival')
+    // It leads with communication / understanding instead.
+    expect(['communication', 'understanding', 'knowledge', 'human']).toContain(top2[0])
+  })
+
+  it('keeps the LLM concept enum in sync with the engine vocabulary (drift guard)', () => {
+    // The reported bug also lived on the LLM path: api/analyze.ts constrains the
+    // model to a hardcoded CONCEPTS enum. If a new engine concept is missing there,
+    // the model can never pick it and the prompt silently falls back. Lock it.
+    const apiSrc = readFileSync(new URL('../../api/analyze.ts', import.meta.url), 'utf8')
+    for (const concept of Object.keys(IDEAS)) {
+      expect(apiSrc).toContain(`'${concept}'`)
+    }
+  })
+
+  it('TEST F — a humor prompt reaches the absurdity domain, not grief/rebirth', () => {
+    const a = analyzeMeaning(
+      [],
+      'the private amusement of understanding why a serious situation is absurd while everyone else remains solemn',
+    )
+    const top = Object.entries(a.concepts).sort((x, y) => y[1] - x[1]).map(([c]) => c)
+    expect(top[0]).toBe('absurdity')
+    expect(top.slice(0, 3)).not.toContain('grief')
+    expect(top.slice(0, 3)).not.toContain('rebirth')
   })
 
   it('does not over-constrain low-confidence prompts (no regression)', () => {

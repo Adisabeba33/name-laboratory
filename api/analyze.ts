@@ -24,6 +24,7 @@ const CONCEPTS = [
   'earth', 'sky', 'time', 'mystery', 'harmony', 'strength', 'freedom', 'vision',
   'transformation', 'rebirth', 'survival', 'destruction', 'identity', 'resilience',
   'loss', 'memory', 'shadow', 'transcendence', 'longing', 'courage', 'grief', 'hope',
+  'recognition', 'understanding', 'communication', 'connection', 'absurdity',
 ]
 
 // Recognised themes. Keep in sync with src/engine/data/themes.ts ids.

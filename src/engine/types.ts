@@ -84,6 +84,14 @@ export type Concept =
   | 'courage'
   | 'grief'
   | 'hope'
+  // Cognitive / relational / communicative concepts — the vocabulary a prompt about
+  // recognition, shared meaning, or connection between people actually needs, so it
+  // no longer collapses to the "creation" fallback (Morutho ranking fix §7).
+  | 'recognition'
+  | 'understanding'
+  | 'communication'
+  | 'connection'
+  | 'absurdity'
 
 /** A weighted point in concept space — the AI's "internal semantic map". */
 export type ConceptVector = Partial<Record<Concept, number>>
