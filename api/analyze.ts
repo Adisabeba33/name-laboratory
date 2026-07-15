@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { dampenAttractors, METAMORPHOSIS_CUE } from '../src/engine/attractors'
 
 /**
  * Word Laboratory — LLM Meaning Analysis (server-side).
@@ -113,6 +114,7 @@ CORE PRINCIPLE — read the SPECIFIC configuration, not the nearest category.
 A request is never "just grief" or "just a smell". It is one exact shape of experience, and your reading must name THAT shape, not the familiar bucket it resembles.
 - "a grief you have carried so long it has become a kind of home" is NOT generic loss or "transformation". It is the strange domestic comfort of long-carried grief — sorrow worn smooth into companionship, a pain you would almost miss if it left. Name that.
 - Never let a broad label (transformation, grief, longing, survival) overwrite the specific thing in front of you. The specific reading is the whole product.
+- DO NOT reflexively read "identity", "transformation" or the "metamorphosis" theme into a request just because it mentions a self, a future, or becoming. Reserve those for requests that EXPLICITLY name becoming a different person, rebirth, or a changed self after something. "A future self shaping your present" is NOT identity transformation — nobody is becoming someone else; it is about time, continuity and a quiet trust in your own unfolding. Read agency, foresight, self-continuity, comfort or trust when THOSE are the real subject, and lean on the plainer concepts (time, future, trust, recognition, vision, mystery) rather than forcing the deep-transformation bucket.
 
 STAY FAITHFUL TO THE REGISTER — go only as deep as the request itself goes, never deeper:
 - Concrete / sensory (a smell, a place, a sound, a scene): keep the reading about THAT sensation and its immediate human feeling. Do NOT inflate it into philosophy about suffering, desire or existence. "The smell of rain on warm dust after a dry summer" = petrichor: earth releasing its held breath, relief after heat, the plain proof the season has turned — NOT "the paradox of desire".
@@ -123,6 +125,7 @@ CALIBRATION — the quality and specificity of reading to aim for (interpretatio
 · "the joy of returning home after a long time away" → The relief of a place that still holds your shape — being re-absorbed by somewhere that kept a space for you while you were gone.
 · "the quiet of a house the morning after guests have left" → The specific hollow-but-peaceful stillness of a space suddenly returned to itself, the warmth of company still faintly present in its absence.
 · "the moment a perfect experience ends while you are still inside it" → Anticipatory loss — mourning something before it has finished, the ending felt from within the thing itself.
+· "the strange comfort of realizing your future self is already shaping your present through decisions you don't yet understand" → The quiet reassurance of being authored by a self you can't yet see — trusting that a wiser, later you is already at work in the choices you make blindly now. It is about time, agency and self-continuity, NOT identity transformation: no one becomes a different person, they are simply carried by their own unfolding.
 
 Given a short description, produce a structured analysis:
 
@@ -195,18 +198,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       | undefined
     const raw = JSON.parse(textBlock?.text ?? '{}')
 
-    // Fold the {name, weight}[] into a normalised concept vector.
-    const concepts: Record<string, number> = {}
-    let max = 0
+    // Fold the {name, weight}[] into a concept vector.
+    let concepts: Record<string, number> = {}
     for (const entry of raw.concepts ?? []) {
       const name = entry?.name
       const weight = Number(entry?.weight)
       if (CONCEPTS.includes(name) && weight > 0) {
         concepts[name] = (concepts[name] ?? 0) + weight
-        max = Math.max(max, concepts[name])
       }
     }
+    // §7 backstop — the LLM has no attractor damping of its own, so an over-read
+    // ("future self shaping the present" → identity/transformation) folds straight
+    // in. Apply the SAME deterministic damping the engine path uses: any attractor
+    // the brief does not actually name is cut to 40% before we normalise. Then the
+    // max-normalise, so whatever genuinely survives leads.
+    concepts = dampenAttractors(concepts, brief.toLowerCase())
+    let max = 0
+    for (const k of Object.keys(concepts)) max = Math.max(max, concepts[k])
     if (max > 0) for (const k of Object.keys(concepts)) concepts[k] = concepts[k] / max
+
+    // Theme guard — never let the coarse `metamorphosis` tag flatten a prompt that
+    // never named becoming/rebirth (the reflex that mis-read the future-self case).
+    const rawTheme = raw.theme && raw.theme !== 'none' ? String(raw.theme) : undefined
+    const theme =
+      rawTheme === 'metamorphosis' && !METAMORPHOSIS_CUE.test(brief.toLowerCase())
+        ? undefined
+        : rawTheme
 
     const analysis = {
       interpretation: String(raw.interpretation ?? ''),
@@ -216,7 +233,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       tensions: sanitiseTensions(raw.tensions),
       directions: sanitiseDirections(raw.directions),
       concepts,
-      theme: raw.theme && raw.theme !== 'none' ? String(raw.theme) : undefined,
+      theme,
     }
 
     res.setHeader('cache-control', 'no-store')

@@ -831,6 +831,7 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .results-head h2 { font-family: var(--serif); font-weight: 300; font-size: clamp(24px, 4vw, 32px); }
 .results-sub { color: var(--faint); font-size: 13px; margin: 4px 0 0; }
 .refining { color: var(--accent); }
+.meanings-outage { color: var(--risk); }
 
 /* V6 — the lexical-evolution funnel: bred → survived → shipped → exceptional. */
 .evofunnel {

@@ -8,6 +8,7 @@
 export * from './types'
 export { runLaboratory, generateFamilies, generateWords, buildPassport, discoverFromAnalysis } from './generator'
 export { analyzeMeaning, matchTheme, focusConcepts, dampenAttractors } from './meaning'
+export { METAMORPHOSIS_CUE } from './attractors'
 export { detectTargetType, targetTypeMatch } from './target-type'
 export { THEMES } from './data/themes'
 export { buildConceptMap, topConcepts, conceptMatch } from './concepts'

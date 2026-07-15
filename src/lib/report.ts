@@ -14,12 +14,14 @@ export interface ReportInput {
   results: LaboratoryResult
   gap: SemanticGapResult | null
   usedLLM: boolean
+  /** True when the bespoke-meanings pass could not run — definitions are the engine's. */
+  meaningsOutage?: boolean
   version?: string
   /** ISO timestamp; pass one in (the engine forbids Date.now(), so the caller stamps it). */
   stamp?: string
 }
 
-export function buildReport({ brief, results, gap, usedLLM, version, stamp }: ReportInput): string {
+export function buildReport({ brief, results, gap, usedLLM, meaningsOutage, version, stamp }: ReportInput): string {
   const { analysis, families, population, conclusion } = results
   const L: string[] = []
   const words = families.flatMap((f) => f.words)
@@ -28,6 +30,13 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
   L.push('')
   L.push(`- **Prompt:** ${brief || '(empty)'}`)
   L.push(`- **Meaning source:** ${usedLLM ? 'LLM (Read by AI)' : 'deterministic engine (no key)'}`)
+  if (meaningsOutage) {
+    L.push(
+      `- **⚠ Bespoke meanings unavailable this run:** definitions below are the engine's own ` +
+        `deterministic glosses (which repeat across words sharing a concept), and the meaning-` +
+        `fidelity gate did not run — so no word is crowned a verified winner.`,
+    )
+  }
   if (version) L.push(`- **Build:** v${version}`)
   if (stamp) L.push(`- **Generated:** ${stamp}`)
   L.push(`- **Discovered:** ${words.length} words across ${families.length} languages`)
@@ -46,7 +55,9 @@ export function buildReport({ brief, results, gap, usedLLM, version, stamp }: Re
   const top = [...directWords].sort((a, b) => b.discovery.score - a.discovery.score)[0]
   L.push('## Top discovery')
   L.push('')
-  if (top) {
+  if (meaningsOutage) {
+    L.push('_Withheld — the bespoke-meanings pass did not run, so no candidate could be verified against the gap. The engine\'s strongest form by sound is shown among the direct discoveries below, unverified._')
+  } else if (top) {
     L.push(`**${top.word}** — ${top.discovery.classification}, ${top.discovery.score}/100`)
     if (top.shortMeaning || top.meaning) L.push(`\n${top.shortMeaning || top.meaning}`)
     if (top.discovery.penalties.length) L.push(`\n_Risks: ${top.discovery.penalties.join(' ')}_`)

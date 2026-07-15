@@ -48,4 +48,18 @@ describe('buildReport', () => {
     const text = buildReport({ brief: 'x', results, gap: null, usedLLM: false })
     expect(text).toContain('Not run for this result')
   })
+
+  it('surfaces a bespoke-meanings outage honestly and withholds the winner', () => {
+    const text = buildReport({
+      brief: 'x',
+      results,
+      gap: null,
+      usedLLM: true,
+      meaningsOutage: true,
+    })
+    expect(text).toContain('Bespoke meanings unavailable this run')
+    // The Top discovery is withheld rather than crowning an unverified word.
+    expect(text).toContain('## Top discovery')
+    expect(text).toContain('Withheld')
+  })
 })

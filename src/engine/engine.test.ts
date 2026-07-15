@@ -28,6 +28,7 @@ import {
   detectTargetType,
   targetTypeMatch,
   dampenAttractors,
+  METAMORPHOSIS_CUE,
   acousticProfile,
   LANGUAGES,
   languageById,
@@ -864,6 +865,31 @@ describe('target-type alignment — regression suite (Morutho ranking fix §11)'
     // A genuinely-present, non-attractor concept is untouched and now dominates.
     expect(v.knowledge).toBe(0.9)
     expect(v.knowledge!).toBeGreaterThan(v.identity!)
+  })
+
+  it('TEST C2 — the future-self prompt is not read as identity/transformation (LLM-path backstop)', () => {
+    // The exact live prompt that regressed: the LLM folded it into
+    // identity 1.0 / transformation 0.79 / metamorphosis. The shared backstop the
+    // api/analyze seam now applies must cut those, leaving the plainer concepts.
+    const brief =
+      'the strange comfort of realizing that your future self is already silently shaping your present through decisions you don\'t yet understand'
+    const v = dampenAttractors(
+      { identity: 1, transformation: 0.79, time: 0.95, trust: 0.74, recognition: 0.84 },
+      brief.toLowerCase(),
+    )
+    // No "becoming a different person" / "transform" cue — identity & transformation damped.
+    expect(v.identity!).toBeLessThanOrEqual(0.4)
+    expect(v.transformation!).toBeLessThanOrEqual(0.79 * 0.4 + 1e-9)
+    // The genuinely-present concepts are untouched and now dominate.
+    expect(v.time).toBe(0.95)
+    expect(v.trust).toBe(0.74)
+    expect(v.recognition).toBe(0.84)
+    expect(v.time!).toBeGreaterThan(v.identity!)
+    expect(v.recognition!).toBeGreaterThan(v.transformation!)
+    // …and the coarse metamorphosis theme is not licensed by this prompt.
+    expect(METAMORPHOSIS_CUE.test(brief.toLowerCase())).toBe(false)
+    // A genuine transformation prompt still trips the cue (guard not over-eager).
+    expect(METAMORPHOSIS_CUE.test('becoming a different person after the fire')).toBe(true)
   })
 
   it('TEST D — a "capacity" lens is not a direct answer unless the target is a capacity', () => {

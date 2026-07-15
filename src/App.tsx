@@ -102,6 +102,10 @@ export default function App() {
   const [refining, setRefining] = useState(false)
   const [steering, setSteering] = useState(false)
   const [usedLLM, setUsedLLM] = useState(false)
+  // True when the bespoke-meanings pass could not run this session — the words
+  // fall back to the engine's own definitions and the fidelity gate never fires,
+  // so we surface it honestly instead of crowning an unverified winner.
+  const [meaningsOutage, setMeaningsOutage] = useState(false)
   const [selectedDirections, setSelectedDirections] = useState<string[]>([])
   const [openWord, setOpenWord] = useState<WordPassport | null>(null)
   // Semantic Gap Search — "does a word already exist for this?" (LLM, discover mode).
@@ -167,11 +171,41 @@ export default function App() {
         })),
       )
       const tt = detectTargetType(trimmed)
-      const map = await fetchBespokeMeanings(trimmed, items, {
+      const context = {
         interpretation: result.analysis.interpretation,
         target: { headType: tt.headType, mechanism: tt.mechanism },
-      })
-      if (map && runId.current === myRun) {
+      }
+      // One retry before giving up — the usual failure is a 60s timeout writing
+      // ~18 bilingual definitions, which a second attempt often clears.
+      let map = await fetchBespokeMeanings(trimmed, items, context)
+      if (!map && runId.current === myRun) map = await fetchBespokeMeanings(trimmed, items, context)
+      if (runId.current !== myRun) return
+
+      if (!map) {
+        // Outage (Morutho §3/§6): the meanings pass never ran, so A never anchored
+        // and the B fidelity gate can't fire. Keep the engine's own definitions, but
+        // DON'T let its acoustic-top word wear an unearned "Exceptional" crown — a
+        // winner is only credible once its meaning has been verified against the gap.
+        setMeaningsOutage(true)
+        setResults({
+          ...result,
+          families: result.families.map((f) => ({
+            ...f,
+            words: f.words.map((w) => {
+              if (w.discovery.classification !== 'Exceptional') return w
+              const penalties = [...w.discovery.penalties]
+              if (!penalties.some((p) => p.includes('not verified'))) {
+                penalties.push('Meaning not verified — bespoke meanings unavailable this run.')
+              }
+              return { ...w, discovery: { ...w.discovery, classification: 'Strong', penalties } }
+            }),
+          })),
+        })
+        return
+      }
+
+      setMeaningsOutage(false)
+      if (runId.current === myRun) {
         // Safety net (Morutho §3/§6): re-decide Top Discovery from the WRITTEN
         // meanings. The winner is the strongest DIRECT word that actually names the
         // gap (gapFidelity ≥ 0.8); a word whose meaning drifts is demoted so beauty
@@ -241,6 +275,7 @@ export default function App() {
 
     const myRun = ++runId.current
     setOpenWord(null)
+    setMeaningsOutage(false)
     if (!reseed && !steer) setGap(null) // a fresh meaning restarts the vocabulary search
     const seed = reseed ? Math.floor(Math.random() * 1e9) : undefined
     const request = { brief: trimmed || undefined, keywords, mode, count, speakability, seed, brandMode: appMode === 'name' }
@@ -362,6 +397,7 @@ export default function App() {
       results,
       gap,
       usedLLM,
+      meaningsOutage,
       version: __APP_VERSION__,
       stamp: new Date().toISOString(),
     })
@@ -626,6 +662,11 @@ export default function App() {
                           </span>
                         )}
                         {refining && <span className="refining"> · writing meanings…</span>}
+                        {meaningsOutage && (
+                          <span className="meanings-outage">
+                            {' '}· bespoke meanings unavailable — showing the engine’s own definitions
+                          </span>
+                        )}
                       </p>
                       {results.population.generated > 0 && (
                         <p className="evofunnel" title="The engine bred a population of candidate forms and let selection pressure decide which survived. Every count is real.">
