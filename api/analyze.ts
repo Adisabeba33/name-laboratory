@@ -1,6 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { dampenAttractors, METAMORPHOSIS_CUE } from '../src/engine/attractors'
 
 /**
  * Word Laboratory — LLM Meaning Analysis (server-side).
@@ -30,6 +29,44 @@ const CONCEPTS = [
 
 // Recognised themes. Keep in sync with src/engine/data/themes.ts ids.
 const THEMES = ['metamorphosis', 'grief', 'resilience']
+
+// Attractor damping — a LOCAL copy of src/engine/attractors.ts. Kept inline (not
+// imported) because Vercel bundles api/* as a standalone serverless function, and a
+// cross-import from src/engine risks the bundler failing to resolve it → the whole
+// endpoint 500s and the client silently falls back to the no-LLM engine. Same
+// hand-synced convention as CONCEPTS/THEMES above. KEEP IN SYNC with attractors.ts
+// (an engine drift-guard test asserts these attractor concepts match the canon).
+const ATTRACTOR_SIGNATURES: Record<string, RegExp> = {
+  identity: /\b(identity|who i (am|was)|the person i (was|am|became)|myself|sense of self|(become|becoming|became) (someone|a (different|new) person)|different person)\b/,
+  hope: /\b(hope|hopeful|optimis|looking forward|a better (day|future|life))\b/,
+  longing: /\b(long(ing)?|yearn|ache for|miss(ing)?|nostalg)\b/,
+  transformation: /\b(transform|becom(e|ing)|became|change(d|s)? into|metamorph|turn(ed|ing) into)\b/,
+  memory: /\b(memor|remember|recall|forget|reminisc|the past)\b/,
+  survival: /\b(surviv|endur|made it through|lived through|barely)\b/,
+  grief: /\b(grief|griev|mourn|loss|bereave|sorrow)\b/,
+  rebirth: /\b(rebirth|reborn|born again|renew|from the ashes)\b/,
+}
+
+// Cue for a genuine transformation/rebirth register — guards the coarse
+// `metamorphosis` theme so it can't flatten a prompt that never named becoming.
+const METAMORPHOSIS_CUE =
+  /\b(transform|becom(e|ing)|became|metamorph|rebirth|reborn|born again|from the ashes|a (different|new) person|change(d|s)? into|turn(ed|ing) into)\b/
+
+/**
+ * Damp any attractor concept the prompt does not support: it keeps 40% of its
+ * weight rather than dominating. Pure; returns a new record. Mirrors the engine's
+ * `dampenAttractors` so the LLM path is as safe against archetype drift as the
+ * deterministic path.
+ */
+function dampenAttractors(vector: Record<string, number>, text: string): Record<string, number> {
+  const out: Record<string, number> = { ...vector }
+  for (const concept of Object.keys(ATTRACTOR_SIGNATURES)) {
+    if (out[concept] != null && !ATTRACTOR_SIGNATURES[concept].test(text)) {
+      out[concept] = out[concept] * 0.4
+    }
+  }
+  return out
+}
 
 const MODEL = process.env.WORDLAB_MODEL || 'claude-haiku-4-5-20251001'
 

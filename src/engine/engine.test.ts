@@ -976,6 +976,23 @@ describe('target-type alignment — regression suite (Morutho ranking fix §11)'
     }
   })
 
+  it('keeps the api/analyze attractor-damping copy in sync with the engine canon (drift guard)', () => {
+    // api/analyze.ts carries a LOCAL copy of ATTRACTOR_SIGNATURES (it can't import
+    // from src/engine — Vercel bundles it standalone). If the two lists of damped
+    // concepts diverge, the LLM path stops matching the deterministic path silently.
+    // The attractor-concept keys are the lines `  <concept>: /…/` in each block.
+    const attractorKeys = (src: string): string[] => {
+      const start = src.indexOf('ATTRACTOR_SIGNATURES')
+      const block = src.slice(start, src.indexOf('METAMORPHOSIS_CUE', start))
+      return [...block.matchAll(/^\s{2}([a-z]+):\s*\//gm)].map((m) => m[1]).sort()
+    }
+    const canon = readFileSync(new URL('./attractors.ts', import.meta.url), 'utf8')
+    const apiSrc = readFileSync(new URL('../../api/analyze.ts', import.meta.url), 'utf8')
+    const canonKeys = attractorKeys(canon)
+    expect(canonKeys.length).toBeGreaterThan(0)
+    expect(attractorKeys(apiSrc)).toEqual(canonKeys)
+  })
+
   it('TEST F — a humor prompt reaches the absurdity domain, not grief/rebirth', () => {
     const a = analyzeMeaning(
       [],
