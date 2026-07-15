@@ -28,7 +28,9 @@ const CUES: Cue[] = [
   { head: 'social_phenomenon', test: /\b(social (reversal|dynamic|phenomenon)|when everyone|the collective|a whole (group|room|culture))/ },
   { head: 'relationship', test: /\b(the (bond|relationship|connection) between|between two people|each other|one another|the way (two|people|we|they))/ },
   { head: 'capacity', test: /\b(the ability|the capacity|being able to|the skill of|the power to)/, temporality: 'timeless' },
-  { head: 'person', test: /\b(a person who|someone who|the (kind of )?person|the one who|a man who|a woman who)/ },
+  // Require the person to be the TARGET (defined by "who …"), so a subordinate
+  // clause like "the person you shared it with is gone" does NOT hijack the target.
+  { head: 'person', test: /\b(a person who|someone who|the person who|the kind of person who|the one who|a man who|a woman who)/ },
   { head: 'trait', test: /\b(the (habit|tendency|trait|quirk|disposition) (of|to)|the way someone (always|tends))/, temporality: 'timeless' },
   { head: 'process', test: /\b(the (process|act) of|gradually|slowly (becoming|turning|drifting)|the slow )/, temporality: 'durative' },
   { head: 'feeling', test: /\b(the feeling|the ache|the sense of|the emotion|feeling of|the quiet (grief|joy|dread|sorrow)|the private (amusement|joy|grief))/ },

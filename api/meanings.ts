@@ -57,7 +57,14 @@ THE ONE RULE THAT OVERRIDES EVERYTHING: every definition must be about the CONFI
 
 DO NOT DRIFT to the engine's stock archetypes. Words like "survival becomes strength", "rebirth from the ashes", "the core self beneath all change", "identity reborn", "endurance", "transformation" are DEFAULT DRIFT — write them ONLY if the confirmed meaning is genuinely about survival/rebirth/identity. If the meaning is about, say, a future self shaping the present, a definition about "when endurance becomes settled strength" is WRONG — it names a different idea. Reject that reflex.
 
-Each word carries a "lens" — the distinct angle its language takes (the event, the person, the feeling, the turning point, the cost, the observer, the aftermath). Use the lens to pick WHICH FACET of the confirmed meaning to define — never to change the subject. Lens "the person" → the person inside THIS meaning; lens "the feeling" → the feeling of THIS meaning; lens "the moment" → the exact instant THIS meaning happens.
+Each word carries a "lens" — the distinct angle its language takes. Use the lens to pick WHICH FACET of the confirmed meaning to define — never to change the subject, but ALSO never to collapse every entry into the same shape. The lenses must name DIFFERENT KINDS of thing:
+- "the meaning itself" / "what is it" → name the ACT or QUALITY itself (e.g. "the quiet dignity of…", "the act of…") — NOT a person.
+- "the feeling" → name the inner SENSATION itself ("the ache of…", "the steadiness of…").
+- "the threshold" / "the moment" → name the exact INSTANT it happens.
+- "the aftermath" → name what ORDINARY LIFE becomes.
+- "the cost" → name what it TAKES from you.
+- "the person" / "the observer" → only THIS lens names a person.
+CRITICAL: do NOT write "a person who…" for every word. If most of your entries begin "A person who…", you have collapsed the lenses and failed — most words name an act, a feeling, a moment or a state, not an agent.
 
 For every word return:
 - meaning: one English sentence — a real, specific dictionary definition of the confirmed meaning from this word's lens.

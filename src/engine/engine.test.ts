@@ -832,6 +832,18 @@ describe('target-type alignment — regression suite (Morutho ranking fix §11)'
     if (top) expect(['moment', 'realization', 'event']).toContain(top.candidateType)
   })
 
+  it('does not let a subordinate "the person…" clause hijack the target type', () => {
+    // Regression: "the person you shared it with is gone" wrongly detected as a
+    // person-target, demoting every family and forcing a false "no direct candidate".
+    const tt = detectTargetType(
+      'A word for the quiet dignity of continuing a small daily ritual long after the person you shared it with is gone.',
+    )
+    expect(tt.headType).not.toBe('person')
+    // A genuine person target still resolves correctly.
+    expect(detectTargetType('A word for someone who quietly keeps everyone else together.').headType).toBe('person')
+    expect(detectTargetType('A word for the person who always arrives first.').headType).toBe('person')
+  })
+
   it('TEST B — a bodily/state candidate is only adjacent to a social-phenomenon prompt', () => {
     const tt = detectTargetType(
       'A word for the social reversal when a whole group suddenly turns against the person they were praising.',
