@@ -193,11 +193,9 @@ function wordBlock(w: WordPassport): string {
   const b: string[] = []
   b.push('')
   b.push(`#### ${w.word}  ·  ${w.transliteration}`)
-  b.push(
-    `- say: ${w.pronunciationGuide}  ·  ${w.partOfSpeech}` +
-      `  ·  speakability: ${w.speakability}  ·  naturalness: ${w.naturalness}`,
-  )
-  b.push(`- adoption: ${w.adoption.band} (${w.adoption.score}/100)`)
+  // §10 — lead with the thresholded discovery classification; do NOT parade the
+  // near-universal "Inevitable"/"Exceptional" adoption+naturalness labels.
+  b.push(`- say: ${w.pronunciationGuide}  ·  ${w.partOfSpeech}  ·  speakability: ${w.speakability}`)
   const cr = w.collisionReport
   b.push(
     `- collision: **${cr.status}** (confidence ${cr.confidence}) — internal ${cr.internalDictionary} · ` +

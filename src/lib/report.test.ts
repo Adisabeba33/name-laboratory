@@ -38,7 +38,9 @@ describe('buildReport', () => {
     // Every discovered word appears in the report.
     for (const w of results.families.flatMap((f) => f.words)) {
       expect(text).toContain(w.word)
-      expect(text).toContain(w.naturalness)
+      // §10 — the report leads with the thresholded discovery classification,
+      // not the near-universal "Inevitable" naturalness label.
+      expect(text).toContain(w.discovery.classification)
     }
   })
 

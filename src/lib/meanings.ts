@@ -23,6 +23,14 @@ export interface WordMeaning {
   ru: string
   short: string
   pos: string
+  /** The model's adversarial self-rating of how directly this names the gap (0–1). */
+  gapFidelity: number
+}
+
+/** The confirmed meaning + target type the definitions must stay anchored to. */
+export interface MeaningContext {
+  interpretation?: string
+  target?: { headType: string; mechanism?: string }
 }
 
 const cache = new Map<string, Map<string, WordMeaning>>()
@@ -34,6 +42,7 @@ function keyFor(brief: string, words: WordItem[]): string {
 export async function fetchBespokeMeanings(
   brief: string,
   words: WordItem[],
+  context: MeaningContext = {},
   timeoutMs = 55_000,
 ): Promise<Map<string, WordMeaning> | null> {
   if (words.length === 0) return null
@@ -47,12 +56,12 @@ export async function fetchBespokeMeanings(
     const res = await fetch('/api/meanings', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ brief, words }),
+      body: JSON.stringify({ brief, words, interpretation: context.interpretation, target: context.target }),
       signal: controller.signal,
     })
     if (!res.ok) return null
     const data = (await res.json()) as {
-      meanings?: Array<{ word: string; meaning: string; meaningRu: string; short?: string; pos?: string }>
+      meanings?: Array<{ word: string; meaning: string; meaningRu: string; short?: string; pos?: string; gapFidelity?: number }>
     }
     if (!data || !Array.isArray(data.meanings)) return null
     const map = new Map<string, WordMeaning>()
@@ -63,6 +72,7 @@ export async function fetchBespokeMeanings(
           ru: m.meaningRu,
           short: m.short ?? '',
           pos: m.pos ?? '',
+          gapFidelity: typeof m.gapFidelity === 'number' ? Math.max(0, Math.min(1, m.gapFidelity)) : 0.7,
         })
       }
     }

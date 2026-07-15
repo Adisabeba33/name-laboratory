@@ -60,15 +60,21 @@ export function naturalness(word: string): number {
   // Base — how easily it's said and how ordinary its shape is (no fantasy markers yet).
   const ease = pronounceability(w)
   const flow = (rhythm(w) + syllableHarmony(w)) / 2
-  const syllableScore = syl <= 3 ? (syl === 1 ? 0.85 : 1) : Math.max(0.4, 1 - (syl - 3) * 0.25)
+  // Up to four syllables reads as an ordinary word ("understanding", "inevitable");
+  // only beyond that does a coined word start to feel over-long, and gently.
+  const syllableScore = syl <= 4 ? (syl === 1 ? 0.85 : 1) : Math.max(0.45, 1 - (syl - 4) * 0.22)
   const clusterScore = Math.max(0, 1 - awkwardClusters(w) * 0.4)
   const base = clamp01(ease * 0.4 + flow * 0.2 + syllableScore * 0.2 + clusterScore * 0.2)
 
   // Multiplicative penalties — each fantasy tell scales the score down.
   const rare = [...w].filter((c) => RARE_LETTERS.has(c)).length
   const thCount = (w.match(/th/g) ?? []).length
+  // Length is a GENTLE penalty, not a cliff: long words are legitimate when they
+  // stay clean (real words run to 13–16 letters). The incantation smell is caught
+  // by the fantasy-ending, rare-letter, th-wall, vowel-run and sharp-cluster
+  // penalties — not by length itself. So a long, well-structured word stays natural.
   const lengthPenalty =
-    len <= 7 ? 1 : len <= 8 ? 0.9 : len <= 9 ? 0.78 : len <= 10 ? 0.66 : 0.55
+    len <= 9 ? 1 : len <= 11 ? 0.95 : len <= 13 ? 0.88 : len <= 16 ? 0.8 : 0.7
   const penalty =
     (FANTASY_ENDING.test(w) ? 0.5 : 1) *
     Math.max(0.3, 1 - rare * 0.35) *

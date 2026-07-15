@@ -172,7 +172,7 @@ describe('native synthesis (diverse speakers of one language)', () => {
     for (const w of vocab.words) {
       expect(awkwardClusters(w)).toBeLessThan(1)
       expect(KNOWN_WORDS.has(w.toLowerCase())).toBe(false)
-      expect(w.length).toBeLessThanOrEqual(11)
+      expect(w.length).toBeLessThanOrEqual(14)
     }
   })
 
@@ -967,7 +967,7 @@ describe('speakability — words that stay sayable', () => {
         const vocab = speakNative(languageById(id), new Rng(seed), 3)
         for (const w of vocab.words) {
           expect(longestVowelRun(w)).toBeLessThanOrEqual(2)
-          expect(w.length).toBeLessThanOrEqual(11)
+          expect(w.length).toBeLessThanOrEqual(14)
           expect(pronounceability(w)).toBeGreaterThanOrEqual(0.5)
         }
       }

@@ -96,15 +96,17 @@ function speakControls(speakability: number): SpeakControls {
   const strict = s >= 0.5
   return {
     floor: 0.3 + s * 0.42, // s=1 → 0.72, s=0.7 → ~0.59, s=0 → 0.30
-    // Syllable count is NOT a quality lever — a 2-, 3- or 4-syllable word can all
-    // be lovely and sayable. So this is only a generous backstop against a
-    // signature ending stacking into a 6-syllable monster; real beauty is the
-    // pronounceability floor + vowel-run + cluster gates below. Words keep their
-    // language's natural 2–4 syllable spread, so a run mixes short and long.
-    maxSyllables: strict ? 5 : 6,
+    // Length is NOT capped tightly: real languages DO have long words
+    // ("understanding", "inevitability", "недосказанность"), and they are legitimate
+    // as long as they stay STRUCTURALLY clean — clear syllables, no wall of vowels,
+    // no cluster pile-up, no incantation ending. Those are policed by the vowel-run,
+    // cluster, reduplication and (in naturalness) fantasy-ending / sharp-cluster
+    // guards below — NOT by a blunt length cap. So the backstop is generous; a long
+    // word survives if it reads as a word, and dies only if it reads as a spell.
+    maxSyllables: strict ? 6 : 8,
     maxVowelRun: strict ? 2 : 3,
     clusterLimit: strict ? 0.5 : 1,
-    maxLen: strict ? 11 : 13,
+    maxLen: strict ? 14 : 18,
     strict,
   }
 }

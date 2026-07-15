@@ -34,36 +34,39 @@ const SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['word', 'meaning', 'meaningRu', 'short', 'pos'],
+        required: ['word', 'meaning', 'meaningRu', 'short', 'pos', 'gapFidelity'],
         properties: {
           word: { type: 'string' },
           meaning: { type: 'string' },
           meaningRu: { type: 'string' },
           short: { type: 'string' },
           pos: { type: 'string' },
+          // How directly THIS definition names the confirmed meaning (0–1).
+          gapFidelity: { type: 'number' },
         },
       },
     },
   },
 }
 
-const SYSTEM = `You are the Lexicographer of Word Laboratory. A person is naming one specific human idea with new words that can be USED inside existing human languages. For each word below, write its dictionary entry.
+const SYSTEM = `You are the Lexicographer of Word Laboratory. A person is naming ONE SPECIFIC human idea — the CONFIRMED MEANING, given to you below — with new words that can be USED inside existing human languages. For each word, write its dictionary entry AS A FACET OF THAT EXACT MEANING.
 
-WRITE IT AS IF THE WORD ALREADY EXISTS — a word the language has quietly owned for years, not a fresh invention. The reader should think "wait… is this already a real word?" Define it the way an actual dictionary would: plainly, precisely, with no fantasy, mystical or magical framing. These are ordinary words a language was simply missing.
+WRITE IT AS IF THE WORD ALREADY EXISTS — a word the language has quietly owned for years, not a fresh invention. Define it the way an actual dictionary would: plainly, precisely, with no fantasy, mystical or magical framing.
 
-Each word carries a "lens" — the distinct angle its language looks at the meaning from (e.g. the event, the person, the feeling, the turning point, the cost, the observer, what emerged, the aftermath). This is the most important instruction: DEFINE EACH WORD THROUGH ITS LENS, so the whole set reads as many viewpoints on the meaning, NOT one observation restated. A word lensed on "the event" defines what happened; on "the person" defines who you became; on "the feeling" defines the inner sensation; on "the cost" defines what was taken. Do NOT let every word drift back to "the core / the self / what remains" — that convergence is the failure to avoid.
+THE ONE RULE THAT OVERRIDES EVERYTHING: every definition must be about the CONFIRMED MEANING and nothing else. It must name the SAME KIND OF THING the target asks for (a "moment" meaning gets a moment; a "feeling" gets a feeling; a "realization" gets the click of realizing) AND the SAME SUBJECT (if the meaning is about two people recognizing a shared experience, EVERY definition is about that — recognition, shared meaning, the two speakers — not about anything else).
+
+DO NOT DRIFT to the engine's stock archetypes. Words like "survival becomes strength", "rebirth from the ashes", "the core self beneath all change", "identity reborn", "endurance", "transformation" are DEFAULT DRIFT — write them ONLY if the confirmed meaning is genuinely about survival/rebirth/identity. If the meaning is about, say, a future self shaping the present, a definition about "when endurance becomes settled strength" is WRONG — it names a different idea. Reject that reflex.
+
+Each word carries a "lens" — the distinct angle its language takes (the event, the person, the feeling, the turning point, the cost, the observer, the aftermath). Use the lens to pick WHICH FACET of the confirmed meaning to define — never to change the subject. Lens "the person" → the person inside THIS meaning; lens "the feeling" → the feeling of THIS meaning; lens "the moment" → the exact instant THIS meaning happens.
 
 For every word return:
-- meaning: one sentence in English — a real, specific definition ("the moment when…", "the quiet ache of…"), the way a dictionary states it, written FROM this word's lens. Not a restatement of the idea, not decorative poetry.
-- meaningRu: the same meaning in fluent, natural Russian a native speaker would actually feel (idiomatic, not word-for-word).
-- short: a 3–6 word English distillation ("Identity reborn through survival.").
-- pos: the word's natural grammatical role — usually "noun"; use "verb"/"adjective" only if it truly reads that way.
+- meaning: one English sentence — a real, specific dictionary definition of the confirmed meaning from this word's lens.
+- meaningRu: the same in fluent, idiomatic Russian.
+- short: a 3–6 word English distillation.
+- pos: usually "noun"; "verb"/"adjective" only if it truly reads that way.
+- gapFidelity: AFTER writing, rate 0–1, critically and adversarially, how directly THIS definition names the confirmed meaning. 1.0 = names the exact thing asked for; 0.7 = a true facet of it; 0.5 = related but a DIFFERENT KIND of thing (a neighbour); below 0.4 = drifted to another idea. Be harsh — reserve 0.9+ for a definition that nails the precise gap; if you wrote a stock archetype, score it low honestly.
 
-Rules:
-- Make every word's meaning genuinely DISTINCT — driven by its lens, each names a different facet of the idea. Two words should never be paraphrases of each other.
-- Stay faithful to the request's register: a concrete/sensory idea gets a grounded, sensory definition; an emotional one reaches for its deep core. Never inflate a plain image into philosophy.
-- Let the word's language character shade the tone, lightly — but the entry must always read as ordinary language, never fantasy.
-- Return one entry per word, echoing the word exactly.`
+Return one entry per word, echoing the word exactly, every definition genuinely distinct.`
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -77,11 +80,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const brief = String(req.body?.brief ?? '').slice(0, 2000).trim()
+  const interpretation = String(req.body?.interpretation ?? '').slice(0, 2000).trim()
+  const target = req.body?.target && typeof req.body.target === 'object'
+    ? {
+        headType: String((req.body.target as { headType?: unknown }).headType ?? '').slice(0, 40),
+        mechanism: String((req.body.target as { mechanism?: unknown }).mechanism ?? '').slice(0, 200),
+      }
+    : null
   const words = Array.isArray(req.body?.words) ? req.body.words.slice(0, MAX_WORDS) : []
   if (!brief || words.length === 0) {
     res.status(400).json({ error: 'bad_request' })
     return
   }
+  // The confirmed meaning the definitions must stay anchored to (falls back to the brief).
+  const confirmed = interpretation || brief
 
   // Compact, sanitised list for the model.
   const list = words
@@ -103,7 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const chunks: (typeof list)[] = []
     for (let i = 0; i < list.length; i += CHUNK_SIZE) chunks.push(list.slice(i, i + CHUNK_SIZE))
 
-    const settled = await Promise.allSettled(chunks.map((chunk) => writeEntries(client, brief, chunk)))
+    const settled = await Promise.allSettled(chunks.map((chunk) => writeEntries(client, confirmed, target, chunk)))
     const meanings = settled.flatMap((s) => (s.status === 'fulfilled' ? s.value : []))
     const anyOk = settled.some((s) => s.status === 'fulfilled')
 
@@ -124,26 +136,36 @@ interface WordEntry {
   meaningRu: string
   short: string
   pos: string
+  gapFidelity: number
 }
 
-/** Write dictionary entries (meaning + short + pos) for one small chunk of words. */
+/** Write dictionary entries (meaning + short + pos + gapFidelity) for one chunk. */
 async function writeEntries(
   client: Anthropic,
-  brief: string,
+  confirmed: string,
+  target: { headType: string; mechanism: string } | null,
   list: Array<{ word: string; language: string; hint: string; lens: string }>,
 ): Promise<WordEntry[]> {
+  const targetLine = target?.headType
+    ? `\nTARGET TYPE — the kind of thing every definition must name: "${target.headType}"${
+        target.mechanism ? ` · mechanism: "${target.mechanism}"` : ''
+      }.\n`
+    : '\n'
   const response = await client.messages.create({
     model: MODEL,
-    max_tokens: 1600,
+    max_tokens: 1800,
     system: SYSTEM,
     output_config: { format: { type: 'json_schema', schema: SCHEMA } },
     messages: [
       {
         role: 'user',
         content:
-          `The idea being named:\n"""${brief}"""\n\n` +
-          `Write the dictionary entry for each of these invented words, using each ` +
-          `word's language character and concept hint:\n` +
+          `THE CONFIRMED MEANING every definition must be a facet of:\n"""${confirmed}"""\n` +
+          targetLine +
+          `\nWrite the dictionary entry for each invented word below. Use its lens to choose ` +
+          `WHICH facet of the confirmed meaning to define — never to change the subject. The ` +
+          `"hint" is only the engine's rough concept; if it points away from the confirmed ` +
+          `meaning, IGNORE it and stay on the confirmed meaning. Rate gapFidelity honestly.\n` +
           JSON.stringify(list),
       },
     ],
@@ -169,6 +191,14 @@ async function writeEntries(
           meaningRu: String(m.meaningRu),
           short: String(m.short ?? '').slice(0, 120),
           pos: String(m.pos ?? '').slice(0, 24),
+          gapFidelity: clampUnit(m.gapFidelity),
         }))
     : []
+}
+
+/** Coerce the model's self-rating to a 0–1 number (default 0.7 when absent/bad). */
+function clampUnit(n: unknown): number {
+  const v = typeof n === 'number' ? n : Number(n)
+  if (!Number.isFinite(v)) return 0.7
+  return Math.max(0, Math.min(1, v))
 }

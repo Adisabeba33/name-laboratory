@@ -3,6 +3,7 @@ import {
   runLaboratory,
   discoverFromAnalysis,
   focusConcepts,
+  detectTargetType,
   MODES,
   DEFAULT_SPEAKABILITY,
   type CreativeMode,
@@ -40,6 +41,11 @@ import { LanguagesView, LexiconView, RoomView } from './components/views'
 import type { ViewKey } from './components/nav'
 
 const MODE_KEYS = Object.keys(MODES) as CreativeMode[]
+
+/** Tier ordering, so a gap-drift demotion can only ever lower a classification. */
+const CLASS_ORDER: Record<string, number> = {
+  Rejected: 0, Weak: 1, Experimental: 2, Viable: 3, Strong: 4, Exceptional: 5,
+}
 
 /** The two things the lab does: name a meaning, or name a thing. */
 type AppMode = 'discover' | 'name'
@@ -160,15 +166,31 @@ export default function App() {
           lens: f.lens,
         })),
       )
-      const map = await fetchBespokeMeanings(trimmed, items)
+      const tt = detectTargetType(trimmed)
+      const map = await fetchBespokeMeanings(trimmed, items, {
+        interpretation: result.analysis.interpretation,
+        target: { headType: tt.headType, mechanism: tt.mechanism },
+      })
       if (map && runId.current === myRun) {
+        // Safety net (Morutho §3/§6): re-decide Top Discovery from the WRITTEN
+        // meanings. The winner is the strongest DIRECT word that actually names the
+        // gap (gapFidelity ≥ 0.8); a word whose meaning drifts is demoted so beauty
+        // can't crown an off-meaning word. If none qualifies, there is no winner.
+        const gf = (w: WordPassport) => map.get(w.word.toLowerCase())?.gapFidelity ?? 1
+        const winner = result.families
+          .filter((f) => f.direct)
+          .flatMap((f) => f.words)
+          .filter((w) => gf(w) >= 0.8)
+          .sort((a, b) => b.discovery.score - a.discovery.score)[0]
+        const winnerKey = winner?.word.toLowerCase()
+
         setResults({
           ...result,
           families: result.families.map((f) => ({
             ...f,
             words: f.words.map((w) => {
               const m = map.get(w.word.toLowerCase())
-              return m
+              let word = m
                 ? {
                     ...w,
                     meaning: `${m.en} (${m.ru})`,
@@ -176,6 +198,22 @@ export default function App() {
                     partOfSpeech: m.pos || w.partOfSpeech,
                   }
                 : w
+              const key = w.word.toLowerCase()
+              const fid = m?.gapFidelity ?? 1
+              let cls = word.discovery.classification
+              const penalties = [...word.discovery.penalties]
+              if (key === winnerKey) cls = 'Exceptional'
+              else if (cls === 'Exceptional') cls = 'Strong' // engine-top, but not the gap-top
+              if (fid < 0.45 && cls !== 'Rejected' && CLASS_ORDER[cls] > CLASS_ORDER.Experimental) {
+                cls = 'Experimental'
+                if (!penalties.some((p) => p.includes('requested meaning'))) {
+                  penalties.push('Drifts from the requested meaning.')
+                }
+              }
+              if (cls !== word.discovery.classification || penalties.length !== word.discovery.penalties.length) {
+                word = { ...word, discovery: { ...word.discovery, classification: cls, penalties } }
+              }
+              return word
             }),
           })),
         })
