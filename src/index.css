@@ -1744,6 +1744,106 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 
 @keyframes twinkle { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
+/* ── Capacity panel (Experiments) ───────────────────────────────────── */
+.capacity {
+  margin-bottom: 34px;
+  font-variant-numeric: tabular-nums;
+}
+.capacity-hero {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: linear-gradient(160deg, var(--grad-soft), transparent 70%), var(--panel);
+  padding: 30px;
+  margin-bottom: 14px;
+}
+.capacity-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.capacity-big {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(48px, 9vw, 88px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin: 12px 0 14px;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.capacity-claim {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(17px, 2.6vw, 22px);
+  line-height: 1.5;
+  color: var(--text);
+  max-width: 60ch;
+  margin: 0 0 14px;
+}
+.capacity-claim b { font-weight: 400; color: var(--accent-2); }
+.capacity-caveat { font-size: 13px; color: var(--faint); max-width: 66ch; margin: 0; }
+.capacity-caveat b { color: var(--dim); font-weight: 500; }
+
+.capacity-stats {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+  margin-bottom: 14px;
+}
+@media (min-width: 640px) { .capacity-stats { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1000px) { .capacity-stats { grid-template-columns: repeat(4, 1fr); } }
+.cap-stat {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cap-val { font-family: var(--serif); font-size: 26px; color: var(--text); }
+.cap-key { font-size: 12px; color: var(--faint); line-height: 1.4; }
+
+.capacity-cols { display: grid; gap: 14px; margin-bottom: 14px; }
+@media (min-width: 820px) { .capacity-cols { grid-template-columns: 1fr 1fr; } }
+.cap-card { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--panel); padding: 18px; }
+.cap-card h4 { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); margin-bottom: 14px; }
+
+.cap-bands, .cap-langs { display: flex; flex-direction: column; gap: 9px; }
+.cap-band-row, .cap-lang-row { display: grid; grid-template-columns: 128px 1fr 68px; align-items: center; gap: 10px; }
+.cap-lang-row { grid-template-columns: 96px 1fr 60px; }
+.cap-band-name { font-size: 12.5px; color: var(--dim); display: inline-flex; align-items: center; gap: 6px; }
+.cap-band-tag { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--good); border: 1px solid rgba(100,230,166,0.3); border-radius: 999px; padding: 1px 6px; }
+.cap-lang-name { font-size: 12.5px; color: var(--dim); }
+.cap-band-bar, .cap-lang-bar { height: 7px; border-radius: 999px; background: var(--panel-3); overflow: hidden; }
+.cap-band-bar i, .cap-lang-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--faint), var(--dim)); }
+.cap-band-bar i.ok { background: var(--grad); }
+.cap-band-val, .cap-lang-val { font-size: 12px; color: var(--faint); text-align: right; }
+
+.capacity-method {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--panel-2);
+  padding: 16px 18px;
+  margin: 0;
+}
+.capacity-method b { color: var(--dim); font-weight: 500; }
+.capacity-method code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--accent); background: rgba(139,124,255,0.1); padding: 1px 5px; border-radius: 5px; }
+
+.room-section-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 30px 0 14px;
+}
+
 /* ── Views ──────────────────────────────────────────────────────────── */
 .view { animation: rise 0.5s var(--ease) both; }
 .view-head { margin-bottom: 34px; max-width: 66ch; }

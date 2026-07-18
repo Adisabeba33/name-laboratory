@@ -3,6 +3,7 @@ import { LANGUAGES } from '../engine'
 import type { LexEntry } from '../lib/lexicon'
 import { ComingSoonGrid, type FutureLab } from './ComingSoon'
 import { Placeholder } from './Placeholder'
+import { CapacityPanel } from './CapacityPanel'
 import { LexiconIcon } from './icons'
 
 /* ── Languages room ───────────────────────────────────────────────────── */
@@ -204,7 +205,11 @@ export function RoomView({ room }: { room: keyof typeof ROOM_COPY }) {
       </header>
 
       {room === 'experiments' ? (
-        <ComingSoonGrid />
+        <>
+          <CapacityPanel />
+          <div className="room-section-label">Instruments in the lab</div>
+          <ComingSoonGrid />
+        </>
       ) : (
         <div className="room-split">
           <ComingSoonGrid labs={copy.labs} />
