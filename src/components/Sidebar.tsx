@@ -1,4 +1,4 @@
-import { Logo } from './Logo'
+import { Logo, Wordmark, Subtitle } from './Logo'
 import { NAV_PRIMARY, NAV_SECONDARY, type ViewKey } from './nav'
 
 /**
@@ -22,8 +22,8 @@ export function Sidebar({
       <button type="button" className="brand" onClick={() => onNavigate('discover')}>
         <Logo className="brand-mark" />
         <span className="brand-text">
-          <span className="brand-name">Sianelara</span>
-          <span className="brand-sub">Institute of Meaning</span>
+          <Wordmark className="brand-name" />
+          <Subtitle className="brand-sub" />
         </span>
       </button>
 

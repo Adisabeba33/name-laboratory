@@ -30,7 +30,7 @@ import { ConceptDirections } from './components/ConceptDirections'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { Sidebar } from './components/Sidebar'
 import { BottomNav } from './components/BottomNav'
-import { Logo } from './components/Logo'
+import { Logo, Wordmark } from './components/Logo'
 import { Hero } from './components/Hero'
 import { StepFlow } from './components/StepFlow'
 import { EvolutionLoader } from './components/EvolutionLoader'
@@ -506,7 +506,7 @@ export default function App() {
         <header className="mobilebar">
           <button type="button" className="mobilebar-brand" onClick={() => { setView('discover'); setOpenWord(null) }}>
             <Logo className="mobilebar-mark" />
-            <span className="mobilebar-name">Sianelara</span>
+            <Wordmark className="mobilebar-name" />
           </button>
         </header>
 
