@@ -30,6 +30,7 @@ import { ConceptDirections } from './components/ConceptDirections'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { Sidebar } from './components/Sidebar'
 import { BottomNav } from './components/BottomNav'
+import { Logo } from './components/Logo'
 import { Hero } from './components/Hero'
 import { StepFlow } from './components/StepFlow'
 import { EvolutionLoader } from './components/EvolutionLoader'
@@ -502,6 +503,13 @@ export default function App() {
       <Sidebar view={view} onNavigate={(v) => { setView(v); setOpenWord(null) }} lexiconCount={lexicon.length} />
 
       <main className="content">
+        <header className="mobilebar">
+          <button type="button" className="mobilebar-brand" onClick={() => { setView('discover'); setOpenWord(null) }}>
+            <Logo className="mobilebar-mark" gradientId="sianelara-gold-mobile" />
+            <span className="mobilebar-name">Sianelara</span>
+          </button>
+        </header>
+
         {view === 'discover' &&
           (openWord ? (
             <WordDetail

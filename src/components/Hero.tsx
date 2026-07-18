@@ -27,7 +27,7 @@ export function Hero({
           <span className="hero-em">meaning forgot.</span>
         </h1>
         <p className="hero-lede">
-          Word Laboratory uncovers the meanings hidden inside human experience — and
+          Sianelara uncovers the meanings hidden inside human experience — and
           creates entirely new words capable of carrying them.
         </p>
         <div className="hero-cta">

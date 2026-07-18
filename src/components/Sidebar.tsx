@@ -21,10 +21,9 @@ export function Sidebar({
     <aside className="sidebar">
       <button type="button" className="brand" onClick={() => onNavigate('discover')}>
         <Logo className="brand-mark" />
-        <span className="brand-name">
-          Word
-          <br />
-          Laboratory
+        <span className="brand-text">
+          <span className="brand-name">Sianelara</span>
+          <span className="brand-sub">Institute of Meaning</span>
         </span>
       </button>
 

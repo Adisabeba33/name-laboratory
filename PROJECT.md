@@ -5,6 +5,11 @@
 > any agent or contributor can understand the whole project from the repository
 > alone, without prior context. If you change direction, update this file.
 
+> **Public brand:** the product's public identity is **Sianelara — Institute of
+> Meaning** (gold glyph mark, `src/components/Logo.tsx`; PWA name in
+> `public/manifest.webmanifest`). "Word Laboratory" remains the internal/engine
+> codename used throughout the codebase and docs.
+
 ---
 
 ## 1. What this project is (in one sentence)
