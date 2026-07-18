@@ -354,8 +354,9 @@ function MeaningTab({ p }: { p: WordPassport }) {
           </ul>
         )}
         <p className="tabsec-muted">
-          Invented morphology — the coined root inflected the way English derives words. Not a
-          grammar of the invented sound-world.
+          Constructed native morphology — the coined root taking this language’s own
+          derivational suffixes (e.g. Slavic <i>-nik</i>, Greek <i>-ikos</i>, Japanese <i>-sha</i>).
+          Not English inflection and not a historical claim.
         </p>
       </div>
 

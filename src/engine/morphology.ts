@@ -1,65 +1,100 @@
 import type { RejectedForm, WordForm, WordParadigm } from './types'
+import type { Language } from './data/languages'
 import { Rng, hashSeed } from './rng'
-import { awkwardClusters, isVowel, normalise, pronounceability } from './phonetics'
-import { naturalness } from './naturalness'
+import { awkwardClusters, collectClusters, isVowel, normalise, pronounceability } from './phonetics'
+import { naturalness, type NaturalnessContext } from './naturalness'
 
 /**
  * Engine V6 — morphological word families.
  *
  * A living word is not one frozen form: a real word bends into a verb, an
- * adjective, an adverb, an agent noun. This grows that paradigm from a coined
- * root so the word can actually be *used* across a sentence, not just admired.
+ * adjective, an agent noun (and, where the language forms one, an adverb). This
+ * grows that paradigm from a coined root so the word can actually be *used*, not
+ * just admired.
  *
- * Honesty (invariant #6): these are the coined root inflected with the HOST
- * language's (English) derivational morphology — "how this word would bend if it
- * entered English", deployable in a real EN sentence. It is NOT a claim about the
- * grammar of the invented sound-world, and the UI/report say so. Deterministic:
- * the suffix chosen for a given (word, role) is fixed by a seed hashed from the
- * word, so a family is stable across runs.
+ * Honesty (invariant #6): these forms are a CONSTRUCTED grammar for the word's own
+ * invented sound-world — the coined root taking that language's OWN derivational
+ * suffixes (Slavic -nik, Greek -ikos, Japanese -sha…), chosen to echo the real
+ * family the accent draws on. They are NOT English inflections and NOT a historical
+ * claim; the UI/report label them as the word's native paradigm. Deterministic: the
+ * suffix for a given (word, role) is fixed by a seed hashed from the word.
  */
 
-/** English-deployable derivational suffixes, per grammatical role. */
+/**
+ * Fallback English-deployable suffixes, used only when a word is inflected without
+ * a language (a standalone/evolved passport). Every real run passes the language.
+ */
 const VERB_SUFFIXES = ['ate', 'ify', 'en']
 const ADJ_SUFFIXES = ['ic', 'ine', 'al', 'ous']
 const AGENT_SUFFIXES = ['ist', 'ian', 'er']
 
 /**
- * Grow a small paradigm from a coined root: verb, adjective, adverb, agent noun.
- * `anchor` is a short human label for the meaning (e.g. the lead concept's noun),
- * used only to phrase each form's usage gloss.
+ * Grow a small paradigm from a coined root: verb, adjective, agent noun, and an
+ * adverb where the language forms one. `anchor` is a short human label for the
+ * meaning, used only to phrase each form's usage gloss. `language` supplies the
+ * word's own derivational suffixes and its phonology (so a native cluster at the
+ * seam is judged by that language's rules, not a fixed Latin ideal).
  */
-export function computeParadigm(word: string, anchor: string): WordParadigm {
+export function computeParadigm(word: string, anchor: string, language?: Language): WordParadigm {
   const rng = new Rng(hashSeed(`morph:${word.toLowerCase()}`))
   const stem = rootStem(word)
+  const m = language?.morphology
 
-  const adjective = attachSuffix(stem, pick(ADJ_SUFFIXES, rng))
+  const adjective = attachSuffix(stem, pick(m?.adjective ?? ADJ_SUFFIXES, rng))
   const candidates: WordForm[] = [
-    { role: 'verb', form: cap(attachSuffix(stem, pick(VERB_SUFFIXES, rng))), gloss: `to bring about ${anchor}` },
+    { role: 'verb', form: cap(attachSuffix(stem, pick(m?.verb ?? VERB_SUFFIXES, rng))), gloss: `to bring about ${anchor}` },
     { role: 'adjective', form: cap(adjective), gloss: `having the quality of ${anchor}` },
-    { role: 'adverb', form: cap(adverbOf(adjective)), gloss: `in a ${anchor} way` },
-    { role: 'agent noun', form: cap(attachSuffix(stem, pick(AGENT_SUFFIXES, rng))), gloss: `one who embodies ${anchor}` },
   ]
+  // Adverb only where the language forms one by suffix (its own suffix, or — for the
+  // no-language fallback — the English -ly rule). Many languages form none.
+  const adverb = m
+    ? (m.adverb?.length ? cap(attachSuffix(stem, pick(m.adverb, rng))) : null)
+    : cap(adverbOf(adjective))
+  if (adverb) candidates.push({ role: 'adverb', form: adverb, gloss: `in a ${anchor} way` })
+  candidates.push({
+    role: 'agent noun',
+    form: cap(attachSuffix(stem, pick(m?.agent ?? AGENT_SUFFIXES, rng))),
+    gloss: `one who embodies ${anchor}`,
+  })
 
-  // v0.36 P3 — validate each derivation; keep only forms that sound natural, and
-  // record the rest as honestly rejected (a word may stay noun-only).
+  // v0.36 P3 — validate each derivation against the language's own phonology; keep
+  // only forms that sound natural for it, record the rest as honestly rejected.
+  const ctx = language ? nativePhonology(language) : {}
   const forms: WordForm[] = []
   const rejected: RejectedForm[] = []
   for (const c of candidates) {
-    const reason = rejectionReason(c.form)
+    const reason = rejectionReason(c.form, ctx)
     if (reason) rejected.push({ role: c.role, form: c.form, reason: `no natural ${c.role} — ${reason}` })
     else forms.push(c)
   }
   return { root: cap(word), forms, rejected }
 }
 
+/** The language's own phonology (clusters + native letters) for form validation. */
+function nativePhonology(lang: Language): NaturalnessContext {
+  const m = lang.morphology
+  const allowed = collectClusters([
+    ...lang.onsets, ...lang.medials, ...lang.codas,
+    ...m.verb, ...m.adjective, ...m.agent, ...(m.adverb ?? []),
+  ])
+  const native = new Set<string>()
+  for (const piece of [
+    ...lang.onsets, ...lang.medials, ...lang.nuclei, ...lang.codas, ...lang.endings,
+    ...m.verb, ...m.adjective, ...m.agent, ...(m.adverb ?? []),
+  ]) {
+    for (const ch of piece.toLowerCase()) if (/[a-zë-ü]/.test(ch)) native.add(ch)
+  }
+  return { allowed, native }
+}
+
 /** Why a derived form reads as forced, or null if it is natural enough to keep. */
-function rejectionReason(form: string): string | null {
+function rejectionReason(form: string, ctx: NaturalnessContext): string | null {
   const w = normalise(form)
   if (w.length > 13) return 'the form runs too long to be usable'
-  if (awkwardClusters(w) >= 1) return 'an awkward consonant cluster at the seam'
+  if (awkwardClusters(w, ctx.allowed) >= 1) return 'an awkward consonant cluster at the seam'
   if (/(.)\1\1/.test(w)) return 'a run of repeated letters'
   if (pronounceability(w) < 0.5) return 'it is hard to pronounce'
-  if (naturalness(form) < 0.58) return 'it sounds artificial'
+  if (naturalness(form, ctx) < 0.58) return 'it sounds artificial'
   return null
 }
 

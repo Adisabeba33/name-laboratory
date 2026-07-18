@@ -10,6 +10,21 @@ import type { Concept, EmotionalAxis, LanguageFamily } from '../types'
  * Words are then generated as *native speakers* that obey the language's rules,
  * so a word is evidence the language exists rather than a one-off invention.
  */
+/**
+ * A language's OWN derivational morphology (v0.50 P3) — the suffixes that grow a
+ * root into a verb / adjective / agent noun / adverb *in that language's style*,
+ * romanised. These are a CONSTRUCTED grammar for the invented sound-world, chosen
+ * to echo the shape of the real family the accent draws on (e.g. Slavic -nik, Greek
+ * -ikos, Japanese -sha) — not English, and not a historical claim. A language with
+ * no `adverb` set simply forms no adverb by suffix (many languages don't).
+ */
+export interface LanguageMorphology {
+  verb: string[]
+  adjective: string[]
+  agent: string[]
+  adverb?: string[]
+}
+
 export interface Language {
   id: string
   /** The language's name / linguistic character. */
@@ -62,6 +77,9 @@ export interface Language {
 
   /** Emotional signature — deltas added to the emotional DNA (0–1 scale). */
   emotion: Partial<Record<EmotionalAxis, number>>
+
+  /** The language's own (constructed) derivational suffixes — how its words bend. */
+  morphology: LanguageMorphology
 }
 
 export const LANGUAGES: Language[] = [
@@ -98,6 +116,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'Medium',
     evolutionSpeed: 'Slow',
     emotion: { scientific: 0.7, futuristic: 0.5, minimal: 0.4, premium: 0.3 },
+    morphology: { verb: ['a', 'na'], adjective: ['ig', 'sk', 'lig'], agent: ['er', 'ling'], adverb: ['ligt'] },
   },
   {
     id: 'liquid',
@@ -132,6 +151,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'Medium',
     evolutionSpeed: 'Medium',
     emotion: { elegant: 0.5, warm: 0.5, trustworthy: 0.4, premium: 0.3, natural: 0.3 },
+    morphology: { verb: ['suru', 'naru'], adjective: ['teki', 'na'], agent: ['sha', 'ka', 'nin'], adverb: ['ni'] },
   },
   {
     id: 'verdant',
@@ -166,6 +186,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'High',
     evolutionSpeed: 'Fast',
     emotion: { natural: 0.7, warm: 0.4, trustworthy: 0.4, elegant: 0.2 },
+    morphology: { verb: ['ia', 'hia'], adjective: ['nui', 'loa'], agent: ['kai', 'oa'] },
   },
   {
     id: 'noble',
@@ -200,6 +221,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'Low',
     evolutionSpeed: 'Slow',
     emotion: { premium: 0.8, elegant: 0.6, trustworthy: 0.4, warm: 0.2 },
+    morphology: { verb: ['are', 'ire'], adjective: ['oso', 'ale', 'ino'], agent: ['aio', 'ista', 'tore'], adverb: ['mente'] },
   },
   {
     id: 'ancient',
@@ -234,6 +256,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'Low',
     evolutionSpeed: 'Slow',
     emotion: { mystical: 0.7, powerful: 0.5, premium: 0.3, scientific: 0.1 },
+    morphology: { verb: ['aya', 'ati'], adjective: ['vat', 'in', 'maya'], agent: ['aka', 'tar'], adverb: ['tas'] },
   },
   {
     id: 'ethereal',
@@ -268,6 +291,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'High',
     evolutionSpeed: 'Fast',
     emotion: { mystical: 0.5, elegant: 0.5, creative: 0.5, futuristic: 0.3 },
+    morphology: { verb: ['ta', 'oida'], adjective: ['inen', 'llinen'], agent: ['ja', 'ri'], adverb: ['sti'] },
   },
   {
     id: 'earthen',
@@ -302,6 +326,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'Medium',
     evolutionSpeed: 'Medium',
     emotion: { powerful: 0.6, natural: 0.5, energetic: 0.4, warm: 0.3 },
+    morphology: { verb: ['la', 'le'], adjective: ['li', 'siz'], agent: ['chi', 'ci'], adverb: ['ce'] },
   },
   {
     id: 'solar',
@@ -336,6 +361,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'Medium',
     evolutionSpeed: 'Medium',
     emotion: { energetic: 0.5, warm: 0.5, creative: 0.4, premium: 0.3 },
+    morphology: { verb: ['a', 'ala'], adjective: ['iyy', 'i'], agent: ['un', 'iyya'] },
   },
 
   // ── Meaning-driven species (emerge from deep/emotional concepts) ──────────
@@ -372,6 +398,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'Low',
     evolutionSpeed: 'Slow',
     emotion: { mystical: 0.5, trustworthy: 0.3, warm: 0.2, natural: 0.2, premium: 0.2 },
+    morphology: { verb: ['a'], adjective: ['i', 'oni'], agent: ['an', 'ai'] },
   },
   {
     id: 'phoenix',
@@ -406,6 +433,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'Medium',
     evolutionSpeed: 'Fast',
     emotion: { creative: 0.5, energetic: 0.4, mystical: 0.4, warm: 0.3, premium: 0.3 },
+    morphology: { verb: ['izo', 'oo'], adjective: ['ikos', 'ios', 'inos'], agent: ['tes', 'eus'], adverb: ['os'] },
   },
   {
     id: 'obsidian',
@@ -440,6 +468,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'Low',
     evolutionSpeed: 'Slow',
     emotion: { powerful: 0.6, mystical: 0.4, premium: 0.3, aggressive: 0.2 },
+    morphology: { verb: ['it', 'at'], adjective: ['ny', 'sk', 'ov'], agent: ['nik', 'ar'], adverb: ['no'] },
   },
   {
     id: 'chrysalis',
@@ -474,6 +503,7 @@ export const LANGUAGES: Language[] = [
     mutationRate: 'High',
     evolutionSpeed: 'Fast',
     emotion: { creative: 0.5, elegant: 0.4, mystical: 0.4, warm: 0.2 },
+    morphology: { verb: ['hada'], adjective: ['han', 'eun'], agent: ['ja', 'in'], adverb: ['hi'] },
   },
 ]
 

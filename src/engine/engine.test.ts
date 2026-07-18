@@ -18,6 +18,7 @@ import {
   EVOLVE_DIRECTIONS,
   matchBrands,
   speakNative,
+  computeParadigm,
   offlineCollision,
   naturalness,
   naturalnessBand,
@@ -356,19 +357,18 @@ describe('morphological word families (Engine V6)', () => {
     }
   })
 
-  it('derives adverbs from adjectives the way English does', () => {
-    const { families } = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
-    for (const w of families.flatMap((f) => f.words)) {
-      // Only when BOTH the adjective and the adverb survived validation.
-      const adjForm = w.paradigm.forms.find((f) => f.role === 'adjective')
-      const advForm = w.paradigm.forms.find((f) => f.role === 'adverb')
-      if (!adjForm || !advForm) continue
-      const adj = adjForm.form.toLowerCase()
-      const adv = advForm.form.toLowerCase()
-      // "-ic" adjectives take "-ally"; everything else takes "-ly".
-      if (adj.endsWith('ic')) expect(adv).toBe(adj + 'ally')
-      else if (!adj.endsWith('le')) expect(adv).toBe(adj + 'ly')
+  it('grows each language\'s forms from its OWN suffixes, not a fixed Latin set (v0.50 P3)', () => {
+    // Slavic obsidian must bend with Slavic suffixes, never English -ify/-ous/-ian.
+    const obs = languageById('obsidian')
+    const p = computeParadigm(speakNative(obs, new Rng(7), 1).words[0], 'strength', obs)
+    const SLAVIC = ['it', 'at', 'ov', 'ny', 'sk', 'nik', 'ar', 'no']
+    for (const f of p.forms) {
+      expect(SLAVIC.some((s) => f.form.toLowerCase().endsWith(s))).toBe(true)
     }
+    // A language with no adverb set (Arabic solar) forms no adverb at all.
+    const sol = languageById('solar')
+    const sp = computeParadigm(speakNative(sol, new Rng(7), 1).words[0], 'fire', sol)
+    expect(sp.forms.some((f) => f.role === 'adverb')).toBe(false)
   })
 
   it('is deterministic per word', () => {
@@ -635,10 +635,13 @@ describe('validation & typed relations (v0.36 Phase 3)', () => {
   it('only ships morphological forms that pass validation, rejecting the rest with reasons', () => {
     const r = runLaboratory({ ...MEDICINE_REQUEST, count: 6, seed: 7 })
     for (const w of r.families.flatMap((f) => f.words)) {
-      // Accepted forms are genuinely natural…
+      // Accepted forms are genuinely sayable. (Naturalness is now judged with the
+      // language's OWN phonology inside computeParadigm, so a native cluster can
+      // score below the global Latin 0.58; the global pronounceability floor the
+      // gate still enforces is the language-agnostic guarantee we assert here.)
       for (const f of w.paradigm.forms) {
         expect(ROLES).toContain(f.role)
-        expect(naturalness(f.form)).toBeGreaterThanOrEqual(0.58)
+        expect(pronounceability(f.form)).toBeGreaterThanOrEqual(0.5)
       }
       // …and rejected forms carry an explanation.
       for (const rej of w.paradigm.rejected) {

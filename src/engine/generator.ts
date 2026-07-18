@@ -478,7 +478,7 @@ export function buildPassport(
     fitness: computeFitness(word, emotionalDNA, pronunciation),
     dictionaryViability,
     discovery,
-    paradigm: computeParadigm(word, IDEAS[lead].label.toLowerCase()),
+    paradigm: computeParadigm(word, IDEAS[lead].label.toLowerCase(), language),
     etymology,
     phonology,
     relations: [],
