@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   runLaboratory,
   discoverFromAnalysis,
@@ -31,6 +31,8 @@ import { ConceptDirections } from './components/ConceptDirections'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { DuplicateDialog } from './components/DuplicateDialog'
 import { Sidebar } from './components/Sidebar'
+import { AuthDialog } from './components/AuthDialog'
+import { isAuthConfigured, onAuthChange, signOut, type AuthUser } from './lib/auth'
 import { BottomNav } from './components/BottomNav'
 import { Logo, Wordmark } from './components/Logo'
 import { Hero } from './components/Hero'
@@ -125,6 +127,10 @@ export default function App() {
   const [lexicon, setLexicon] = useState<LexEntry[]>(() => loadLexicon())
   // Proof-of-meaning: a pending add flagged as too close to an existing entry.
   const [dupWarn, setDupWarn] = useState<{ entry: LexEntry; hits: SimilarityHit[] } | null>(null)
+  // Accounts (optional — guest mode when Supabase isn't configured).
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [authOpen, setAuthOpen] = useState(false)
+  useEffect(() => onAuthChange(setUser), [])
   const runId = useRef(0)
   const workspaceRef = useRef<HTMLDivElement>(null)
   const wordsRef = useRef<HTMLDivElement>(null)
@@ -528,7 +534,17 @@ export default function App() {
         />
       )}
 
-      <Sidebar view={view} onNavigate={(v) => { setView(v); setOpenWord(null) }} lexiconCount={lexicon.length} />
+      {authOpen && <AuthDialog onClose={() => setAuthOpen(false)} />}
+
+      <Sidebar
+        view={view}
+        onNavigate={(v) => { setView(v); setOpenWord(null) }}
+        lexiconCount={lexicon.length}
+        authConfigured={isAuthConfigured()}
+        user={user}
+        onSignIn={() => setAuthOpen(true)}
+        onSignOut={() => void signOut()}
+      />
 
       <main className="content">
         <header className="mobilebar">

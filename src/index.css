@@ -255,9 +255,39 @@ button {
   background: var(--grad);
   opacity: 0.85;
 }
-.user-meta { display: flex; flex-direction: column; line-height: 1.25; }
-.user-name { font-size: 13px; }
+.user-meta { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.user-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-sub { font-size: 11px; color: var(--faint); }
+/* Signed-in / sign-in variants of the footer chip (a real button). */
+.sidebar-user.is-account { width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.sidebar-user.is-account:hover { border-color: var(--accent); }
+.user-dot.on { opacity: 1; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent); }
+
+/* ── Sign-in dialog ─────────────────────────────────────────────────── */
+.auth-email {
+  width: 100%;
+  padding: 11px 12px;
+  margin-bottom: 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+}
+.auth-email:focus { outline: none; border-color: var(--accent); }
+.auth-error { color: var(--risk); font-size: 12.5px; margin: -4px 0 12px; }
+.auth-google {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  cursor: pointer;
+}
+.auth-google:hover { border-color: var(--accent); color: inherit; }
 
 /* ── Mobile top brand bar (phone only) ──────────────────────────────── */
 .mobilebar {
