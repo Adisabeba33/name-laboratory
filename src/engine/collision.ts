@@ -39,7 +39,7 @@ export function offlineCollision(word: string): Collision {
  * A crude phonetic key — how the word *sounds*, so a different spelling of an
  * existing word ("Kwik" ~ "quick") is caught. Deliberately simple, not IPA.
  */
-function phoneticKey(word: string): string {
+export function phoneticKey(word: string): string {
   return normalise(word)
     .replace(/[^a-z]/g, '')
     .replace(/qu/g, 'kw')

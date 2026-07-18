@@ -1811,6 +1811,24 @@ input[type='range'] { width: 100%; accent-color: var(--accent); }
 .modal-remember input { accent-color: var(--accent); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
+/* ── Lexicon de-duplication ("proof of meaning") warning ──────────────── */
+.dup-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.dup-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.dup-word { font-weight: 600; }
+.dup-tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.dup-form { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.dup-meaning { background: color-mix(in srgb, var(--risk) 16%, transparent); color: var(--risk); }
+.dup-both { background: color-mix(in srgb, var(--risk) 22%, transparent); color: var(--risk); }
+.dup-brief { color: var(--faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ── Footer ─────────────────────────────────────────────────────────── */
 .footer {
   margin-top: auto;

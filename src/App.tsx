@@ -19,6 +19,7 @@ import {
   lexId,
   type LexEntry,
 } from './lib/lexicon'
+import { findSimilarEntries, type SimilarityHit } from './lib/dedupe'
 import { analyzeRemote } from './lib/analyze'
 import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
 import { fetchUsage, hasCachedUsage } from './lib/usage'
@@ -28,6 +29,7 @@ import { buildReport } from './lib/report'
 import { InterpretationPanel } from './components/InterpretationPanel'
 import { ConceptDirections } from './components/ConceptDirections'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { DuplicateDialog } from './components/DuplicateDialog'
 import { Sidebar } from './components/Sidebar'
 import { BottomNav } from './components/BottomNav'
 import { Logo, Wordmark } from './components/Logo'
@@ -121,6 +123,8 @@ export default function App() {
   )
   // My Lexicon — the user's saved words, persisted on-device (localStorage).
   const [lexicon, setLexicon] = useState<LexEntry[]>(() => loadLexicon())
+  // Proof-of-meaning: a pending add flagged as too close to an existing entry.
+  const [dupWarn, setDupWarn] = useState<{ entry: LexEntry; hits: SimilarityHit[] } | null>(null)
   const runId = useRef(0)
   const workspaceRef = useRef<HTMLDivElement>(null)
   const wordsRef = useRef<HTMLDivElement>(null)
@@ -134,11 +138,23 @@ export default function App() {
   function toggleSave(p: WordPassport) {
     const b = brief.trim()
     const id = lexId(p.word, b)
-    setLexicon((prev) =>
-      prev.some((e) => e.id === id)
-        ? removeEntry(prev, id)
-        : addEntry(prev, toEntry(p, p.family.name, b, new Date().toISOString())),
+    // Already saved for this concept → unsave, no dedupe needed.
+    if (lexicon.some((e) => e.id === id)) {
+      setLexicon((prev) => removeEntry(prev, id))
+      return
+    }
+    // Adding: run the proof-of-meaning check first. If the word is too close to
+    // something already saved (by form or meaning), warn before committing.
+    const entry = toEntry(p, p.family.name, b, new Date().toISOString())
+    const hits = findSimilarEntries(
+      { word: p.word, meaningText: `${p.shortMeaning} ${p.meaning}`, brief: b },
+      lexicon,
     )
+    if (hits.length) {
+      setDupWarn({ entry, hits })
+      return
+    }
+    setLexicon((prev) => addEntry(prev, entry))
   }
 
   /** Ask permission before any AI request. Resolves true if allowed. */
@@ -496,6 +512,18 @@ export default function App() {
             if (remember) setLlmAllowed(true)
             confirm.resolve(true)
             setConfirm(null)
+          }}
+        />
+      )}
+
+      {dupWarn && (
+        <DuplicateDialog
+          word={dupWarn.entry.word}
+          hits={dupWarn.hits}
+          onCancel={() => setDupWarn(null)}
+          onAdd={() => {
+            setLexicon((prev) => addEntry(prev, dupWarn.entry))
+            setDupWarn(null)
           }}
         />
       )}
