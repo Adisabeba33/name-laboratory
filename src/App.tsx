@@ -505,7 +505,7 @@ export default function App() {
       <main className="content">
         <header className="mobilebar">
           <button type="button" className="mobilebar-brand" onClick={() => { setView('discover'); setOpenWord(null) }}>
-            <Logo className="mobilebar-mark" gradientId="sianelara-gold-mobile" />
+            <Logo className="mobilebar-mark" />
             <span className="mobilebar-name">Sianelara</span>
           </button>
         </header>

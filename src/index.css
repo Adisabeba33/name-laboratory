@@ -163,8 +163,8 @@ button {
   text-align: left;
 }
 .brand-mark {
-  width: 27px;
-  height: 29px;
+  width: auto;
+  height: 30px;
   flex: none;
 }
 .brand-text {
@@ -287,8 +287,8 @@ button {
   padding: 0;
 }
 .mobilebar-mark {
-  width: 20px;
-  height: 22px;
+  width: auto;
+  height: 24px;
   flex: none;
 }
 .mobilebar-name {
