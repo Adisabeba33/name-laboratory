@@ -361,6 +361,9 @@ function reduplicated(word: string): boolean {
  */
 const DIPHTHONGS = new Set([
   'ai', 'ei', 'oi', 'au', 'ou', 'eu', 'ia', 'io', 'ie', 'ea', 'ua', 'ue', 'uo', 'ao', 'oa',
+  // Korean / additional single-sound vowel pairs, so accents that rely on them
+  // (eo, eu, ae, oe) survive strict smoothing instead of collapsing to one vowel.
+  'eo', 'ae', 'oe',
 ])
 
 /**

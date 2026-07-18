@@ -1535,6 +1535,14 @@ describe('per-language phonotactics — accent diversity', () => {
     expect(v.words.some((w) => /[bcdfghjklmnpqrstvwxz]{2}/i.test(w))).toBe(true)
   })
 
+  it('every language still breeds a usable pool under its new accent', () => {
+    for (const lang of LANGUAGES) {
+      const v = speakNative(lang, new Rng(7), 6)
+      expect(v.words.length).toBeGreaterThan(0)
+      expect(v.census.survived).toBeGreaterThan(5)
+    }
+  })
+
   it('naturalness stops punishing a native letter once the language owns it', () => {
     // `z` is "rare" globally, but not for a language whose inventory contains it.
     const bare = naturalness('zhelov')

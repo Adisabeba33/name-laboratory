@@ -32,6 +32,9 @@ const FAMILY_LABEL: Record<LanguageFamily, string> = {
   hebrew: 'Hebrew',
   finnish: 'Finnish',
   slavic: 'Slavic',
+  polynesian: 'Polynesian',
+  turkic: 'Turkic',
+  korean: 'Korean',
 }
 
 export function familyLabel(family: LanguageFamily): string {
