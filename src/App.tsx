@@ -20,6 +20,7 @@ import {
   type LexEntry,
 } from './lib/lexicon'
 import { findSimilarEntries, type SimilarityHit } from './lib/dedupe'
+import { cloudList, cloudUpsert, cloudRemove } from './lib/lexicon-cloud'
 import { analyzeRemote } from './lib/analyze'
 import { fetchBespokeMeanings, type WordItem } from './lib/meanings'
 import { fetchUsage, hasCachedUsage } from './lib/usage'
@@ -131,6 +132,29 @@ export default function App() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
   useEffect(() => onAuthChange(setUser), [])
+
+  // Stage 2 — cloud lexicon. On sign-in, migrate any local words up and load the
+  // cloud copy; on sign-out (or guest), fall back to the on-device localStorage.
+  useEffect(() => {
+    let cancelled = false
+    if (!user) {
+      setLexicon(loadLexicon())
+      return
+    }
+    void (async () => {
+      const local = loadLexicon()
+      const cloud = await cloudList()
+      const cloudKeys = new Set(cloud.map((e) => e.id))
+      const toMigrate = local.filter((e) => !cloudKeys.has(e.id))
+      for (const e of toMigrate) await cloudUpsert(e)
+      const merged = toMigrate.length ? await cloudList() : cloud
+      if (!cancelled) setLexicon(merged)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
   const runId = useRef(0)
   const workspaceRef = useRef<HTMLDivElement>(null)
   const wordsRef = useRef<HTMLDivElement>(null)
@@ -141,12 +165,23 @@ export default function App() {
     return new Set(lexicon.filter((e) => e.brief === b).map((e) => e.word.toLowerCase()))
   }, [lexicon, brief])
 
+  // Persist through both layers: local state/localStorage always, and the cloud
+  // when signed in (fire-and-forget — localStorage stays the source of truth).
+  function persistAdd(entry: LexEntry) {
+    setLexicon((prev) => addEntry(prev, entry))
+    if (user) void cloudUpsert(entry)
+  }
+  function persistRemove(id: string) {
+    setLexicon((prev) => removeEntry(prev, id))
+    if (user) void cloudRemove(id)
+  }
+
   function toggleSave(p: WordPassport) {
     const b = brief.trim()
     const id = lexId(p.word, b)
     // Already saved for this concept → unsave, no dedupe needed.
     if (lexicon.some((e) => e.id === id)) {
-      setLexicon((prev) => removeEntry(prev, id))
+      persistRemove(id)
       return
     }
     // Adding: run the proof-of-meaning check first. If the word is too close to
@@ -160,7 +195,7 @@ export default function App() {
       setDupWarn({ entry, hits })
       return
     }
-    setLexicon((prev) => addEntry(prev, entry))
+    persistAdd(entry)
   }
 
   /** Ask permission before any AI request. Resolves true if allowed. */
@@ -528,7 +563,7 @@ export default function App() {
           hits={dupWarn.hits}
           onCancel={() => setDupWarn(null)}
           onAdd={() => {
-            setLexicon((prev) => addEntry(prev, dupWarn.entry))
+            persistAdd(dupWarn.entry)
             setDupWarn(null)
           }}
         />
@@ -805,7 +840,7 @@ export default function App() {
           <LexiconView
             entries={lexicon}
             onOpen={openLexEntry}
-            onRemove={(id) => setLexicon((prev) => removeEntry(prev, id))}
+            onRemove={(id) => persistRemove(id)}
             onDiscover={goDiscover}
           />
         )}

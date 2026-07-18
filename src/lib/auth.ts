@@ -30,7 +30,7 @@ export interface AuthUser {
 let clientPromise: Promise<SupabaseClient | null> | null = null
 
 /** Lazily import supabase-js and create the client — null when not configured. */
-function loadClient(): Promise<SupabaseClient | null> {
+export function getClient(): Promise<SupabaseClient | null> {
   if (!isAuthConfigured()) return Promise.resolve(null)
   if (!clientPromise) {
     clientPromise = import('@supabase/supabase-js').then(({ createClient }) =>
@@ -49,7 +49,7 @@ function toUser(session: Session | null): AuthUser | null {
 
 /** The current signed-in user, or null (guest / not configured). */
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const c = await loadClient()
+  const c = await getClient()
   if (!c) return null
   const { data } = await c.auth.getSession()
   return toUser(data.session)
@@ -57,7 +57,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
 /** The access token for the current session, for authenticating `/api` calls. */
 export async function getAccessToken(): Promise<string | null> {
-  const c = await loadClient()
+  const c = await getClient()
   if (!c) return null
   const { data } = await c.auth.getSession()
   return data.session?.access_token ?? null
@@ -65,7 +65,7 @@ export async function getAccessToken(): Promise<string | null> {
 
 /** Send a passwordless magic-link to `email`. Returns an error message, or null. */
 export async function signInWithEmail(email: string): Promise<string | null> {
-  const c = await loadClient()
+  const c = await getClient()
   if (!c) return 'Sign-in is not configured.'
   const { error } = await c.auth.signInWithOtp({
     email: email.trim(),
@@ -76,7 +76,7 @@ export async function signInWithEmail(email: string): Promise<string | null> {
 
 /** Begin Google OAuth (redirect flow). Returns an error message, or null. */
 export async function signInWithGoogle(): Promise<string | null> {
-  const c = await loadClient()
+  const c = await getClient()
   if (!c) return 'Sign-in is not configured.'
   const { error } = await c.auth.signInWithOAuth({
     provider: 'google',
@@ -86,7 +86,7 @@ export async function signInWithGoogle(): Promise<string | null> {
 }
 
 export async function signOut(): Promise<void> {
-  const c = await loadClient()
+  const c = await getClient()
   await c?.auth.signOut()
 }
 
@@ -101,7 +101,7 @@ export function onAuthChange(cb: (user: AuthUser | null) => void): () => void {
   }
   let active = true
   let unsub = () => {}
-  void loadClient().then((c) => {
+  void getClient().then((c) => {
     if (!c || !active) return
     void c.auth.getSession().then(({ data }) => {
       if (active) cb(toUser(data.session))
