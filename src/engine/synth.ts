@@ -4,6 +4,7 @@ import { Rng } from './rng'
 import {
   awkwardClusters,
   clamp01,
+  collectClusters,
   countSyllables,
   isVowel,
   longestVowelRun,
@@ -11,7 +12,7 @@ import {
   pronounceability,
 } from './phonetics'
 import { editDistance } from './genome'
-import { naturalness } from './naturalness'
+import { naturalness, type NaturalnessContext } from './naturalness'
 import {
   consonantHardness,
   endsOpen,
@@ -135,6 +136,11 @@ export function speakNative(
   const pool: string[] = []
   const seen = new Set<string>()
 
+  // Per-language phonotactics (accent fix): the clusters THIS language legitimately
+  // owns, and the letters it natively uses. Passed to the gate and to naturalness so
+  // a Slavic/Nordic word isn't rejected/penalised against a fixed Latin ideal.
+  const ctx = nativePhonology(lang)
+
   // Engine V6 — breed a fixed population, gate every candidate, keep the survivors.
   // Unlike the old "stop as soon as the pool is full" loop, this explores a full
   // budget so the funnel counts are honest AND the survivor pool is deep enough
@@ -149,7 +155,7 @@ export function speakNative(
       countSyllables(word) <= ctl.maxSyllables &&
       !seen.has(key) &&
       !KNOWN_WORDS.has(key) &&
-      awkwardClusters(word) < ctl.clusterLimit &&
+      awkwardClusters(word, ctx.allowed) < ctl.clusterLimit &&
       longestVowelRun(word) <= ctl.maxVowelRun &&
       !reduplicated(word) &&
       hasVowel(word)
@@ -161,10 +167,25 @@ export function speakNative(
 
   const survived = pool.length
   return {
-    words: selectSpeakable(pool, count, ctl.floor),
+    words: selectSpeakable(pool, count, ctl.floor, ctx),
     prototype,
     census: { generated, rejected: generated - survived, survived },
   }
+}
+
+/**
+ * A language's own phonology as a {@link NaturalnessContext}: the consonant
+ * clusters it legitimately owns (from its onsets/medials/codas) and the letters it
+ * natively uses (from its whole inventory). This is what makes the phonotactic gate
+ * and naturalness ranking judge each language by its own sound world.
+ */
+function nativePhonology(lang: Language): NaturalnessContext {
+  const allowed = collectClusters([...lang.onsets, ...lang.medials, ...lang.codas])
+  const native = new Set<string>()
+  for (const piece of [...lang.onsets, ...lang.medials, ...lang.nuclei, ...lang.codas, ...lang.endings]) {
+    for (const ch of piece.toLowerCase()) if (/[a-zë-ü]/.test(ch)) native.add(ch)
+  }
+  return { allowed, native }
 }
 
 /**
@@ -176,10 +197,10 @@ export function speakNative(
  * so spreading for variety never reaches down into fabricated / fantasy shapes.
  * Falls back gracefully so a run always returns words.
  */
-function selectSpeakable(pool: string[], count: number, floor: number): string[] {
+function selectSpeakable(pool: string[], count: number, floor: number, ctx: NaturalnessContext = {}): string[] {
   if (pool.length <= count) return pool
   const scored = pool
-    .map((w) => ({ w, nat: naturalness(w), say: pronounceability(w) }))
+    .map((w) => ({ w, nat: naturalness(w, ctx), say: pronounceability(w) }))
     .sort((a, b) => b.nat - a.nat)
 
   // Prefer words that clear the speakability floor AND don't read as fabricated.

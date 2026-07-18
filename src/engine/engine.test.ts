@@ -39,6 +39,7 @@ import { KNOWN_WORDS } from './data/known-words'
 import {
   countSyllables,
   awkwardClusters,
+  collectClusters,
   vowelRatio,
   longestVowelRun,
   pronounceability,
@@ -1166,8 +1167,8 @@ describe('naturalness (Engine V3 — inevitable, not fabricated)', () => {
   const FANTASY = ['Gruthuthoth', 'Vorulalux', 'Xekakix', 'Nyrariath', 'Ishithaliel', 'Voruknoath']
 
   it('scores real-feeling words far above fantasy shapes', () => {
-    const minReal = Math.min(...REAL.map(naturalness))
-    const maxFantasy = Math.max(...FANTASY.map(naturalness))
+    const minReal = Math.min(...REAL.map((w) => naturalness(w)))
+    const maxFantasy = Math.max(...FANTASY.map((w) => naturalness(w)))
     expect(minReal).toBeGreaterThan(maxFantasy)
     expect(minReal).toBeGreaterThan(0.7)
     expect(maxFantasy).toBeLessThan(0.5)
@@ -1493,5 +1494,53 @@ describe('generateFamilies (discovering languages)', () => {
 
   it('resolves every language id', () => {
     for (const l of LANGUAGES) expect(languageById(l.id).id).toBe(l.id)
+  })
+})
+
+describe('per-language phonotactics — accent diversity', () => {
+  it('collectClusters harvests a language\'s own clusters and their sub-runs', () => {
+    const allowed = collectClusters(['skj', 'mzh', 'rn', 'a', 'st'])
+    expect(allowed.has('skj')).toBe(true)
+    expect(allowed.has('sk')).toBe(true) // sub-run of skj
+    expect(allowed.has('kj')).toBe(true)
+    expect(allowed.has('mzh')).toBe(true)
+    expect(allowed.has('rn')).toBe(true)
+  })
+
+  it('a cluster the language owns is not awkward for it, but is under the global measure', () => {
+    const allowed = collectClusters(['mzh', 'zgr'])
+    // Globally (Latin whitelist) a Slavic cluster is awkward…
+    expect(awkwardClusters('mzhelov')).toBeGreaterThan(0)
+    // …but for a language that declares it, it is clean.
+    expect(awkwardClusters('mzhelov', allowed)).toBe(0)
+    // Back-compat: omitting `allowed` matches passing undefined.
+    expect(awkwardClusters('strato')).toBe(awkwardClusters('strato', undefined))
+  })
+
+  it('the Japanese-accent language (liquid) coins open, cluster-free words', () => {
+    for (const seed of [7, 42, 99]) {
+      for (const w of speakNative(languageById('liquid'), new Rng(seed), 8).words) {
+        // Open CV syllabary → no multi-consonant clusters even by the global measure.
+        expect(awkwardClusters(w)).toBeLessThan(1)
+      }
+    }
+  })
+
+  it('the Slavic-accent language (obsidian) breeds a viable pool WITH real clusters', () => {
+    const v = speakNative(languageById('obsidian'), new Rng(7), 8)
+    expect(v.words.length).toBeGreaterThan(0)
+    // Clusters survive the gate rather than being filtered to nothing.
+    expect(v.census.survived).toBeGreaterThan(10)
+    // At least one word carries an adjacent consonant pair — proof clusters live.
+    expect(v.words.some((w) => /[bcdfghjklmnpqrstvwxz]{2}/i.test(w))).toBe(true)
+  })
+
+  it('naturalness stops punishing a native letter once the language owns it', () => {
+    // `z` is "rare" globally, but not for a language whose inventory contains it.
+    const bare = naturalness('zhelov')
+    const native = naturalness('zhelov', { native: new Set(['z']) })
+    expect(native).toBeGreaterThanOrEqual(bare)
+    // Back-compat: no context = the original global judgement.
+    expect(naturalness('kodak')).toBe(naturalness('kodak', {}))
   })
 })

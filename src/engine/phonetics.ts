@@ -92,8 +92,15 @@ export function sharpness(word: string): number {
  * A cluster is problematic if it is 3+ consonants that don't form a known onset,
  * or a 2-consonant run that isn't a valid onset and straddles unusual pairs.
  * Returns the number of awkward clusters — used to penalise pronounceability.
+ *
+ * `allowed` (optional) is a language's OWN set of legitimate consonant clusters
+ * (see {@link collectClusters}). A cluster the language explicitly declares is not
+ * awkward FOR THAT LANGUAGE — this is what lets a Slavic "mzh" or a Nordic "skj"
+ * survive when its own language wants it, while the global Latin whitelist still
+ * governs any language that declares nothing. Without `allowed`, behaviour is
+ * exactly as before (global Latin `VALID_ONSETS` only).
  */
-export function awkwardClusters(word: string): number {
+export function awkwardClusters(word: string, allowed?: ReadonlySet<string>): number {
   const w = normalise(word)
   let awkward = 0
   let run = ''
@@ -101,22 +108,56 @@ export function awkwardClusters(word: string): number {
     if (!isVowel(ch) && /[a-z]/.test(ch)) {
       run += ch
     } else {
-      awkward += scoreRun(run)
+      awkward += scoreRun(run, allowed)
       run = ''
     }
   }
-  awkward += scoreRun(run)
+  awkward += scoreRun(run, allowed)
   return awkward
 }
 
-function scoreRun(run: string): number {
+function scoreRun(run: string, allowed?: ReadonlySet<string>): number {
   if (run.length <= 1) return 0
-  if (run.length === 2) return VALID_ONSETS.has(run) ? 0 : 0.5
-  // 3+ consonants: only comfortable if it starts with a valid 2/3 onset.
+  // A cluster the language itself owns is comfortable for that language.
+  if (allowed?.has(run)) return 0
+  const ok = (c: string) => VALID_ONSETS.has(c) || (allowed?.has(c) ?? false)
+  if (run.length === 2) return ok(run) ? 0 : 0.5
+  // 3+ consonants: only comfortable if it starts with a valid 2/3 onset (global
+  // Latin whitelist OR the language's own cluster set).
   const three = run.slice(0, 3)
   const two = run.slice(0, 2)
-  if (VALID_ONSETS.has(three) || VALID_ONSETS.has(two)) return run.length >= 4 ? 1 : 0.5
+  if (ok(three) || ok(two)) return run.length >= 4 ? 1 : 0.5
   return run.length - 1
+}
+
+/**
+ * Build a language's own set of legitimate consonant clusters from its phoneme
+ * inventory (onsets + medials + codas). Every consonant-only run of length ≥ 2
+ * inside a piece — and all of its ≥2 sub-runs — is registered, so a declared
+ * onset like "skj" also licenses "sk"/"kj", and a coda "rn" licenses "rn". This is
+ * what `awkwardClusters(word, allowed)` consults so a language's native clusters
+ * (and the seams between them) aren't penalised as Latin-awkward.
+ */
+export function collectClusters(parts: readonly string[]): Set<string> {
+  const out = new Set<string>()
+  for (const part of parts) {
+    const w = normalise(part)
+    let run = ''
+    const flush = () => {
+      if (run.length >= 2) {
+        for (let i = 0; i < run.length - 1; i++) {
+          for (let j = i + 2; j <= run.length; j++) out.add(run.slice(i, j))
+        }
+      }
+      run = ''
+    }
+    for (const ch of w) {
+      if (!isVowel(ch) && /[a-z]/.test(ch)) run += ch
+      else flush()
+    }
+    flush()
+  }
+  return out
 }
 
 /**

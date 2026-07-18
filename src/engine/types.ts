@@ -31,6 +31,7 @@ export type LanguageFamily =
   | 'arabic'
   | 'hebrew'
   | 'finnish'
+  | 'slavic'
 
 /**
  * A semantic concept. User keywords are mapped into this shared concept space so
